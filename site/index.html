@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quantum Backrooms — Level 0</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Courier New", monospace;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #060604;
+      }
+
+      #start-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at 50% 42%, rgba(121, 99, 45, 0.24), transparent 38%),
+          linear-gradient(180deg, #0a0905 0%, #151207 100%);
+        color: #e4c77d;
+        text-align: center;
+        letter-spacing: 0.18em;
+      }
+
+      #start-screen[hidden],
+      #hud[hidden],
+      #phase-telemetry[hidden] {
+        display: none;
+      }
+
+      .start-card {
+        width: min(90vw, 520px);
+        padding: 42px 28px 34px;
+        border: 1px solid rgba(228, 199, 125, 0.32);
+        background: rgba(8, 8, 4, 0.76);
+        box-shadow: 0 0 80px rgba(0, 0, 0, 0.55);
+      }
+
+      .start-mark {
+        color: #f4dda1;
+        font-size: 2.7rem;
+        line-height: 1;
+        margin-bottom: 32px;
+      }
+
+      .start-card h1 {
+        margin: 0 0 28px;
+        color: #f4dda1;
+        font-size: clamp(1.3rem, 4vw, 2.2rem);
+        font-weight: 400;
+        letter-spacing: 0.16em;
+        text-shadow: 0 0 12px rgba(244, 221, 161, 0.25);
+      }
+
+      .start-card p {
+        color: #9e8959;
+        font-size: 0.7rem;
+        letter-spacing: 0.12em;
+        line-height: 1.8;
+      }
+
+      #start-game {
+        margin: 24px 0 12px;
+        padding: 14px 48px;
+        border: 1px solid #b89551;
+        background: #b77b32;
+        color: #130d05;
+        cursor: pointer;
+        font: inherit;
+        font-weight: bold;
+        letter-spacing: 0.18em;
+      }
+
+      #start-game:hover,
+      #start-game:focus-visible {
+        background: #d49a4a;
+        outline: 1px solid #f4dda1;
+      }
+
+      .start-note {
+        font-size: 0.58rem;
+        color: #6f613f;
+      }
+
+      #hud {
+        position: fixed;
+        z-index: 10;
+        top: 18px;
+        left: 20px;
+        pointer-events: none;
+        min-width: 220px;
+        padding: 10px 12px;
+        border-left: 2px solid #b89551;
+        background: rgba(8, 8, 4, 0.58);
+        color: #d8bc75;
+        font: 0.65rem/1.7 "Courier New", monospace;
+        letter-spacing: 0.12em;
+        text-shadow: 0 1px 4px #000;
+      }
+
+      #phase-telemetry {
+        position: fixed;
+        z-index: 10;
+        top: 18px;
+        right: 20px;
+        width: min(310px, 34vw);
+        padding: 12px 14px;
+        border: 1px solid rgba(228, 199, 125, 0.28);
+        border-left: 2px solid #b89551;
+        background: rgba(8, 8, 4, 0.72);
+        color: #d8bc75;
+        font: 0.6rem/1.65 "Courier New", monospace;
+        letter-spacing: 0.08em;
+        text-shadow: 0 1px 4px #000;
+      }
+
+      #phase-telemetry .phase-heading {
+        color: #ffe69b;
+        margin-bottom: 6px;
+      }
+
+      #phase-telemetry .phase-value {
+        color: #f4dda1;
+      }
+
+      #phase-telemetry .phase-candidates {
+        color: #a9e7d2;
+        white-space: nowrap;
+      }
+
+      #phase-telemetry.zeta-visor {
+        border-color: #d8a8ff;
+        box-shadow: 0 0 18px rgba(177, 98, 255, 0.35);
+      }
+
+      body.phase-shift::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        pointer-events: none;
+        background: rgba(185, 154, 87, 0.16);
+        mix-blend-mode: screen;
+        animation: phase-shift-flash 420ms ease-out;
+      }
+
+      @keyframes phase-shift-flash {
+        from { opacity: 0.85; }
+        to { opacity: 0; }
+      }
+
+      body.floor-transition::after {
+        content: "DESCENDING // RECONFIGURING FLOOR";
+        position: fixed;
+        inset: 0;
+        z-index: 31;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        background: #070604;
+        color: #ffe69b;
+        font: 0.8rem/1 "Courier New", monospace;
+        letter-spacing: 0.18em;
+        animation: floor-transition-fade 900ms ease-in-out;
+      }
+
+      body.ghost-strike::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        pointer-events: none;
+        background: radial-gradient(circle, transparent 30%, rgba(120, 0, 30, 0.75) 100%);
+        animation: phase-shift-flash 700ms ease-out;
+      }
+
+      body.ghost-contact #backrooms-scene canvas {
+        filter: blur(4px);
+        transition: filter 120ms ease-out;
+      }
+
+      body.ghost-contact::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        pointer-events: none;
+        background: radial-gradient(circle, rgba(190, 0, 22, 0.18) 0%, rgba(95, 0, 8, 0.68) 100%);
+      }
+
+      body.sanity-lost::after {
+        content: "SANITY LOST // YOU ARE NO LONGER SURE WHERE YOU ARE";
+        position: fixed;
+        inset: 0;
+        z-index: 31;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        background: #000;
+        color: #ff6677;
+        font: 0.8rem/1 "Courier New", monospace;
+        letter-spacing: 0.18em;
+        animation: floor-transition-fade 2400ms ease-in-out;
+      }
+
+      body.zeta-visor #hud {
+        border-left-color: #c44dff;
+      }
+
+      body.zeta-visor::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 9;
+        pointer-events: none;
+        box-shadow: inset 0 0 140px rgba(150, 70, 255, 0.45);
+      }
+
+      @keyframes floor-transition-fade {
+        0%, 100% { opacity: 0; }
+        28%, 76% { opacity: 1; }
+      }
+    </style>
+    <script src="js/debug-overlay.js"></script>
+    <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.7.x/dist/aframe-extras.min.js"></script>
+    <script type="module" src="js/maze-physics.js"></script>
+    <script type="module" src="js/map-generator.js"></script>
+    <script type="module" src="js/quantum-bank.js"></script>
+    <script type="module" src="js/components/backrooms-wall.js"></script>
+    <script type="module" src="js/phase-zero.js?v=20261118-2"></script>
+    <script src="js/components/xr-hands.js"></script>
+    <script src="js/components/hand-gestures.js"></script>
+    <script src="js/components/player-locomotion.js"></script>
+    <script src="js/components/wrist-hud.js"></script>
+    <script src="js/components/quantum-ghost.js?v=20261118-5"></script>
+    <script src="js/components/superposed-wall.js"></script>
+    <script src="js/components/light-flicker.js"></script>
+    <script src="js/components/floor-transition.js"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261118-4"></script>
+    <script src="js/components/scatter-props.js"></script>
+  </head>
+  <body>
+    <section id="start-screen">
+      <div class="start-card">
+        <div class="start-mark">⬡</div>
+        <h1>QUANTUM BACKROOMS</h1>
+        <p>AN EXPERIMENT IN SPATIAL UNCERTAINTY</p>
+        <button id="start-game" type="button">ENTER</button>
+        <p>
+          VR: BALANCE OS BRAÇOS PARA ANDAR // PINÇA NA TESTA LIGA O VISOR<br />
+          PALMAS NA PAREDE = PHASE SHIFT // MÃOS NOS OLHOS = SE PROTEGER<br />
+          PINÇA PARA PEGAR O QPS // LEVE A ALMOND WATER À BOCA
+        </p>
+        <div class="start-note">DESKTOP: WASD // V VISOR // SPACE + W PHASE SHIFT // P PAUSA</div>
+        <div class="start-note">MELHOR NO META QUEST COM HAND TRACKING</div>
+      </div>
+    </section>
+
+    <div id="hud" hidden>
+      <div>LEVEL 0 // QUANTUM BACKROOMS</div>
+      <div id="hud-state">STATE: UNMEASURED</div>
+      <div id="hud-qpu">QPU: CONNECTING // 12 QUBITS</div>
+      <div id="hud-qps">QPS: --</div>
+      <div id="hud-coherence">COHERENCE: --</div>
+      <div id="hud-noise">NOISE: --</div>
+      <div id="hud-sanity">SANITY: 100%</div>
+      <div id="hud-energy">ENERGY: 100%</div>
+      <div id="hud-measurements">MEASUREMENTS: 0</div>
+    </div>
+
+    <div id="phase-telemetry" hidden>
+      <div class="phase-heading">QUANTUM TELEMETRY // PHASE 0</div>
+      <div id="phase-status" class="phase-value">REALITY: COLLAPSED</div>
+      <div><span id="phase-floor">FLOOR 01</span> // <span id="phase-qps">QPS SEARCH</span> // <span id="phase-tick">TICK 0</span></div>
+      <div>OBJECTIVE: FIND THE QPS TO LOCATE STAIRS</div>
+      <div>CURRENT FLOOR: <span id="phase-current" class="phase-value"></span></div>
+      <div class="phase-candidates" id="phase-candidates"></div>
+      <div>GRID ENTROPY // SUPERPOSED <span id="phase-superposed">0</span> COLLAPSED <span id="phase-collapsed">84</span> TOTAL <span id="phase-total">84</span></div>
+      <div>ENTITY // SENTINEL <span id="phase-sentinel" class="phase-value">CLEAR</span> // GHOST <span id="phase-ghost" class="phase-value">DORMANT</span></div>
+      <div>LOOK_T <span id="phase-look-time">0.0s / 10s</span></div>
+      <div id="phase-visor" class="phase-value">ZETA VISOR OFF</div>
+    </div>
+
+    <a-scene
+      id="backrooms-scene"
+      background="color: #0b0905"
+      fog="type: exponential; color: #17130f; density: 0.035"
+      renderer="colorManagement: true"
+        webxr="referenceSpaceType: local-floor; optionalFeatures: bounded-floor, hand-tracking"
+    >
+      <a-assets>
+        <img
+          id="wall-texture"
+          src="assets/textures/yasu/walls/wallpaper-01-color.jpg"
+        />
+        <img id="ceiling-texture" src="assets/textures/yasu/ceilings/ceiling-01-color.jpg" />
+        <img id="floor-texture" src="assets/textures/yasu/floors/carpet-01-color.jpg" />
+        <a-asset-item id="props-model" src="assets/models/backrooms-vol2.glb"></a-asset-item>
+        <a-asset-item id="door-yellow-model" src="assets/models/door-yellow.glb"></a-asset-item>
+        <a-asset-item id="bacteria-model" src="assets/models/bacteria-backrooms.glb"></a-asset-item>
+      </a-assets>
+
+      <!-- Rig do jogador: a ordem dos componentes importa (rastreio > gestos > locomoção). -->
+      <a-entity
+        id="player"
+        position="-4.2 0 -4.2"
+        xr-hands="camera: #head; anchor: #player-head"
+        hand-gestures
+        player-locomotion
+      >
+        <a-entity id="head" camera position="0 1.6 0" look-controls>
+          <a-entity
+            id="desktop-hint"
+            position="0 -0.34 -1.1"
+            text="value: WASD ou setas: andar | Q E: girar | arraste o mouse: olhar\nEncontre o QPS para localizar as escadas; align: center; color: #fff0c7; width: 1.1"
+          ></a-entity>
+        </a-entity>
+        <a-entity hand-tracking-controls="hand: left; modelColor: #d8bc75"></a-entity>
+        <a-entity hand-tracking-controls="hand: right; modelColor: #d8bc75"></a-entity>
+        <a-entity wrist-hud="hand: left"></a-entity>
+      </a-entity>
+      <a-entity id="player-head"></a-entity>
+
+      <a-entity id="quantum-ghost" quantum-ghost="player: #player-head; rig: #player"></a-entity>
+
+      <a-entity light="type: ambient; color: #fff0c7; intensity: 0.36"></a-entity>
+      <a-entity
+        light="type: point; color: #ffd36b; intensity: 1.05; distance: 12"
+        position="0 2.8 0"
+        light-flicker="min: 0.45; max: 1.05; interval: 170"
+      ></a-entity>
+      <a-entity
+        light="type: directional; color: #fff1b0; intensity: 0.5"
+        position="-4 8 3"
+      ></a-entity>
+
+      <a-entity
+        light="type: point; color: #ffe7a3; intensity: 0.8; distance: 8"
+        position="-4.2 4.35 -4.2"
+        light-flicker="min: 0.3; max: 0.8; interval: 230"
+      ></a-entity>
+      <a-entity
+        light="type: point; color: #ffe7a3; intensity: 0.75; distance: 8"
+        position="3.2 4.35 2.4"
+        light-flicker="min: 0.25; max: 0.75; interval: 190"
+      ></a-entity>
+
+      <a-entity
+        id="backrooms-props"
+        gltf-model="#props-model"
+        scatter-props="maxObjects: 48; seed: 17"
+      ></a-entity>
+
+      <a-plane
+        position="0 0 0"
+        rotation="-90 0 0"
+        width="30"
+        height="30"
+        material="src: #floor-texture; repeat: 8 8; roughness: 1"
+      ></a-plane>
+
+      <!-- Teto visual contínuo: a névoa esconde as bordas do plano. -->
+      <a-plane
+        id="backrooms-ceiling"
+        position="0 4.7 0"
+        rotation="90 0 0"
+        width="120"
+        height="120"
+        backrooms-wall="texture: #ceiling-texture; repeat: 8 8; side: double"
+      ></a-plane>
+
+      <a-entity
+        id="quantum-map"
+        quantum-map="bitstring: 010110101100"
+        position="0 0 0"
+        scale="1 1 1"
+      ></a-entity>
+
+
+      <a-sky color="#0b0905"></a-sky>
+    </a-scene>
+
+    <script>
+      const scene = document.querySelector('#backrooms-scene');
+      const hint = document.querySelector('#desktop-hint');
+      const quantumMap = document.querySelector('#quantum-map');
+      const startScreen = document.querySelector('#start-screen');
+      const startGame = document.querySelector('#start-game');
+      const hud = document.querySelector('#hud');
+      const hudState = document.querySelector('#hud-state');
+      const hudQpu = document.querySelector('#hud-qpu');
+      const hudQps = document.querySelector('#hud-qps');
+      const hudCoherence = document.querySelector('#hud-coherence');
+      const hudNoise = document.querySelector('#hud-noise');
+      let measured = false;
+      let measuring = false;
+
+      function updateQuantumHud(bitstring, result) {
+        const metrics = window.analyzeQuantumState(bitstring);
+        hudQps.textContent = `QPS: ${metrics.qps}/100`;
+        hudCoherence.textContent = `COHERENCE: ${metrics.coherence}%`;
+        hudNoise.textContent = `NOISE: ${metrics.noise}%`;
+        hudQpu.textContent = `QPU: ${result.source.toUpperCase()} // ${result.backend}`;
+        return metrics;
+      }
+
+      startGame.addEventListener('click', () => {
+        startScreen.hidden = true;
+        hud.hidden = false;
+      });
+
+      function applyMeasurement(result) {
+        measured = true;
+        const bitstring = result.bitstring;
+
+        quantumMap.setAttribute(
+          'quantum-map',
+          `bitstring: ${bitstring}`
+        );
+        hint.setAttribute(
+          'text',
+          `value: MEDIÇÃO REGISTRADA — ${bitstring}; align: center; color: #fff0c7; width: 1.1`
+        );
+        hudState.textContent = `STATE: MEASURED // ${bitstring}`;
+        const metrics = updateQuantumHud(bitstring, result);
+        window.dispatchEvent(new CustomEvent('quantum-measured', {
+          detail: { result, metrics },
+        }));
+      }
+
+      async function collapseQuantumState() {
+        if (measuring) return;
+        measuring = true;
+        hint.setAttribute(
+          'text',
+          'value: MEDIÇÃO EM ANDAMENTO — o estado está sendo amostrado; align: center; color: #fff0c7; width: 1.1'
+        );
+
+        try {
+          const floor = window.quantumPlayer?.floor ?? 1;
+          // Caminho padrão: banco de medições gravadas (sem fila nem cota). Use ?live para chamar a API.
+          const bank = new URLSearchParams(location.search).has('live')
+            ? null
+            : await window.quantumBank?.ready;
+          if (bank) {
+            applyMeasurement(window.quantumBank.measureFromBank(bank, floor));
+            return;
+          }
+
+          const response = await fetch('/api/measure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shots: 128, floor }),
+          });
+
+          if (!response.ok) throw new Error(`quantum-api-${response.status}`);
+          applyMeasurement(await response.json());
+        } catch (error) {
+          console.warn('[quantum-backrooms] IBM unavailable, using local fallback', error);
+          applyMeasurement({
+            bitstring: window.sampleQuantumBitstring(),
+            source: 'local-sim',
+            backend: 'browser-fallback',
+          });
+        } finally {
+          measuring = false;
+        }
+      }
+
+      // O QPS é coletado com uma pinça (VR) ou ao passar por ele (desktop).
+      scene.addEventListener('qps-collected', collapseQuantumState);
+
+      window.addEventListener('quantum-measured', () => {
+        hint.setAttribute(
+          'text',
+          'value: QPS ENCONTRADO — localize as escadas antes do próximo colapso; align: center; color: #fff0c7; width: 1.1'
+        );
+      });
+    </script>
+  </body>
+</html>

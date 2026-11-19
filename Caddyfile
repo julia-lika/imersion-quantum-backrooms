@@ -1,0 +1,15 @@
+{
+	http_port 8080
+	https_port 8443
+	skip_install_trust
+}
+
+localhost {
+  handle /api/* {
+    reverse_proxy quantum-api:8000
+  }
+
+	root * /srv
+	file_server
+	header Cache-Control "no-cache"
+}
