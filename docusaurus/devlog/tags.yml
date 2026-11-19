@@ -1,6 +1,8 @@
 planejamento:
   label: Planejamento
+desenvolvimento:
+  label: Desenvolvimento
+hardware:
+  label: Hardware
 vr:
   label: VR
-gameplay:
-  label: Gameplay
