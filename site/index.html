@@ -244,6 +244,7 @@
     <script src="js/components/hand-gestures.js"></script>
     <script src="js/components/player-locomotion.js"></script>
     <script src="js/components/wrist-hud.js"></script>
+    <script src="js/components/vr-effects.js"></script>
     <script src="js/components/quantum-ghost.js?v=20261118-5"></script>
     <script src="js/components/superposed-wall.js"></script>
     <script src="js/components/light-flicker.js"></script>
@@ -320,7 +321,7 @@
         hand-gestures
         player-locomotion
       >
-        <a-entity id="head" camera position="0 1.6 0" look-controls>
+        <a-entity id="head" camera position="0 1.6 0" look-controls vr-effects>
           <a-entity
             id="desktop-hint"
             position="0 -0.34 -1.1"
@@ -416,10 +417,14 @@
         return metrics;
       }
 
-      startGame.addEventListener('click', () => {
+      function hideStartScreen() {
         startScreen.hidden = true;
         hud.hidden = false;
-      });
+      }
+
+      startGame.addEventListener('click', hideStartScreen);
+      // Entrar em VR sem clicar em ENTER também inicia o jogo.
+      scene.addEventListener('enter-vr', hideStartScreen);
 
       function applyMeasurement(result) {
         measured = true;

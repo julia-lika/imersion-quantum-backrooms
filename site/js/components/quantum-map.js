@@ -127,6 +127,13 @@ AFRAME.registerComponent('quantum-map', {
 
     this.addItems(map, origin, cellSize);
     this.el.setAttribute('data-map-state', map.state);
+    window.quantumMapStats = {
+      renders: (window.quantumMapStats?.renders ?? 0) + 1,
+      bitstring: map.bitstring,
+      stairsVisible: this.data.stairsVisible,
+      stairs: `${map.stairs.x},${map.stairs.z}`,
+      doorModel: Boolean(document.querySelector('#door-yellow-model')?.data),
+    };
     this.el.sceneEl.emit('maze-world-updated', { stairs: map.stairs });
   },
 
@@ -206,6 +213,16 @@ AFRAME.registerComponent('quantum-map', {
     door.setAttribute('door-proximity-animation', 'target: #player-head; radius: 2.5');
     door.setAttribute('class', 'door-yellow');
     stairs.appendChild(door);
+
+    // Farol: feixe ciano pulsante que aparece mesmo se o modelo da porta demorar
+    // ou falhar, e que se vê de longe pelos corredores (também em VR).
+    const beacon = document.createElement('a-cylinder');
+    beacon.setAttribute('radius', '0.08');
+    beacon.setAttribute('height', '4.6');
+    beacon.setAttribute('position', '0 2.3 0');
+    beacon.setAttribute('material', 'color: #44ffcc; shader: flat; transparent: true; opacity: 0.55');
+    beacon.setAttribute('animation', 'property: material.opacity; from: 0.25; to: 0.7; dir: alternate; loop: true; dur: 900');
+    stairs.appendChild(beacon);
 
     const trigger = document.createElement('a-box');
     trigger.setAttribute('id', 'stairs-trigger');

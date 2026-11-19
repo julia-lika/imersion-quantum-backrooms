@@ -32,6 +32,9 @@
     }
 
     info.teclas_recebidas = [...keysSeen].slice(-6).join(' ') || 'nenhuma';
+    info.mapa = window.quantumMapStats || 'ainda não renderizado';
+    info.medicao = window.quantumMeasureStats || 'nenhuma medição ainda';
+    info.jogo_ativo = window.quantumPlayer ? window.quantumPlayer.active : 'sem quantumPlayer';
     info.aframe = window.AFRAME ? window.AFRAME.version : 'NÃO CARREGOU';
     info.fisica = Boolean(window.quantumPhysics);
     info.gerador = typeof window.generateQuantumMap === 'function';
