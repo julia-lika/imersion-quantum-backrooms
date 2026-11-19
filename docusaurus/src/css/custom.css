@@ -1,0 +1,30 @@
+/* Paleta inspirada nos Backrooms: amarelo envelhecido e luz fluorescente. */
+:root {
+  --ifm-color-primary: #8a7420;
+  --ifm-color-primary-dark: #7c681d;
+  --ifm-color-primary-darker: #75631b;
+  --ifm-color-primary-darkest: #615116;
+  --ifm-color-primary-light: #988023;
+  --ifm-color-primary-lighter: #9f8525;
+  --ifm-color-primary-lightest: #b3962a;
+  --ifm-code-font-size: 95%;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #d9c25e;
+  --ifm-color-primary-dark: #d3b944;
+  --ifm-color-primary-darker: #cfb43a;
+  --ifm-color-primary-darkest: #b0982b;
+  --ifm-color-primary-light: #dfcb78;
+  --ifm-color-primary-lighter: #e2d082;
+  --ifm-color-primary-lightest: #ebdea3;
+  --ifm-background-color: #15140f;
+}
+
+.slides-embed {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  margin: 1rem 0;
+}
