@@ -1,6 +1,6 @@
 ---
 slug: ficha-e-primeira-versao
-title: Ficha do projeto e início do jogo em A-Frame
+title: Ficha do projeto
 authors: [julia]
 tags: [planejamento, desenvolvimento]
 ---

@@ -1,6 +1,6 @@
 ---
 slug: meta-quest
-title: Toques finais da Sprint 1 e jogo rodando no Meta Quest
+title: Jogo no Meta Quest
 authors: [julia]
 tags: [vr, desenvolvimento]
 ---
