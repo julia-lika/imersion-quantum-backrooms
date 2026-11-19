@@ -13,6 +13,7 @@ const MOUTH_RADIUS = 0.16;
 const PHASE_HOLD_SECONDS = 1.1;
 const PHASE_COOLDOWN_SECONDS = 2;
 const GRAB_RADIUS = 0.3;
+const TOUCH_RADIUS = 0.2;
 const DESKTOP_PICKUP_RADIUS = 0.85;
 
 AFRAME.registerComponent('hand-gestures', {
@@ -126,7 +127,22 @@ AFRAME.registerComponent('hand-gestures', {
     );
 
     this.updateHeldItems();
+    this.touchCollectQps();
     this.updatePhasePress(dt, bothTracked);
+  },
+
+  // Reserva para a pinça: tocar o QPS com a mão também o coleta. Evita depender
+  // do evento select do navegador (que varia entre mãos e controles).
+  touchCollectQps() {
+    if (!window.quantumPlayer?.active) return;
+
+    ['left', 'right'].forEach((side) => {
+      const hand = this.tracker.hands[side];
+      if (!hand.tracked) return;
+
+      const item = this.findNearestItem(hand.world, TOUCH_RADIUS);
+      if (item?.dataset.item === 'qps') this.consume(item, 'qps-collected', 600);
+    });
   },
 
   setEyesCovered(covered) {
