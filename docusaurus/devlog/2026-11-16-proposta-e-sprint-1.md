@@ -1,6 +1,6 @@
 ---
 slug: proposta-e-sprint-1
-title: Proposta definida e entregas da Sprint 1
+title: Proposta e Sprint 1
 authors: [julia]
 tags: [planejamento]
 ---
