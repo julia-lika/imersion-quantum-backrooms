@@ -1,0 +1,24 @@
+services:
+  quantum-api:
+    build: ./backend
+    image: quantum-backrooms-quantum-api
+    environment:
+      IBM_QUANTUM_API_KEY: ${IBM_QUANTUM_API_KEY:-}
+      IBM_QUANTUM_INSTANCE: ${IBM_QUANTUM_INSTANCE:-}
+      IBM_QUANTUM_BACKEND: ${IBM_QUANTUM_BACKEND:-}
+      IBM_MIN_INTERVAL_SECONDS: ${IBM_MIN_INTERVAL_SECONDS:-12}
+
+  aframe:
+    build: .
+    image: quantum-backrooms-aframe
+    depends_on:
+      - quantum-api
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - ./site:/srv:ro
+      - caddy_data:/data
+
+volumes:
+  caddy_data:

@@ -1,0 +1,4 @@
+fastapi~=0.115
+uvicorn[standard]~=0.34
+qiskit~=2.5.2
+qiskit-ibm-runtime~=0.47.0
