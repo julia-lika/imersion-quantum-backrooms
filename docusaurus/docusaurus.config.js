@@ -10,7 +10,7 @@ const baseUrl = process.env.DOCS_BASE_URL || '/';
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Quantum Backrooms VR',
-  tagline: 'Apresentações das sprints e devlog do projeto',
+  tagline: 'Entregas semanais e devlog do projeto',
   favicon: 'img/favicon.svg',
 
   future: {
@@ -38,10 +38,10 @@ const config = {
       'classic',
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
-        // Aba "Sprints": uma página por sprint, com a apresentação.
+        // Aba "Semanas": uma página por semana, com a entrega.
         docs: {
-          path: 'sprints',
-          routeBasePath: 'sprints',
+          path: 'semanas',
+          routeBasePath: 'semanas',
           sidebarPath: './sidebars.js',
         },
         // Aba "Devlog": diário de desenvolvimento, um post por entrada.
@@ -80,9 +80,9 @@ const config = {
         items: [
           {
             type: 'docSidebar',
-            sidebarId: 'sprintsSidebar',
+            sidebarId: 'semanasSidebar',
             position: 'left',
-            label: 'Sprints',
+            label: 'Semanas',
           },
           {
             to: '/devlog',

@@ -2,7 +2,7 @@
 
 Site em [Docusaurus](https://docusaurus.io/) com duas abas:
 
-- **Sprints** (`sprints/`): uma página por sprint, com a apresentação embutida em PDF e o PowerPoint para baixar. Os arquivos ficam em `static/apresentacoes/`.
+- **Semanas** (`semanas/`): uma página por semana, com a entrega (apresentação, ficha e o que mais for pedido).
 - **Devlog** (`devlog/`): diário de desenvolvimento. Cada entrada é um arquivo `AAAA-MM-DD-titulo.md`.
 
 ## Rodar localmente
@@ -24,10 +24,9 @@ O resultado fica em `docusaurus/build`. Para publicar num subcaminho, defina
 `DOCS_URL` e `DOCS_BASE_URL` antes do build, por exemplo
 `DOCS_URL=https://julia-lika.github.io DOCS_BASE_URL=/imersion-quantum-backrooms/docs/`.
 
-## Adicionar a apresentação de uma sprint
+## Adicionar a entrega de uma semana
 
-1. Exporte os slides em PDF e coloque o PDF e o `.pptx` em `static/apresentacoes/`, com o mesmo nome (por exemplo `sprint-2-mapa-v2.pdf` e `sprint-2-mapa-v2.pptx`).
-2. Renomeie `sprints/sprint-2.md` para `sprint-2.mdx` e copie o bloco `Slides` do topo de `sprints/sprint-1.mdx`, trocando o nome do arquivo.
+Edite `semanas/semana-N.md`. Se a semana tiver mais de uma página, transforme-a numa pasta, como `semanas/semana-1/`, com um `_category_.json` e um `index.md`.
 
 ## Escrever no devlog
 

@@ -4,7 +4,7 @@ import styles from './index.module.css';
 
 export default function Home() {
   return (
-    <Layout description="Apresentações das sprints e devlog do Quantum Backrooms VR">
+    <Layout description="Entregas semanais e devlog do Quantum Backrooms VR">
       <header className={styles.hero}>
         <div className="container">
           <h1 className={styles.title}>Quantum Backrooms VR</h1>
@@ -13,8 +13,8 @@ export default function Home() {
             O mundo só decide o que é quando você o mede.
           </p>
           <div className={styles.buttons}>
-            <Link className="button button--primary button--lg" to="/sprints">
-              Apresentações das sprints
+            <Link className="button button--primary button--lg" to="/semanas">
+              Entregas semanais
             </Link>
             <Link className="button button--secondary button--lg" to="/devlog">
               Devlog
