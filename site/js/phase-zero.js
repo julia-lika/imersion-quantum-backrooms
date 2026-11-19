@@ -141,7 +141,9 @@ function syncHud() {
 // Sanidade baixa engrossa a névoa e escurece o andar.
 function syncAtmosphere() {
   const madness = 1 - game.current.sanity / 100;
-  elements['backrooms-scene'].setAttribute('fog', 'density', 0.035 + madness * 0.09);
+  // Perto da entidade a névoa engrossa: em VR é o substituto do blur (CSS não aparece).
+  const contact = window.quantumPlayer?.effects?.contact ?? 0;
+  elements['backrooms-scene'].setAttribute('fog', 'density', 0.035 + madness * 0.09 + contact * 0.12);
 }
 
 function syncMap() {
@@ -282,7 +284,7 @@ function transitionToNextFloor() {
     syncMap();
     persistProgress();
     document.body.classList.remove('floor-transition');
-    setHint(`FLOOR ${String(game.current.floor).padStart(2, '0')} — encontre o QPS para localizar as escadas`);
+    setHint(`FLOOR ${String(game.current.floor).padStart(2, '0')} — encontre o QPS para localizar a porta`);
     transitioning = false;
     window.quantumPlayer.active = isActive();
     renderTelemetry();
