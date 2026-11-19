@@ -234,6 +234,7 @@ function resolvePhaseShift({ detail }) {
   survival = attempt.state;
   setSanity(attempt.sanity);
   flash('phase-shift');
+  elements['backrooms-scene'].emit('screen-effect', { type: 'flash', color: '#c9a8ff', duration: 420, peak: 0.5 });
   elements['backrooms-scene'].emit('phase-shift-resolved', {
     success: attempt.success,
     target: detail.target,
@@ -271,6 +272,7 @@ function transitionToNextFloor() {
   persistProgress();
   setHint('DESCIDA CONFIRMADA — preparando o próximo andar');
   document.body.classList.add('floor-transition');
+  elements['backrooms-scene'].emit('screen-effect', { type: 'fade', color: '#000000', duration: 900 });
 
   window.setTimeout(() => {
     const nextBits = window.sampleQuantumBitstring?.() || initialBits;
@@ -298,6 +300,7 @@ function loseSanity() {
   transitioning = true;
   window.quantumPlayer.active = false;
   document.body.classList.add('sanity-lost');
+  elements['backrooms-scene'].emit('screen-effect', { type: 'fade', color: '#000000', duration: 2400 });
 
   window.setTimeout(() => {
     const nextBits = window.sampleQuantumBitstring?.() || initialBits;
@@ -319,6 +322,7 @@ function loseSanity() {
 function updateSurvival() {
   if (!isActive()) {
     document.body.classList.remove('ghost-contact');
+    window.quantumPlayer.effects = { contact: 0, visor: survival.visor, madness: 0 };
     return;
   }
 
@@ -336,12 +340,22 @@ function updateSurvival() {
     'ghost-contact',
     ghost.distance <= SURVIVAL.ghostContactRadiusCells
   );
+  // Em VR o CSS não aparece: o componente vr-effects lê este estado a cada quadro.
+  // O efeito cresce a partir de ~3 células e chega ao máximo no contato.
+  window.quantumPlayer.effects = {
+    contact: ghost.distance <= SURVIVAL.ghostContactRadiusCells
+      ? 1
+      : Math.max(0, 1 - ghost.distance / 3),
+    visor: survival.visor,
+    madness: 1 - game.current.sanity / 100,
+  };
   syncAtmosphere();
 
   result.events.forEach((event) => {
     if (event === 'visor-depleted') setHint('ZETA VISOR DESCARREGADO');
     if (event === 'ghost-strike') {
       flash('ghost-strike', 700);
+      elements['backrooms-scene'].emit('screen-effect', { type: 'flash', color: '#b0001a', duration: 700, peak: 0.7 });
       setHint('VOCÊ ENCAROU A ENTIDADE — cubra os olhos com as mãos');
       elements['backrooms-scene'].emit('ghost-strike');
     }
@@ -369,14 +383,21 @@ function updateSurvival() {
 function bindGameEvents() {
   const scene = elements['backrooms-scene'];
 
-  document.getElementById('start-game').addEventListener('click', () => {
+  // O botão ENTER é HTML e não aparece no headset, e o botão de VR do A-Frame fica
+  // acima da tela inicial. Entrar em VR também precisa iniciar o jogo, senão
+  // `quantumPlayer.active` fica falso: a entidade não anda e o QPS não pode ser pego.
+  function beginGame() {
+    if (started) return;
     started = true;
     window.quantumPlayer.active = isActive();
     elements['phase-telemetry'].hidden = false;
     syncMap();
     syncAtmosphere();
     renderTelemetry();
-  });
+  }
+
+  document.getElementById('start-game').addEventListener('click', beginGame);
+  scene.addEventListener('enter-vr', beginGame);
 
   scene.addEventListener('visor-toggle-request', toggleVisor);
   scene.addEventListener('phase-shift-attempt', resolvePhaseShift);
@@ -411,6 +432,14 @@ function bindGameEvents() {
       stairs: map.stairs,
     });
     setSanity(state.current.sanity);
+    window.quantumMeasureStats = {
+      count: (window.quantumMeasureStats?.count ?? 0) + 1,
+      bitstring: detail.result.bitstring,
+      source: `${detail.result.source} // ${detail.result.backend}`,
+      stairs: map.stairs,
+    };
+    // Sinal visível em VR de que o estado colapsou e o mapa vai mudar.
+    elements['backrooms-scene'].emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.35 });
     syncMap();
     persistProgress();
     renderTelemetry();
