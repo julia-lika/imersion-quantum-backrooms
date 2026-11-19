@@ -26,7 +26,29 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Configure Pages
+        id: pages
         uses: actions/configure-pages@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docusaurus/package-lock.json
+
+      - name: Build Docusaurus docs
+        working-directory: docusaurus
+        env:
+          DOCS_URL: ${{ steps.pages.outputs.origin }}
+          DOCS_BASE_URL: ${{ steps.pages.outputs.base_path }}/docs/
+        run: |
+          npm ci
+          npm run build
+
+      - name: Add docs to the site
+        run: |
+          rm -rf site/docs
+          cp -r docusaurus/build site/docs
 
       - name: Upload site files
         uses: actions/upload-pages-artifact@v4
