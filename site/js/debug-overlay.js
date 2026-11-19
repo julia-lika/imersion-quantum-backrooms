@@ -32,6 +32,11 @@
     }
 
     info.teclas_recebidas = [...keysSeen].slice(-6).join(' ') || 'nenhuma';
+    const ghost = window.quantumPlayer?.ghost;
+    info.fantasma = ghost
+      ? { dist: Number(ghost.distance.toFixed(2)), vista: ghost.inView, caca: ghost.hunting }
+      : 'sem dados (quantum-ghost não rodou)';
+    info.efeitos = window.quantumPlayer?.effects || 'sem dados';
     info.mapa = window.quantumMapStats || 'ainda não renderizado';
     info.medicao = window.quantumMeasureStats || 'nenhuma medição ainda';
     info.jogo_ativo = window.quantumPlayer ? window.quantumPlayer.active : 'sem quantumPlayer';
