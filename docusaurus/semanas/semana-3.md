@@ -6,7 +6,7 @@ sidebar_position: 3
 
 # Semana 3 · Conteúdo, áudio e conforto
 
-**Período:** 2 a 8 de dezembro de 2026
+**Período:** 30 de novembro a 4 de dezembro de 2026
 
 :::info Em breve
 A entrega desta semana será publicada aqui.

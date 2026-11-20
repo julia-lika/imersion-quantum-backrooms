@@ -12,9 +12,9 @@ O projeto segue o plano de quatro semanas:
 
 | Semana | Período | Foco |
 | --- | --- | --- |
-| [Semana 1](./semana-1) | 18 a 24 de novembro | Proposta do jogo e ficha de projeto |
-| [Semana 2](./semana-2) | 25 de novembro a 1º de dezembro | Gerador de mapa v2 e loop completo |
-| [Semana 3](./semana-3) | 2 a 8 de dezembro | Conteúdo, áudio e conforto, até o feature freeze |
-| [Semana 4](./semana-4) | 9 a 15 de dezembro | Polimento, performance e entrega |
+| [Semana 1](./semana-1) | 16 a 19 de novembro | Proposta do jogo e ficha de projeto |
+| [Semana 2](./semana-2) | 23 a 27 de novembro | Gerador de mapa v2 e loop completo |
+| [Semana 3](./semana-3) | 30 de novembro a 4 de dezembro | Conteúdo, áudio e conforto, até o feature freeze |
+| [Semana 4](./semana-4) | 7 a 11 de dezembro | Polimento, performance e entrega |
 
 O registro do dia a dia fica no [Devlog](/devlog).
