@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # Semana 2 · Gerador de mapa v2 e loop completo
 
-**Período:** 25 de novembro a 1º de dezembro de 2026
+**Período:** 23 a 27 de novembro de 2026
 
 :::info Em breve
 A entrega desta semana será publicada aqui.

@@ -6,7 +6,7 @@ sidebar_position: 1
 
 # Semana 1 · Proposta e ficha de projeto
 
-**Período:** 18 a 24 de novembro de 2026
+**Período:** 16 a 19 de novembro de 2026
 
 ## Entregas
 
