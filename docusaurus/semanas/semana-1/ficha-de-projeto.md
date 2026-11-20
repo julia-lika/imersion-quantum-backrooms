@@ -44,7 +44,7 @@ Pensando nas três técnicas da aula, a perspectiva dá a profundidade a partir 
 
 ## 6. Risco · como serviria para enganar
 
-O risco que a aula aponta é o do panorama de Sedan: uma imersão feita para suspender a capacidade de relativizar o que se vê. O headset faz o mesmo, porque prende o corpo num ponto e apaga as bordas do mundo. Neste jogo, isso aparece de três formas:
+O risco que a aula aponta é o do panorama de Sedan: uma imersão feita para suspender a capacidade de relativizar o que se vê. O headset faz o mesmo, porque prende o corpo num ponto e apaga as bordas do mundo. Neste jogo, isso aparece de quatro formas:
 
 - **Enganar sobre a ciência:** vender como "universo quântico real" algo que é só aleatoriedade comum. É um risco concreto aqui: o circuito atual (H + CZ) produz uma distribuição uniforme, indistinguível de um gerador comum. **Mitigação:** rótulo honesto da fonte dos dados, um circuito que de fato molde o mapa e a revelação final de como tudo funciona.
 - **Enganar o corpo:** como Eberhard, que saiu do panorama tonto e sem ter como escapar, a mesma imersão que dá medo pode desorientar demais ou dificultar a saída. **Mitigação:** pausa e saída sempre à mão (inclusive por gesto), aviso de conteúdo e de conforto antes de começar, vinheta ao mover, opção de teleporte e sessões curtas.
