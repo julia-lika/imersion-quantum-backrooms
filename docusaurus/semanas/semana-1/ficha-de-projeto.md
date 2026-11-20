@@ -48,6 +48,9 @@ O risco que a aula aponta é o do panorama de Sedan: uma imersão feita para sus
 
 - **Enganar sobre a ciência:** vender como "universo quântico real" algo que é só aleatoriedade comum. É um risco concreto aqui: o circuito atual (H + CZ) produz uma distribuição uniforme, indistinguível de um gerador comum. **Mitigação:** rótulo honesto da fonte dos dados, um circuito que de fato molde o mapa e a revelação final de como tudo funciona.
 - **Enganar o corpo:** como Eberhard, que saiu do panorama tonto e sem ter como escapar, a mesma imersão que dá medo pode desorientar demais ou dificultar a saída. **Mitigação:** pausa e saída sempre à mão (inclusive por gesto), aviso de conteúdo e de conforto antes de começar, vinheta ao mover, opção de teleporte e sessões curtas.
+- **Convencer de algo falso:** passar um sorteio comum por "universo quântico real", exibir indicadores como se fossem medidas de hardware ou sugerir que o olhar de uma pessoa altera a realidade, quando, na física, medir é interagir com um aparelho. **Mitigação:** uma tela final que explique que medir não é olhar e que o gato de Schrödinger é só uma metáfora.
 - **Pressão para continuar:** a sanidade cai sem parar e empurra o jogador a seguir jogando. **Mitigação:** não prender pelo medo. A derrota deve ser clara e o reinício, simples.
+
+Mitigar esse risco não significa deixar o jogo menos real. O perigo de Sedan não estava no realismo, e sim na falta de saída e de pistas de que aquilo era uma pintura. O jogo mantém a escuridão, o susto e a incerteza, que fazem dele um jogo de horror, e devolve à pessoa a chance de relativizar.
 
 Toda imersão esconde a moldura e prende o corpo num ponto, e quem projeta decide o que a pessoa vai sentir, e para quê. Aqui, a decisão é usar o medo para levar à curiosidade, e mostrar a moldura no fim para que a pessoa saia sabendo que viveu uma representação.
