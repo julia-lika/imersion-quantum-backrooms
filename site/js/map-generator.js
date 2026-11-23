@@ -195,23 +195,72 @@ function buildMaze(bitstring, size = MAZE_SIZE) {
   return { maze, roomCenters };
 }
 
+// A porta de saída fica embutida na parede externa do mapa (atrás dela só há
+// escuridão) e longe da entrada, para obrigar o jogador a cruzar as salas.
 export function findStairsCell(maze, bitstring) {
+  const size = maze.length;
+  const minDistance = Math.floor(size * 0.6);
   const floorCells = [];
+  const doorCells = [];
 
   maze.forEach((row, z) => {
     row.forEach((cell, x) => {
-      if (cell === '.' && !(x === 1 && z === 1)) {
-        floorCells.push({ x, z });
-      }
+      if (cell !== '.' || (x === 1 && z === 1)) return;
+      floorCells.push({ x, z });
+      if (x + z - 2 < minDistance) return;
+      // Parede da borda vizinha: nunca vira parede em superposição.
+      const wall = [[1, 0], [0, 1], [-1, 0], [0, -1]].find(([dx, dz]) => (
+        (x + dx === 0 || x + dx === size - 1 || z + dz === 0 || z + dz === size - 1) &&
+        maze[z + dz]?.[x + dx] === '#'
+      ));
+      if (wall) doorCells.push({ x, z, wall: { dx: wall[0], dz: wall[1] } });
     });
   });
 
-  // A porta fica longe da entrada para obrigar o jogador a cruzar as salas.
-  const minDistance = Math.floor(maze.length * 0.6);
-  const farCells = floorCells.filter(({ x, z }) => x + z - 2 >= minDistance);
-  const pool = farCells.length > 0 ? farCells : floorCells;
+  const pool = doorCells.length > 0 ? doorCells : floorCells;
   const seed = Number.parseInt(normalizeBits(bitstring, 12), 2) || 1;
-  return pool[seed % pool.length] || { x: maze.length - 2, z: maze.length - 2 };
+  return pool[seed % pool.length] || { x: size - 2, z: size - 2, wall: { dx: 1, dz: 0 } };
+}
+
+// Fase 0: lobby fixo de treinamento. Um salão de 11 x 17 células a partir da
+// entrada, com as estações do tutorial e a porta para o FLOOR 01 no fundo.
+export const LOBBY = {
+  minX: 1,
+  maxX: 11,
+  minZ: 1,
+  maxZ: 17,
+  door: { x: 6, z: 17, wall: { dx: 0, dz: 1 } },
+  // Células ocupadas por móveis (bloqueiam o jogador).
+  furniture: [
+    [1, 4], [1, 5], [1, 6], // sofá
+    [5, 4], [6, 4], // mesa com o caderno
+    [11, 7], [11, 8], // mesa de metal com o terminal
+    [3, 5], // poltrona
+  ],
+  items: {
+    almondWater: { x: 9, z: 10 },
+    qps: { x: 3, z: 12 },
+  },
+};
+
+export function generateLobbyMap(size = MAZE_SIZE) {
+  const maze = Array.from({ length: size }, (_, z) => Array.from({ length: size }, (__, x) => (
+    x >= LOBBY.minX && x <= LOBBY.maxX && z >= LOBBY.minZ && z <= LOBBY.maxZ ? '.' : '#'
+  )));
+  LOBBY.furniture.forEach(([x, z]) => { maze[z][x] = 'F'; });
+
+  return {
+    bitstring: '000000000000',
+    lobby: true,
+    layout: [],
+    maze,
+    roomCenters: [],
+    stairs: { ...LOBBY.door, visible: true },
+    quantumMetrics: analyzeQuantumState('000000000000'),
+    state: 'lobby',
+    isReachable: true,
+    entangledRooms: [],
+  };
 }
 
 export function generateQuantumMap(bitstring) {
@@ -290,6 +339,8 @@ export function analyzeQuantumState(bitstring) {
 
 if (typeof window !== 'undefined') {
   window.generateQuantumMap = generateQuantumMap;
+  window.generateLobbyMap = generateLobbyMap;
+  window.LOBBY_LAYOUT = LOBBY;
   window.sampleQuantumBitstring = sampleQuantumBitstring;
   window.analyzeQuantumState = analyzeQuantumState;
   window.dispatchEvent(new Event('quantum-generator-ready'));

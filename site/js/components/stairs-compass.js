@@ -39,7 +39,10 @@ AFRAME.registerComponent('stairs-compass', {
       this.stairsEl = document.getElementById('stairs');
     }
 
-    const visible = Boolean(this.stairsEl) && window.quantumPlayer?.active !== false;
+    const shared = window.quantumPlayer;
+    // No lobby, a seta só aparece depois de ler o caderno, e nunca com o painel aberto.
+    const lobbyHidden = shared?.floor === 0 && (!shared.briefingRead || shared.briefingOpen);
+    const visible = Boolean(this.stairsEl) && shared?.active !== false && !lobbyHidden;
     this.arrow.visible = visible;
     if (!visible) return;
 

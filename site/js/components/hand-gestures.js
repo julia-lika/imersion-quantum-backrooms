@@ -16,6 +16,8 @@ const PHASE_COOLDOWN_SECONDS = 2;
 const GRAB_RADIUS = 0.3;
 const TOUCH_RADIUS = 0.2;
 const DESKTOP_PICKUP_RADIUS = 0.85;
+const DESKTOP_GRAB_RADIUS = 1.3;
+const DESKTOP_DRINK_MS = 700;
 
 AFRAME.registerComponent('hand-gestures', {
   init() {
@@ -35,6 +37,14 @@ AFRAME.registerComponent('hand-gestures', {
     this.inverseHead = new THREE.Quaternion();
     this.itemWorld = new THREE.Vector3();
 
+    this.desktopHeld = null;
+    this.desktopNearby = null;
+    this.drinkStart = 0;
+    this.desktopRight = new THREE.Vector3();
+    this.desktopHold = new THREE.Vector3();
+    this.onDesktopKeyDown = (event) => this.onDesktopKey(event);
+    window.addEventListener('keydown', this.onDesktopKeyDown);
+
     this.onPinchStart = ({ detail }) => this.handlePinch(detail.hand);
     this.onPinchEnd = ({ detail }) => this.release(detail.hand);
 
@@ -43,6 +53,7 @@ AFRAME.registerComponent('hand-gestures', {
   },
 
   remove() {
+    window.removeEventListener('keydown', this.onDesktopKeyDown);
     this.el.removeEventListener('hand-pinchstart', this.onPinchStart);
     this.el.removeEventListener('hand-pinchend', this.onPinchEnd);
   },
@@ -122,7 +133,8 @@ AFRAME.registerComponent('hand-gestures', {
 
   consume(item, eventName, removeAfter = 0) {
     item.dataset.consumed = 'true';
-    this.el.sceneEl.emit(eventName, { id: item.dataset.itemId });
+    // Itens de treino (lobby) avisam quem escuta para não disparar a medição real.
+    this.el.sceneEl.emit(eventName, { id: item.dataset.itemId, training: item.dataset.training === 'true' });
     window.setTimeout(() => item.parentNode?.removeChild(item), removeAfter);
   },
 
@@ -233,19 +245,81 @@ AFRAME.registerComponent('hand-gestures', {
     return physics.isCellSolid(world, cell.x, cell.z, this.el.sceneEl.time / 1000);
   },
 
+  // Desktop: o QPS é coletado ao passar por ele. A Almond Water é pega com F
+  // (fica na mão, no canto da tela) e um segundo F leva a garrafa à boca.
   updateDesktopPickup(headWorld) {
     if (!headWorld || !window.quantumPlayer?.active) return;
 
+    let nearestWater = null;
+    let nearestDistance = DESKTOP_GRAB_RADIUS;
     this.el.sceneEl.querySelectorAll('[data-item]').forEach((item) => {
-      if (item.dataset.consumed) return;
+      if (item.dataset.consumed || item === this.desktopHeld) return;
       item.object3D.getWorldPosition(this.itemWorld);
       const distance = Math.hypot(this.itemWorld.x - headWorld.x, this.itemWorld.z - headWorld.z);
-      if (distance > DESKTOP_PICKUP_RADIUS) return;
 
-      this.consume(
-        item,
-        item.dataset.item === 'qps' ? 'qps-collected' : 'almond-water-drunk'
-      );
+      if (item.dataset.item === 'qps') {
+        if (distance <= DESKTOP_PICKUP_RADIUS) this.consume(item, 'qps-collected');
+        return;
+      }
+      if (distance < nearestDistance) {
+        nearestWater = item;
+        nearestDistance = distance;
+      }
     });
+
+    if (nearestWater !== this.desktopNearby) {
+      this.desktopNearby = nearestWater;
+      if (nearestWater && !this.desktopHeld) {
+        this.el.sceneEl.emit('interaction-hint', { text: 'ALMOND WATER — aperte F para pegar' });
+      }
+    }
+    this.updateDesktopHeld();
+  },
+
+  onDesktopKey(event) {
+    if (event.code !== 'KeyF' || event.repeat || this.tracker?.inVr) return;
+    if (!window.quantumPlayer?.active) return;
+
+    if (this.desktopHeld && !this.drinkStart) {
+      this.drinkStart = performance.now();
+      return;
+    }
+    const item = this.desktopNearby;
+    if (!item?.isConnected || item.dataset.consumed) return;
+
+    this.desktopHeld = item;
+    this.drinkStart = 0;
+    item.removeAttribute('animation');
+    this.el.sceneEl.emit('interaction-hint', { text: 'ALMOND WATER NA MÃO — aperte F de novo para beber' });
+  },
+
+  // Garrafa presa à câmera; ao beber, sobe até a boca e inclina.
+  updateDesktopHeld() {
+    const item = this.desktopHeld;
+    if (!item) return;
+    if (!item.isConnected || item.dataset.consumed) {
+      this.desktopHeld = null;
+      return;
+    }
+
+    const { head } = this.tracker;
+    const forward = head.forward;
+    const right = this.desktopRight.set(-forward.z, 0, forward.x).normalize();
+    const progress = this.drinkStart ? Math.min(1, (performance.now() - this.drinkStart) / DESKTOP_DRINK_MS) : 0;
+    const ease = progress * progress * (3 - 2 * progress);
+    const hold = this.desktopHold.copy(head.world)
+      .addScaledVector(forward, 0.36 - ease * 0.22)
+      .addScaledVector(right, 0.16 * (1 - ease))
+      .add({ x: 0, y: -0.2 + ease * 0.14, z: 0 });
+
+    item.object3D.position.copy(item.object3D.parent.worldToLocal(hold));
+    item.object3D.rotation.set(0, Math.atan2(-forward.x, -forward.z), 0);
+    item.object3D.rotateX(ease * 1.4);
+
+    if (progress >= 1) {
+      this.desktopHeld = null;
+      this.drinkStart = 0;
+      this.consume(item, 'almond-water-drunk');
+    }
   },
 });

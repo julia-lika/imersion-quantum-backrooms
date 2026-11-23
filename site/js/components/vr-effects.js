@@ -5,7 +5,7 @@
 //
 // Leitura contínua: window.quantumPlayer.effects = { contact, visor, madness }
 //   contact 0..1 (proximidade da entidade), visor boolean, madness 0..1 (1 - sanidade)
-// Eventos pontuais na cena: 'screen-effect' { type: 'flash' | 'fade', color, duration, peak }
+// Eventos pontuais na cena: 'screen-effect' { type: 'flash' | 'fade' | 'blink', color, duration, peak }
 // O Quest tem ~50° de meio-campo por olho. Com o plano a 0,35 m, 1,1 de lado cobre
 // ~58°, então a borda opaca da vinheta cai dentro do que o jogador realmente vê.
 const VIGNETTE_SIZE = 1.1;
@@ -126,6 +126,16 @@ AFRAME.registerComponent('vr-effects', {
     if (t >= 1) {
       this.timed = null;
       return 0;
+    }
+
+    if (this.timed.type === 'blink') {
+      // Mesma curva das pálpebras do desktop: fecha devagar, segura, reabre piscando.
+      const smooth = (value) => value * value * (3 - 2 * value);
+      if (t < 0.38) return smooth(t / 0.38);
+      if (t < 0.54) return 1;
+      if (t < 0.7) return 1 - 0.7 * smooth((t - 0.54) / 0.16);
+      if (t < 0.78) return 0.3 + 0.35 * smooth((t - 0.7) / 0.08);
+      return 0.65 * (1 - smooth((t - 0.78) / 0.22));
     }
 
     if (this.timed.type === 'fade') {

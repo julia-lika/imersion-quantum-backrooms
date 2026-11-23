@@ -59,7 +59,10 @@ export function isSuperposedOpen(offset, timeSeconds) {
 
 export function isCellSolid(world, x, z, timeSeconds = 0) {
   if (x < 0 || z < 0 || x >= world.size || z >= world.size) return true;
-  if (world.maze[z][x] !== '#') return false;
+  const cell = world.maze[z][x];
+  if (cell === '.') return false;
+  // 'F' = móvel do lobby: bloqueia como parede, mas não é desenhado como parede.
+  if (cell !== '#') return true;
 
   const offset = world.superposed.get(cellKey(x, z));
   return offset === undefined || !isSuperposedOpen(offset, timeSeconds);
