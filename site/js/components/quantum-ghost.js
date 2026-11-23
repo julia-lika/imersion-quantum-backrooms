@@ -129,6 +129,13 @@ AFRAME.registerComponent('quantum-ghost', {
     const tracker = this.data.rig?.components['xr-hands'];
     const shared = window.quantumPlayer;
     if (!world || !player || !shared) return;
+    // No lobby (andar 0) a entidade não existe.
+    const inLobby = shared.floor === 0;
+    this.el.object3D.visible = !inLobby;
+    if (inLobby) {
+      shared.ghost = { distance: Infinity, inView: false, hunting: false };
+      return;
+    }
     if (!this.cell) this.spawnFarFromPlayer();
     if (!this.cell) return;
 

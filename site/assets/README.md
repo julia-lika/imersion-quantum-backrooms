@@ -70,3 +70,11 @@ peter.griffin. Its embedded metadata identifies it as CC BY 4.0.
 
 Attribution: peter.griffin
 Source: https://sketchfab.com/3d-models/bacteria-backrooms-e4bf372871f343359a6c23a72639d983
+
+## Furniture Pack
+
+`models/furniture-pack.glb` is the "Furniture Pack" by the soppy prisma
+models, licensed CC BY 4.0. It furnishes the phase 0 lobby (sofa, armchair,
+desk, chairs, metal table and CRT terminal).
+
+Source: https://sketchfab.com/3d-models/furniture-pack-497aaaef39ff470f8438aadf6369c149

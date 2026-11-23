@@ -21,6 +21,7 @@ AFRAME.registerComponent('door-proximity-animation', {
 
   remove() {
     this.el.removeEventListener('model-loaded', this.onModelLoaded);
+    window.clearTimeout(this.pauseTimer);
   },
 
   tick() {
@@ -48,6 +49,11 @@ AFRAME.registerComponent('door-proximity-animation', {
       'animation-mixer',
       'clip: open; loop: once; clampWhenFinished: true'
     );
+    // O clipe "open" abre até ~100° e fecha de novo (2,4 s): congela no meio,
+    // com a porta aberta para a escuridão.
+    this.pauseTimer = window.setTimeout(() => {
+      if (this.el.isConnected) this.el.setAttribute('animation-mixer', 'timeScale', 0);
+    }, 1200);
   },
 });
 
@@ -100,12 +106,14 @@ AFRAME.registerComponent('quantum-map', {
 
     this.el.replaceChildren();
     this.clearStaticMeshes();
-    const map = window.generateQuantumMap(this.data.bitstring);
+    // Andar 0 = lobby de treinamento (sala fixa); os outros vêm do bitstring.
+    const lobby = this.data.floor === 0 && typeof window.generateLobbyMap === 'function';
+    const map = lobby ? window.generateLobbyMap() : window.generateQuantumMap(this.data.bitstring);
     const cellSize = physics.CELL_SIZE;
     const size = map.maze.length;
     const height = physics.WALL_HEIGHT;
     const origin = -((cellSize * size) / 2) + cellSize / 2;
-    const superposed = physics.findSuperposedWalls(map.maze, map.bitstring);
+    const superposed = lobby ? [] : physics.findSuperposedWalls(map.maze, map.bitstring);
     const superposedOffsets = new Map(superposed.map(({ x, z, offset }) => [`${x},${z}`, offset]));
 
     window.quantumWorld = physics.createMazeWorld(map.maze, { cellSize, superposed });
@@ -117,6 +125,7 @@ AFRAME.registerComponent('quantum-map', {
       height,
       tile: 0.8,
       isStatic: (x, z) => !superposedOffsets.has(`${x},${z}`),
+      doorway: this.data.stairsVisible || lobby ? map.stairs : null,
     });
     this.addStaticMesh('walls', walls, this.materials.wall);
     this.addStaticMesh('baseboards', baseboards, this.materials.baseboard);
@@ -126,7 +135,7 @@ AFRAME.registerComponent('quantum-map', {
       cellSize,
       height,
       random: this.seededRandom(map.bitstring),
-      offChance: 0.3,
+      offChance: lobby ? 0 : 0.3,
     });
     this.addStaticMesh('light-panels', panels, this.materials.lightPanel);
     window.quantumLightFixtures = fixtures;
@@ -145,11 +154,14 @@ AFRAME.registerComponent('quantum-map', {
 
     this.addMarker(1, 1, '#ffe69b', 'ENTRADA');
 
-    if (this.data.stairsVisible) {
-      this.addStairs(map.stairs.x, map.stairs.z, origin, cellSize);
+    if (lobby) this.addLobby(origin, cellSize);
+
+    if (this.data.stairsVisible || lobby) {
+      this.addStairs(map.stairs, origin, cellSize);
     }
 
-    this.addItems(map, origin, cellSize);
+    if (lobby) this.addLobbyItems(origin, cellSize);
+    else this.addItems(map, origin, cellSize);
     this.el.setAttribute('data-map-state', map.state);
     window.quantumMapStats = {
       renders: (window.quantumMapStats?.renders ?? 0) + 1,
@@ -158,7 +170,7 @@ AFRAME.registerComponent('quantum-map', {
       stairs: `${map.stairs.x},${map.stairs.z}`,
       doorModel: Boolean(document.querySelector('#door-yellow-model')?.data),
     };
-    this.el.sceneEl.emit('maze-world-updated', { stairs: map.stairs, items: this.itemCells });
+    this.el.sceneEl.emit('maze-world-updated', { stairs: map.stairs, items: this.itemCells, lobby });
   },
 
   // Um QPS por andar (até ser coletado) e garrafas de Almond Water espalhadas.
@@ -185,6 +197,101 @@ AFRAME.registerComponent('quantum-map', {
       item.dataset.item = type;
       item.dataset.itemId = id;
       this.el.appendChild(item);
+    });
+  },
+
+  // Lobby: QPS de treino (não mede nada) e uma Almond Water de verdade.
+  addLobbyItems(origin, cellSize) {
+    const { almondWater, qps } = window.LOBBY_LAYOUT.items;
+    this.itemCells = [almondWater, qps];
+    [
+      { type: 'qps', cell: qps, id: '0-qps-training', training: true },
+      { type: 'almond-water', cell: almondWater, id: '0-almond-water-0' },
+    ].forEach(({ type, cell, id, training }) => {
+      if (this.consumed.has(id)) return;
+      const item = type === 'qps' ? this.createQps() : this.createAlmondWater();
+      item.setAttribute('position', `${origin + cell.x * cellSize} 1.05 ${origin + cell.z * cellSize}`);
+      item.dataset.item = type;
+      item.dataset.itemId = id;
+      if (training) item.dataset.training = 'true';
+      this.el.appendChild(item);
+    });
+  },
+
+  addLobby(origin, cellSize) {
+    const at = (cell) => origin + cell * cellSize;
+    const half = cellSize / 2;
+    const leftWall = at(0) + half + 0.02;
+    const rightWall = at(11) + half - 0.02;
+    const farWall = at(17) + half - 0.02;
+
+    const furniture = document.createElement('a-entity');
+    // Nos modelos do pack, a frente de cada móvel aponta para -Z.
+    furniture.lobbyLayout = [
+      { piece: 'sofa', x: at(0) + half + 0.7, z: at(5), rotation: -90 },
+      { piece: 'armchair', x: at(3), z: at(5), rotation: 90 },
+      { piece: 'desk', x: at(5.5), z: at(4), rotation: 0 },
+      { piece: 'officeChair', x: at(5.5), z: at(4.85), rotation: 0 },
+      { piece: 'metalTable', x: rightWall - 0.6, z: at(7.5), rotation: 90 },
+      { piece: 'terminal', x: rightWall - 0.6, z: at(7.5), y: 0.75, rotation: 90 },
+      { piece: 'blueChair', x: at(10), z: at(7.5), rotation: -90 },
+    ];
+    furniture.setAttribute('lobby-furniture', '');
+    this.el.appendChild(furniture);
+
+    const notebook = document.createElement('a-entity');
+    notebook.setAttribute('position', `${at(5.5)} 0.76 ${at(4) - 0.3}`);
+    notebook.setAttribute('rotation', '0 168 0');
+    notebook.setAttribute('lobby-notebook', '');
+    this.el.appendChild(notebook);
+
+    const signs = [
+      {
+        x: rightWall, z: at(2.5), rotation: -90,
+        title: 'FASE 0 // LOBBY', subtitle: 'TREINAMENTO',
+        body: 'Bem-vindo, agente. Este é o lobby de treinamento.\n\nANDAR: balance os braços (VR) ou WASD/setas. Q e E giram.\n\nLeia as estações ao longo do salão e abra o CADERNO na mesa: toque com a mão (VR), clique ou aperte E.',
+      },
+      {
+        x: leftWall, z: at(8), rotation: 90,
+        title: 'PAINEL DO PULSO', subtitle: 'Q-LINK',
+        body: 'Olhe para o pulso esquerdo (VR) ou aperte H (desktop) para abrir o Q-LINK: ANDAR, SANIDADE, ENERGIA, ZETA VISOR, distância da ENTIDADE e OBJETIVO.\n\nA sanidade cai com o tempo e perto da entidade. A energia alimenta o visor e o phase shift.',
+      },
+      {
+        x: rightWall, z: at(10.5), rotation: -90,
+        title: 'ALMOND WATER', subtitle: 'SUPRIMENTO',
+        body: 'Garrafas espalhadas pelos andares. Estenda a mão até a garrafa para pegar e leve à boca para beber. No desktop: F pega, F de novo bebe.\n\nRestaura SANIDADE e recarrega toda a ENERGIA. Experimente a garrafa ao lado.',
+      },
+      {
+        x: leftWall, z: at(12), rotation: 90,
+        title: 'QPS', subtitle: 'QUANTUM POSITIONING',
+        body: 'Cada andar esconde um QPS. Pegue com pinça ou encostando a mão (desktop: passe por ele).\n\nEle mede o estado quântico: o mapa colapsa, a PORTA de saída aparece e uma seta ciano aponta para ela. Este aqui é de treino.',
+      },
+      {
+        x: rightWall, z: at(14.5), rotation: -90,
+        title: 'ENTIDADE', subtitle: 'PERIGO',
+        body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nZETA VISOR: pinça na testa (V) revela paredes em superposição.\nPHASE SHIFT: palmas na parede (Space + W) para atravessar.',
+      },
+      {
+        x: at(8.6), z: farWall, rotation: 180,
+        title: 'SAÍDA', subtitle: 'FLOOR 01',
+        body: 'A porta amarela leva ao FLOOR 01.\n\nQuando estiver pronto, atravesse. Boa sorte, agente.',
+        height: 0.6,
+      },
+    ];
+
+    signs.forEach(({ x, z, rotation, title, subtitle, body, height = 0.9 }) => {
+      const sign = document.createElement('a-entity');
+      sign.setAttribute('position', `${x} 1.65 ${z}`);
+      sign.setAttribute('rotation', `0 ${rotation} 0`);
+      sign.setAttribute('terminal-panel', {
+        title,
+        subtitle,
+        body: body.replace(/\n/g, '\\n'),
+        width: 1.35,
+        height,
+        fontSize: 28,
+      });
+      this.el.appendChild(sign);
     });
   },
 
@@ -218,21 +325,30 @@ AFRAME.registerComponent('quantum-map', {
     model.setAttribute('scale', '0.08 0.08 0.08');
     model.setAttribute('position', '0 -0.11 0');
     bottle.appendChild(model);
-    // Brilho fraco para a garrafa não sumir no escuro.
-    const glow = document.createElement('a-entity');
-    glow.setAttribute('light', 'type: point; color: #fff2c4; intensity: 0.35; distance: 1.6');
-    bottle.appendChild(glow);
+    // Brilho próprio (emissive) para a garrafa não sumir no escuro, sem luz extra.
+    model.addEventListener('model-loaded', () => {
+      model.object3D.traverse((object) => {
+        if (!object.isMesh || !object.material) return;
+        object.material.emissive?.set('#6b5a30');
+        object.material.emissiveIntensity = 0.6;
+      });
+    });
     bottle.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 9000; easing: linear');
     return bottle;
   },
 
-  addStairs(stairsX, stairsZ, origin, cellSize) {
-    const centerX = origin + stairsX * cellSize;
-    const centerZ = origin + stairsZ * cellSize;
+  // Porta amarela (PSX Liminal Kit) embutida na parede, com escuridão atrás.
+  addStairs(stairsCell, origin, cellSize) {
+    const wall = stairsCell.wall || { dx: 0, dz: 1 };
+    const half = cellSize / 2;
+    const faceX = origin + stairsCell.x * cellSize + wall.dx * half;
+    const faceZ = origin + stairsCell.z * cellSize + wall.dz * half;
     const stairs = document.createElement('a-entity');
 
     stairs.setAttribute('id', 'stairs');
-    stairs.setAttribute('position', `${centerX} 0 ${centerZ}`);
+    stairs.setAttribute('position', `${faceX} 0 ${faceZ}`);
+    // A frente da porta (+Z do modelo) fica virada para dentro da sala.
+    stairs.setAttribute('rotation', `0 ${THREE.MathUtils.radToDeg(Math.atan2(-wall.dx, -wall.dz))} 0`);
     stairs.setAttribute('data-stairs', 'true');
 
     const door = document.createElement('a-entity');
@@ -241,23 +357,27 @@ AFRAME.registerComponent('quantum-map', {
     door.setAttribute('class', 'door-yellow');
     stairs.appendChild(door);
 
-    // Farol: feixe ciano pulsante que aparece mesmo se o modelo da porta demorar
-    // ou falhar, e que se vê de longe pelos corredores (também em VR).
-    const beacon = document.createElement('a-cylinder');
-    beacon.setAttribute('radius', '0.08');
-    const beaconHeight = window.quantumPhysics.WALL_HEIGHT - 0.1;
-    beacon.setAttribute('height', beaconHeight);
-    beacon.setAttribute('position', `0 ${beaconHeight / 2} 0`);
-    beacon.setAttribute('material', 'color: #44ffcc; shader: flat; transparent: true; opacity: 0.55');
-    beacon.setAttribute('animation', 'property: material.opacity; from: 0.25; to: 0.7; dir: alternate; loop: true; dur: 900');
-    stairs.appendChild(beacon);
+    // Escuridão: uma caixa preta por dentro, no vão da parede atrás da porta.
+    const darkness = document.createElement('a-entity');
+    darkness.setAttribute('geometry', 'primitive: box; width: 0.98; height: 2.19; depth: 1.2');
+    darkness.setAttribute('material', 'shader: flat; color: #000000; side: back; fog: false');
+    // Fundo 4 mm acima do carpete para cobrir o chão dentro do vão.
+    darkness.setAttribute('position', '0 1.099 -0.6');
+    stairs.appendChild(darkness);
+
+    // Brilho ciano pulsando na frente da porta para ela ser achada no escuro.
+    const glow = document.createElement('a-entity');
+    glow.setAttribute('light', 'type: point; color: #44ffcc; intensity: 0.6; distance: 3.5');
+    glow.setAttribute('position', '0 2.0 0.5');
+    glow.setAttribute('animation', 'property: light.intensity; from: 0.25; to: 0.8; dir: alternate; loop: true; dur: 900');
+    stairs.appendChild(glow);
 
     const trigger = document.createElement('a-box');
     trigger.setAttribute('id', 'stairs-trigger');
     trigger.setAttribute('visible', 'false');
-    trigger.setAttribute('width', '1.8');
+    trigger.setAttribute('width', '1');
     trigger.setAttribute('height', '2.2');
-    trigger.setAttribute('depth', '1.8');
+    trigger.setAttribute('depth', '0.4');
     trigger.setAttribute('position', '0 1 0');
     trigger.setAttribute('class', 'stairs-collider');
     trigger.setAttribute('floor-transition', 'target: #player-head; radius: 0.75');

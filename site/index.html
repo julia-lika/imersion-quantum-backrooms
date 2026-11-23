@@ -227,6 +227,38 @@
         box-shadow: inset 0 0 140px rgba(150, 70, 255, 0.45);
       }
 
+      /* Colapso do QPS: as pálpebras fecham devagar, a visão embaça, o mapa troca
+         no escuro e os olhos reabrem piscando. */
+      .eyelid {
+        position: fixed;
+        left: 0;
+        width: 100%;
+        height: 52%;
+        z-index: 32;
+        pointer-events: none;
+        background: #000;
+        transform: translateY(var(--closed-from));
+      }
+      #eyelid-top { top: 0; --closed-from: -100%; border-radius: 0 0 50% 50% / 0 0 22% 22%; }
+      #eyelid-bottom { bottom: 0; --closed-from: 100%; border-radius: 50% 50% 0 0 / 22% 22% 0 0; }
+      body.blink-transition .eyelid { animation: eyelid-blink 2600ms ease-in-out forwards; }
+      body.blink-transition #backrooms-scene canvas { animation: blink-blur 2600ms ease-in-out forwards; }
+
+      @keyframes eyelid-blink {
+        0% { transform: translateY(var(--closed-from)); }
+        38%, 54% { transform: translateY(0); }
+        70% { transform: translateY(calc(var(--closed-from) * 0.7)); }
+        78% { transform: translateY(calc(var(--closed-from) * 0.35)); }
+        100% { transform: translateY(var(--closed-from)); }
+      }
+
+      @keyframes blink-blur {
+        0% { filter: blur(0) brightness(1); }
+        38% { filter: blur(6px) brightness(0.6); }
+        62% { filter: blur(9px) brightness(0.8); }
+        100% { filter: blur(0) brightness(1); }
+      }
+
       @keyframes floor-transition-fade {
         0%, 100% { opacity: 0; }
         28%, 76% { opacity: 1; }
@@ -239,20 +271,22 @@
     <script type="module" src="js/map-generator.js"></script>
     <script type="module" src="js/quantum-bank.js"></script>
     <script type="module" src="js/components/backrooms-wall.js"></script>
-    <script type="module" src="js/phase-zero.js?v=20261123-1"></script>
+    <script type="module" src="js/phase-zero.js?v=20261123-3"></script>
     <script src="js/components/xr-hands.js"></script>
-    <script src="js/components/hand-gestures.js?v=20261123-1"></script>
+    <script src="js/components/hand-gestures.js?v=20261123-3"></script>
     <script src="js/components/player-locomotion.js"></script>
-    <script src="js/components/wrist-hud.js"></script>
-    <script src="js/components/vr-effects.js"></script>
-    <script src="js/components/stairs-compass.js"></script>
-    <script src="js/components/quantum-ghost.js?v=20261123-2"></script>
+    <script src="js/components/terminal-panel.js"></script>
+    <script src="js/components/wrist-hud.js?v=20261123-3"></script>
+    <script src="js/components/lobby.js"></script>
+    <script src="js/components/vr-effects.js?v=20261123-1"></script>
+    <script src="js/components/stairs-compass.js?v=20261123-1"></script>
+    <script src="js/components/quantum-ghost.js?v=20261123-3"></script>
     <script src="js/components/superposed-wall.js"></script>
     <script src="js/components/light-flicker.js"></script>
     <script src="js/components/fixture-lights.js?v=20261123-1"></script>
     <script src="js/components/floor-transition.js"></script>
-    <script type="module" src="js/components/quantum-map.js?v=20261123-3"></script>
-    <script src="js/components/scatter-props.js?v=20261123-2"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261123-6"></script>
+    <script src="js/components/scatter-props.js?v=20261123-3"></script>
   </head>
   <body>
     <section id="start-screen">
@@ -264,12 +298,16 @@
         <p>
           VR: BALANCE OS BRAÇOS PARA ANDAR // PINÇA NA TESTA LIGA O VISOR<br />
           PALMAS NA PAREDE = PHASE SHIFT // MÃOS NOS OLHOS = SE PROTEGER<br />
+          OLHE PARA O PULSO = PAINEL Q-LINK<br />
           PINÇA PARA PEGAR O QPS // LEVE A ALMOND WATER À BOCA
         </p>
-        <div class="start-note">DESKTOP: WASD // V VISOR // SPACE + W PHASE SHIFT // P PAUSA</div>
+        <div class="start-note">DESKTOP: WASD // H PAINEL // F PEGAR E BEBER // V VISOR // SPACE + W PHASE SHIFT // P PAUSA</div>
         <div class="start-note">MELHOR NO META QUEST COM HAND TRACKING</div>
       </div>
     </section>
+
+    <div id="eyelid-top" class="eyelid"></div>
+    <div id="eyelid-bottom" class="eyelid"></div>
 
     <div id="hud" hidden>
       <div>LEVEL 0 // QUANTUM BACKROOMS</div>
@@ -302,6 +340,8 @@
       fog="type: exponential; color: #0a0805; density: 0.085"
       renderer="colorManagement: true"
         webxr="referenceSpaceType: local-floor; optionalFeatures: bounded-floor, hand-tracking"
+      cursor="rayOrigin: mouse; fuse: false"
+      raycaster="objects: .clickable; far: 6"
     >
       <a-assets>
         <img id="wall-texture" src="assets/textures/level0/wallpaper-color.jpg" />
@@ -316,6 +356,7 @@
         <a-asset-item id="psx-exit-sign-model" src="assets/models/psx-exit-sign.glb"></a-asset-item>
         <a-asset-item id="psx-vent-model" src="assets/models/psx-vent.glb"></a-asset-item>
         <a-asset-item id="psx-door-nowhere-model" src="assets/models/psx-door-nowhere.glb"></a-asset-item>
+        <a-asset-item id="furniture-model" src="assets/models/furniture-pack.glb"></a-asset-item>
       </a-assets>
 
       <!-- Rig do jogador: a ordem dos componentes importa (rastreio > gestos > locomoção). -->
@@ -345,6 +386,9 @@
       <a-entity light="type: ambient; color: #c9b27a; intensity: 0.16"></a-entity>
       <a-entity light="type: hemisphere; color: #e8d6a0; groundColor: #2a2210; intensity: 0.14"></a-entity>
       <a-entity fixture-lights="target: #player-head; count: 2; height: 2.6; intensity: 1.15; distance: 5.5; color: #ffe7a8"></a-entity>
+
+      <!-- Fonte dos móveis do lobby: fica invisível, o lobby clona as peças. -->
+      <a-entity id="furniture-source" gltf-model="#furniture-model" visible="false"></a-entity>
 
       <a-entity
         id="backrooms-props"
@@ -414,8 +458,28 @@
       // Entrar em VR sem clicar em ENTER também inicia o jogo.
       scene.addEventListener('enter-vr', hideStartScreen);
 
+      const BLINK_MS = 2600;
+
+      // Piscar lento: o mapa só troca quando os olhos estão fechados.
+      function playCollapseBlink(onClosed) {
+        document.body.classList.remove('blink-transition');
+        void document.body.offsetWidth;
+        document.body.classList.add('blink-transition');
+        scene.emit('screen-effect', { type: 'blink', color: '#000000', duration: BLINK_MS });
+        window.setTimeout(onClosed, BLINK_MS * 0.46);
+        window.setTimeout(() => document.body.classList.remove('blink-transition'), BLINK_MS + 50);
+      }
+
       function applyMeasurement(result) {
         measured = true;
+        hint.setAttribute(
+          'text',
+          'value: O QPS MEDIU O ESTADO — a realidade está colapsando; align: center; color: #9dffc4; width: 1.1'
+        );
+        playCollapseBlink(() => commitMeasurement(result));
+      }
+
+      function commitMeasurement(result) {
         const bitstring = result.bitstring;
 
         quantumMap.setAttribute(
@@ -433,7 +497,16 @@
         }));
       }
 
-      async function collapseQuantumState() {
+      async function collapseQuantumState(event) {
+        // QPS de treino do lobby: só explica, não mede nem muda o mapa.
+        if (event?.detail?.training) {
+          hint.setAttribute(
+            'text',
+            'value: QPS DE TREINO COLETADO — nos andares, isso mede o estado e revela a porta; align: center; color: #9dffc4; width: 1.1'
+          );
+          scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
+          return;
+        }
         if (measuring) return;
         measuring = true;
         hint.setAttribute(

@@ -6,12 +6,14 @@ export const SURVIVAL = {
   ghostContactRadiusCells: 0.65,
   ghostContactDrainPerSecond: 35,
   visorDrain: 6,
-  energyRecovery: 0.8,
+  energyRecovery: 2.5,
   visorMinEnergy: 5,
   phaseEnergyCost: 25,
   phaseSanityCost: 3,
   phaseBaseSuccess: 0.92,
   almondWaterRestore: 40,
+  // A energia volta inteira na hora: a garrafa é o recarregador do visor.
+  almondWaterEnergy: 100,
   exposureRadiusCells: 3,
   exposureTime: 7,
   exposureDecay: 0.5,
@@ -54,7 +56,8 @@ export function tickSurvival(state, sanity, {
   }
   energy = clamp(energy);
 
-  let drain = SURVIVAL.ambientDrain + SURVIVAL.ambientDrainPerFloor * (floor - 1);
+  // No lobby (andar 0) a sanidade não cai: é a área segura do tutorial.
+  let drain = floor <= 0 ? 0 : SURVIVAL.ambientDrain + SURVIVAL.ambientDrainPerFloor * (floor - 1);
   if (ghostDistance <= 1) drain += SURVIVAL.ghostRadiationDrain;
   if (ghostDistance <= SURVIVAL.ghostContactRadiusCells) {
     drain += SURVIVAL.ghostContactDrainPerSecond;
@@ -98,7 +101,7 @@ export function attemptPhaseShift(state, sanity, random = Math.random) {
 
 export function drinkAlmondWater(state, sanity) {
   return {
-    state: { ...state, energy: clamp(state.energy + SURVIVAL.almondWaterRestore) },
+    state: { ...state, energy: clamp(state.energy + SURVIVAL.almondWaterEnergy) },
     sanity: clamp(sanity + SURVIVAL.almondWaterRestore),
   };
 }

@@ -26,6 +26,34 @@ function pushWallQuad(buffers, { cx, cz, nx, nz, halfWidth, bottom, top, tile })
   buffers.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
 }
 
+// Parede com o vão da porta: faixas à esquerda e à direita e uma verga em cima.
+function pushDoorwayFrame(walls, baseboards, {
+  cx, cz, nx, nz, half, height, tile, doorWidth, doorHeight, baseboardHeight, baseboardInset,
+}) {
+  const rightX = nz;
+  const rightZ = -nx;
+  const doorHalf = doorWidth / 2;
+  const sideHalf = (half - doorHalf) / 2;
+  const sideOffset = doorHalf + sideHalf;
+
+  [-1, 1].forEach((side) => {
+    const sx = cx + rightX * sideOffset * side;
+    const sz = cz + rightZ * sideOffset * side;
+    pushWallQuad(walls, { cx: sx, cz: sz, nx, nz, halfWidth: sideHalf, bottom: 0, top: height, tile });
+    pushWallQuad(baseboards, {
+      cx: sx + nx * baseboardInset,
+      cz: sz + nz * baseboardInset,
+      nx,
+      nz,
+      halfWidth: sideHalf,
+      bottom: 0,
+      top: baseboardHeight,
+      tile,
+    });
+  });
+  pushWallQuad(walls, { cx, cz, nx, nz, halfWidth: doorHalf, bottom: doorHeight, top: height, tile });
+}
+
 export function buildWallGeometry(maze, {
   origin,
   cellSize,
@@ -34,6 +62,10 @@ export function buildWallGeometry(maze, {
   isStatic = () => true,
   baseboardHeight = 0.11,
   baseboardInset = 0.015,
+  // Vão da porta: { x, z } da célula livre e { dx, dz } apontando para a parede.
+  doorway = null,
+  doorWidth = 0.98,
+  doorHeight = 2.19,
 }) {
   const walls = createBuffers();
   const baseboards = createBuffers();
@@ -50,6 +82,16 @@ export function buildWallGeometry(maze, {
 
         const cx = origin + x * cellSize;
         const cz = origin + z * cellSize;
+        const isDoorway = doorway && doorway.wall &&
+          x === doorway.x + doorway.wall.dx && z === doorway.z + doorway.wall.dz &&
+          dx === -doorway.wall.dx && dz === -doorway.wall.dz;
+        if (isDoorway) {
+          pushDoorwayFrame(walls, baseboards, {
+            cx: cx + dx * half, cz: cz + dz * half, nx: dx, nz: dz,
+            half, height, tile, doorWidth, doorHeight, baseboardHeight, baseboardInset,
+          });
+          return;
+        }
         pushWallQuad(walls, {
           cx: cx + dx * half, cz: cz + dz * half, nx: dx, nz: dz,
           halfWidth: half, bottom: 0, top: height, tile,

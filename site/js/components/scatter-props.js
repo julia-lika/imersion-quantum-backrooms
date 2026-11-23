@@ -41,6 +41,7 @@ AFRAME.registerComponent('scatter-props', {
     this.onWorld = ({ detail }) => {
       this.stairs = detail?.stairs || null;
       this.items = detail?.items || [];
+      this.lobby = Boolean(detail?.lobby);
       this.scatter();
     };
     this.el.addEventListener('model-loaded', this.onModel);
@@ -141,6 +142,14 @@ AFRAME.registerComponent('scatter-props', {
     const world = window.quantumWorld;
     const physics = window.quantumPhysics;
     if (!root || !world || !physics) return;
+
+    // O lobby tem móveis próprios: nada do pack Vol. 2 nem manchas.
+    if (this.lobby) {
+      root.children.forEach((object) => { object.visible = false; });
+      this.pieces.forEach(({ el }) => { el.object3D.visible = false; });
+      this.stains.forEach((mesh) => { mesh.visible = false; });
+      return;
+    }
 
     const random = this.createRandom(world.maze.map((row) => row.join('')).join(''));
     const free = this.shuffle(this.freeCells(world), random);

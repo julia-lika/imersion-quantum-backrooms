@@ -1,4 +1,5 @@
 import {
+  LOBBY_FLOOR,
   advanceFloor,
   createGameState,
   loadGameState,
@@ -18,7 +19,7 @@ import {
   drinkAlmondWater,
   tickSurvival,
   toggleVisor as toggleVisorState,
-} from './survival-state.js?v=20261118-1';
+} from './survival-state.js?v=20261123-2';
 import { startPosition } from './maze-physics.js';
 
 const initialBits = '010110101100';
@@ -29,7 +30,8 @@ const savedGame = (() => {
     return null;
   }
 })();
-const game = { current: savedGame || createGameState(initialBits) };
+// Jogo novo começa no lobby de treinamento (fase 0).
+const game = { current: savedGame || createGameState(initialBits, LOBBY_FLOOR) };
 const state = {
   current: createPhaseState(game.current.currentBitstring),
 };
@@ -44,6 +46,8 @@ let lastWristUpdate = 0;
 
 const START_POSITION = startPosition();
 const SURVIVAL_TICK_MS = 100;
+// Névoa escura de base (o index.html define a cor); sobe com a loucura.
+const FOG_BASE_DENSITY = 0.085;
 
 // Estado compartilhado com os componentes A-Frame (fantasma, paredes superpostas).
 window.quantumPlayer = {
@@ -130,6 +134,7 @@ function isActive() {
 }
 
 function objectiveText() {
+  if (game.current.floor === LOBBY_FLOOR) return 'TUTORIAL: EXPLORE O LOBBY';
   return game.current.measured ? 'DESCEND: STAIRS REVEALED' : 'FIND THE QPS';
 }
 
@@ -144,7 +149,7 @@ function syncAtmosphere() {
   const madness = 1 - game.current.sanity / 100;
   // Perto da entidade a névoa engrossa: em VR é o substituto do blur (CSS não aparece).
   const contact = window.quantumPlayer?.effects?.contact ?? 0;
-  elements['backrooms-scene'].setAttribute('fog', 'density', 0.035 + madness * 0.09 + contact * 0.12);
+  elements['backrooms-scene'].setAttribute('fog', 'density', FOG_BASE_DENSITY + madness * 0.08 + contact * 0.12);
 }
 
 function syncMap() {
@@ -166,7 +171,9 @@ function renderTelemetry() {
     )).join('<br>')
     : `> |${formatBits(current.bitstring)}⟩ p=100%`;
 
-  elements['phase-floor'].textContent = `FLOOR ${String(game.current.floor).padStart(2, '0')}`;
+  elements['phase-floor'].textContent = game.current.floor === LOBBY_FLOOR
+    ? 'LOBBY // FASE 0'
+    : `FLOOR ${String(game.current.floor).padStart(2, '0')}`;
   elements['phase-qps'].textContent = game.current.qps > 0
     ? `QPS ${game.current.qps}`
     : 'QPS SEARCH';
@@ -267,7 +274,8 @@ function bindControls() {
 }
 
 function transitionToNextFloor() {
-  if (transitioning || !game.current.measured) return;
+  // No lobby a porta já está aberta; nos andares, só depois de medir o QPS.
+  if (transitioning || (!game.current.measured && game.current.floor !== LOBBY_FLOOR)) return;
 
   transitioning = true;
   window.quantumPlayer.active = false;
@@ -394,6 +402,9 @@ function bindGameEvents() {
     started = true;
     window.quantumPlayer.active = isActive();
     elements['phase-telemetry'].hidden = false;
+    if (game.current.floor === LOBBY_FLOOR) {
+      setHint('LOBBY DE TREINAMENTO — leia as estações e abra o caderno na mesa');
+    }
     syncMap();
     syncAtmosphere();
     renderTelemetry();
@@ -403,6 +414,9 @@ function bindGameEvents() {
   scene.addEventListener('enter-vr', beginGame);
 
   scene.addEventListener('visor-toggle-request', toggleVisor);
+  scene.addEventListener('interaction-hint', ({ detail }) => {
+    if (isActive()) setHint(detail.text);
+  });
   scene.addEventListener('phase-shift-attempt', resolvePhaseShift);
   scene.addEventListener('phase-shift-blocked', () => {
     if (isActive()) setHint('NADA PARA ATRAVESSAR — encoste as palmas numa parede');

@@ -1,4 +1,5 @@
-const SAVE_VERSION = 1;
+// v2: o jogo novo começa no lobby (andar 0); saves antigos são descartados.
+const SAVE_VERSION = 2;
 const DEFAULT_BITSTRING = '010110101100';
 
 function normalizeBitstring(bitstring) {
@@ -16,18 +17,20 @@ function normalizeStairs(stairs, visible = false) {
   };
 }
 
-export function createGameState(bitstring = DEFAULT_BITSTRING) {
+export const LOBBY_FLOOR = 0;
+
+export function createGameState(bitstring = DEFAULT_BITSTRING, floor = 1) {
   const normalized = normalizeBitstring(bitstring);
 
   return {
     version: SAVE_VERSION,
-    floor: 1,
+    floor,
     sanity: 100,
     qps: null,
     measured: false,
     currentBitstring: normalized,
     floors: {
-      1: {
+      [floor]: {
         bitstring: normalized,
         stairs: null,
         completed: false,
@@ -117,11 +120,11 @@ export function restoreGameState(serialized) {
 }
 
 export function saveGameState(state, storage = globalThis.localStorage) {
-  storage?.setItem('quantum-backrooms-save-v1', serializeGameState(state));
+  storage?.setItem('quantum-backrooms-save-v2', serializeGameState(state));
 }
 
 export function loadGameState(storage = globalThis.localStorage) {
-  const serialized = storage?.getItem('quantum-backrooms-save-v1');
+  const serialized = storage?.getItem('quantum-backrooms-save-v2');
   if (!serialized) return null;
 
   try {
