@@ -1,3 +1,5 @@
+import { buildLightPanels, buildWallGeometry } from './level-geometry.js';
+
 AFRAME.registerComponent('door-proximity-animation', {
   schema: {
     target: { type: 'selector' },
@@ -57,6 +59,7 @@ AFRAME.registerComponent('quantum-map', {
   },
 
   init() {
+    this.materials = this.createMaterials();
     this.consumed = new Set();
     this.onItemConsumed = ({ detail }) => this.consumed.add(detail.id);
     this.el.sceneEl.addEventListener('qps-collected', this.onItemConsumed);
@@ -67,6 +70,11 @@ AFRAME.registerComponent('quantum-map', {
   },
 
   remove() {
+    this.clearStaticMeshes();
+    Object.values(this.materials).forEach((material) => {
+      material.map?.dispose();
+      material.dispose();
+    });
     window.removeEventListener('quantum-generator-ready', this.onGeneratorReady);
     this.el.sceneEl.removeEventListener('qps-collected', this.onItemConsumed);
     this.el.sceneEl.removeEventListener('almond-water-drunk', this.onItemConsumed);
@@ -91,32 +99,47 @@ AFRAME.registerComponent('quantum-map', {
     if (typeof window.generateQuantumMap !== 'function' || !physics) return;
 
     this.el.replaceChildren();
+    this.clearStaticMeshes();
     const map = window.generateQuantumMap(this.data.bitstring);
     const cellSize = physics.CELL_SIZE;
-    const origin = -((cellSize * 11) / 2) + cellSize / 2;
+    const size = map.maze.length;
+    const height = physics.WALL_HEIGHT;
+    const origin = -((cellSize * size) / 2) + cellSize / 2;
     const superposed = physics.findSuperposedWalls(map.maze, map.bitstring);
     const superposedOffsets = new Map(superposed.map(({ x, z, offset }) => [`${x},${z}`, offset]));
 
     window.quantumWorld = physics.createMazeWorld(map.maze, { cellSize, superposed });
 
-    map.maze.forEach((row, z) => {
-      row.forEach((cell, x) => {
-        if (cell !== '#') return;
-
-        const wall = document.createElement('a-box');
-        const offset = superposedOffsets.get(`${x},${z}`);
-        if (offset !== undefined) wall.setAttribute('superposed-wall', { offset });
-        wall.setAttribute('width', cellSize + 0.03);
-        wall.setAttribute('height', '4.7');
-        wall.setAttribute('depth', cellSize + 0.03);
-        wall.setAttribute('position', `${origin + x * cellSize} 2.35 ${origin + z * cellSize}`);
-        wall.setAttribute('backrooms-wall', 'repeat: 1 1; offset: 0 0; textureScale: 1');
-        this.el.appendChild(wall);
-      });
+    // Paredes fixas viram um único mesh (poucas draw calls no Quest).
+    const { walls, baseboards } = buildWallGeometry(map.maze, {
+      origin,
+      cellSize,
+      height,
+      tile: 0.8,
+      isStatic: (x, z) => !superposedOffsets.has(`${x},${z}`),
     });
+    this.addStaticMesh('walls', walls, this.materials.wall);
+    this.addStaticMesh('baseboards', baseboards, this.materials.baseboard);
 
-    map.roomCenters.forEach(([roomX, roomZ], roomIndex) => {
-      this.addStrangeRoom(roomX, roomZ, roomIndex, origin, cellSize);
+    const { panels, fixtures } = buildLightPanels(map.maze, {
+      origin,
+      cellSize,
+      height,
+      random: this.seededRandom(map.bitstring),
+    });
+    this.addStaticMesh('light-panels', panels, this.materials.lightPanel);
+    window.quantumLightFixtures = fixtures;
+
+    // Paredes em superposição continuam separadas porque mudam de material.
+    superposed.forEach(({ x, z, offset }) => {
+      const wall = document.createElement('a-box');
+      wall.setAttribute('superposed-wall', { offset });
+      wall.setAttribute('width', cellSize + 0.01);
+      wall.setAttribute('height', height);
+      wall.setAttribute('depth', cellSize + 0.01);
+      wall.setAttribute('position', `${origin + x * cellSize} ${height / 2} ${origin + z * cellSize}`);
+      wall.setAttribute('backrooms-wall', 'repeat: 1 1; offset: 0 0; textureScale: 0.8');
+      this.el.appendChild(wall);
     });
 
     this.addMarker(1, 1, '#ffe69b', 'ENTRADA');
@@ -218,8 +241,9 @@ AFRAME.registerComponent('quantum-map', {
     // ou falhar, e que se vê de longe pelos corredores (também em VR).
     const beacon = document.createElement('a-cylinder');
     beacon.setAttribute('radius', '0.08');
-    beacon.setAttribute('height', '4.6');
-    beacon.setAttribute('position', '0 2.3 0');
+    const beaconHeight = window.quantumPhysics.WALL_HEIGHT - 0.1;
+    beacon.setAttribute('height', beaconHeight);
+    beacon.setAttribute('position', `0 ${beaconHeight / 2} 0`);
     beacon.setAttribute('material', 'color: #44ffcc; shader: flat; transparent: true; opacity: 0.55');
     beacon.setAttribute('animation', 'property: material.opacity; from: 0.25; to: 0.7; dir: alternate; loop: true; dur: 900');
     stairs.appendChild(beacon);
@@ -238,54 +262,72 @@ AFRAME.registerComponent('quantum-map', {
     this.el.appendChild(stairs);
   },
 
-  addStrangeRoom(roomX, roomZ, roomIndex, origin, cellSize) {
-    const centerX = origin + roomX * cellSize;
-    const centerZ = origin + roomZ * cellSize;
-    const offsets = [
-      [-1.05, -1.05],
-      [1.05, -1.05],
-      [-1.05, 1.05],
-      [1.05, 1.05],
-    ];
+  createMaterials() {
+    const loader = new THREE.TextureLoader();
+    const texture = (selector, fallback) => {
+      const src = document.querySelector(selector)?.getAttribute('src') || fallback;
+      const map = loader.load(src);
+      map.wrapS = THREE.RepeatWrapping;
+      map.wrapT = THREE.RepeatWrapping;
+      map.anisotropy = 4;
+      if ('colorSpace' in map) map.colorSpace = THREE.SRGBColorSpace;
+      return map;
+    };
 
-    offsets.forEach(([offsetX, offsetZ], pillarIndex) => {
-      const pillar = document.createElement('a-box');
-      const skew = pillarIndex === roomIndex % offsets.length ? 0.22 : 0;
-      pillar.setAttribute('width', '0.24');
-      pillar.setAttribute('height', '4.7');
-      pillar.setAttribute('depth', '0.24');
-      pillar.setAttribute('position', `${centerX + offsetX + skew} 2.35 ${centerZ + offsetZ}`);
-      pillar.setAttribute('backrooms-wall', 'repeat: 1 1; offset: 0 0; textureScale: 1');
-      this.el.appendChild(pillar);
+    return {
+      wall: new THREE.MeshStandardMaterial({
+        map: texture('#wall-texture', 'assets/textures/level0/wallpaper-color.jpg'),
+        roughness: 0.95,
+        metalness: 0,
+      }),
+      baseboard: new THREE.MeshStandardMaterial({ color: '#8c7a4c', roughness: 0.8, metalness: 0 }),
+      lightPanel: new THREE.MeshBasicMaterial({
+        map: texture('#light-panel-texture', 'assets/textures/level0/light-panel.jpg'),
+        vertexColors: true,
+        color: '#fff4d6',
+      }),
+    };
+  },
+
+  addStaticMesh(name, buffers, material) {
+    if (buffers.indices.length === 0) return;
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(buffers.positions, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(buffers.normals, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(buffers.uvs, 2));
+    if (buffers.colors.length > 0) {
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(buffers.colors, 3));
+    }
+    geometry.setIndex(buffers.indices);
+    geometry.computeBoundingSphere();
+    this.el.setObject3D(name, new THREE.Mesh(geometry, material));
+    this.staticMeshes = [...(this.staticMeshes || []), name];
+  },
+
+  clearStaticMeshes() {
+    (this.staticMeshes || []).forEach((name) => {
+      const mesh = this.el.getObject3D(name);
+      if (!mesh) return;
+      mesh.geometry.dispose();
+      this.el.removeObject3D(name);
     });
+    this.staticMeshes = [];
+  },
 
-    const beam = document.createElement('a-box');
-    beam.setAttribute('width', '2.8');
-    beam.setAttribute('height', '0.18');
-    beam.setAttribute('depth', '0.22');
-    beam.setAttribute('position', `${centerX} 4.48 ${centerZ}`);
-    beam.setAttribute(
-      'backrooms-wall',
-      'repeat: 1 1; offset: 0 0; textureScale: 1'
-    );
-    this.el.appendChild(beam);
-
-    const crossBeam = document.createElement('a-box');
-    crossBeam.setAttribute('width', '0.22');
-    crossBeam.setAttribute('height', '0.14');
-    crossBeam.setAttribute('depth', '2.8');
-    crossBeam.setAttribute('position', `${centerX} 4.58 ${centerZ}`);
-    crossBeam.setAttribute(
-      'backrooms-wall',
-      'repeat: 1 1; offset: 0 0; textureScale: 1'
-    );
-    this.el.appendChild(crossBeam);
+  seededRandom(bitstring) {
+    let seed = Number.parseInt(bitstring, 2) + 7 || 7;
+    return () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
   },
 
   addMarker(x, z, color, label) {
     const marker = document.createElement('a-cylinder');
     const cellSize = window.quantumPhysics.CELL_SIZE;
-    const origin = -((cellSize * 11) / 2) + cellSize / 2;
+    const size = window.quantumWorld?.size ?? window.quantumPhysics.MAZE_SIZE;
+    const origin = -((cellSize * size) / 2) + cellSize / 2;
 
     marker.setAttribute('radius', '0.28');
     marker.setAttribute('height', '0.08');

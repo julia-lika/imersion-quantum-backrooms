@@ -1,5 +1,15 @@
 export const CELL_SIZE = 1.05;
 export const PLAYER_RADIUS = 0.24;
+// Grade do Level 0: 23 x 23 células (~24 m de lado) para caber salas grandes.
+export const MAZE_SIZE = 23;
+// Pé-direito baixo, como nas fotos clássicas das Backrooms.
+export const WALL_HEIGHT = 2.8;
+export const START_CELL = { x: 1, z: 1 };
+
+export function startPosition(size = MAZE_SIZE, cellSize = CELL_SIZE) {
+  const origin = -((cellSize * size) / 2) + cellSize / 2;
+  return { x: origin + START_CELL.x * cellSize, z: origin + START_CELL.z * cellSize };
+}
 
 const SUPERPOSED_SPEED = 0.7;
 const SUPERPOSED_OPEN_THRESHOLD = 0.35;
@@ -223,6 +233,10 @@ if (typeof window !== 'undefined') {
   window.quantumPhysics = {
     bestOpenDirection,
     CELL_SIZE,
+    MAZE_SIZE,
+    WALL_HEIGHT,
+    START_CELL,
+    startPosition,
     PLAYER_RADIUS,
     createMazeWorld,
     worldToCell,

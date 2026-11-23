@@ -82,7 +82,12 @@ AFRAME.registerComponent('quantum-ghost', {
     world.maze.forEach((row, z) => {
       row.forEach((cell, x) => {
         if (cell !== '.') return;
-        const distance = window.quantumPhysics.cellDistance(player, { x, z });
+        // Longe do jogador e também da entrada: no primeiro andar a cabeça
+        // ainda pode estar na origem quando o mapa é desenhado.
+        const distance = Math.min(
+          window.quantumPhysics.cellDistance(player, { x, z }),
+          window.quantumPhysics.cellDistance(window.quantumPhysics.START_CELL || { x: 1, z: 1 }, { x, z })
+        );
         if (!farthest || distance > farthest.distance) farthest = { x, z, distance };
       });
     });

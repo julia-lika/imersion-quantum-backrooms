@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bestOpenDirection, createMazeWorld, resolveMove, PLAYER_RADIUS } from '../site/js/maze-physics.js';
+import { bestOpenDirection, createMazeWorld, resolveMove, startPosition, PLAYER_RADIUS } from '../site/js/maze-physics.js';
 import { generateQuantumMap } from '../site/js/map-generator.js';
 
 const toMaze = (rows) => rows.map((row) => row.split(''));
@@ -25,7 +25,7 @@ test('não devolve direção quando a célula está cercada', () => {
 
 test('no spawn de todos os andares existe uma direção em que dá para andar', () => {
   const world = (bits) => createMazeWorld(generateQuantumMap(bits).maze);
-  const start = { x: -4.2, z: -4.2 };
+  const start = startPosition();
 
   ['010110101100', '000000000000', '111111111111', '101010101010'].forEach((bits) => {
     const w = world(bits);

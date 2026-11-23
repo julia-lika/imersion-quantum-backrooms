@@ -14,7 +14,7 @@ const floorTransition = readFileSync(
 );
 const stairsSection = quantumMap.slice(
   quantumMap.indexOf('  addStairs('),
-  quantumMap.indexOf('addStrangeRoom')
+  quantumMap.indexOf('  createMaterials(')
 );
 
 test('usa a porta amarela animada como saída sem alterar o gatilho de fase', () => {
