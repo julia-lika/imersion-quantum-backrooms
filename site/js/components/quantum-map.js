@@ -126,6 +126,7 @@ AFRAME.registerComponent('quantum-map', {
       cellSize,
       height,
       random: this.seededRandom(map.bitstring),
+      offChance: 0.3,
     });
     this.addStaticMesh('light-panels', panels, this.materials.lightPanel);
     window.quantumLightFixtures = fixtures;
@@ -210,16 +211,17 @@ AFRAME.registerComponent('quantum-map', {
 
   createAlmondWater() {
     const bottle = document.createElement('a-entity');
-    const body = document.createElement('a-cylinder');
-    body.setAttribute('radius', '0.04');
-    body.setAttribute('height', '0.2');
-    body.setAttribute('material', 'color: #f4ead2; opacity: 0.75; transparent: true; roughness: 0.2');
-    const cap = document.createElement('a-cylinder');
-    cap.setAttribute('radius', '0.022');
-    cap.setAttribute('height', '0.04');
-    cap.setAttribute('position', '0 0.12 0');
-    cap.setAttribute('color', '#ffcc44');
-    bottle.append(body, cap);
+    // Modelo "Almond Water" (LinVal, CC BY 4.0): ~2,7 unidades de altura com a
+    // base na origem. Escala para ~22 cm e centraliza no ponto do item.
+    const model = document.createElement('a-entity');
+    model.setAttribute('gltf-model', '#almond-water-model');
+    model.setAttribute('scale', '0.08 0.08 0.08');
+    model.setAttribute('position', '0 -0.11 0');
+    bottle.appendChild(model);
+    // Brilho fraco para a garrafa não sumir no escuro.
+    const glow = document.createElement('a-entity');
+    glow.setAttribute('light', 'type: point; color: #fff2c4; intensity: 0.35; distance: 1.6');
+    bottle.appendChild(glow);
     bottle.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 9000; easing: linear');
     return bottle;
   },
@@ -282,11 +284,11 @@ AFRAME.registerComponent('quantum-map', {
         roughness: 0.95,
         metalness: 0,
       }),
-      baseboard: new THREE.MeshStandardMaterial({ color: '#8c7a4c', roughness: 0.8, metalness: 0 }),
+      baseboard: new THREE.MeshStandardMaterial({ color: '#5e5030', roughness: 0.8, metalness: 0 }),
       lightPanel: new THREE.MeshBasicMaterial({
         map: texture('#light-panel-texture', 'assets/textures/level0/light-panel.jpg'),
         vertexColors: true,
-        color: '#fff4d6',
+        color: '#d8c592',
       }),
     };
   },

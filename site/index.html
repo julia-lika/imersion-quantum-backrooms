@@ -241,18 +241,18 @@
     <script type="module" src="js/components/backrooms-wall.js"></script>
     <script type="module" src="js/phase-zero.js?v=20261123-1"></script>
     <script src="js/components/xr-hands.js"></script>
-    <script src="js/components/hand-gestures.js"></script>
+    <script src="js/components/hand-gestures.js?v=20261123-1"></script>
     <script src="js/components/player-locomotion.js"></script>
     <script src="js/components/wrist-hud.js"></script>
     <script src="js/components/vr-effects.js"></script>
     <script src="js/components/stairs-compass.js"></script>
-    <script src="js/components/quantum-ghost.js?v=20261123-1"></script>
+    <script src="js/components/quantum-ghost.js?v=20261123-2"></script>
     <script src="js/components/superposed-wall.js"></script>
     <script src="js/components/light-flicker.js"></script>
-    <script src="js/components/fixture-lights.js"></script>
+    <script src="js/components/fixture-lights.js?v=20261123-1"></script>
     <script src="js/components/floor-transition.js"></script>
-    <script type="module" src="js/components/quantum-map.js?v=20261123-2"></script>
-    <script src="js/components/scatter-props.js?v=20261123-1"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261123-3"></script>
+    <script src="js/components/scatter-props.js?v=20261123-2"></script>
   </head>
   <body>
     <section id="start-screen">
@@ -298,8 +298,8 @@
 
     <a-scene
       id="backrooms-scene"
-      background="color: #2a2414"
-      fog="type: exponential; color: #2a2414; density: 0.05"
+      background="color: #0a0805"
+      fog="type: exponential; color: #0a0805; density: 0.085"
       renderer="colorManagement: true"
         webxr="referenceSpaceType: local-floor; optionalFeatures: bounded-floor, hand-tracking"
     >
@@ -312,6 +312,10 @@
         <a-asset-item id="props-model" src="assets/models/backrooms-vol2.glb"></a-asset-item>
         <a-asset-item id="door-yellow-model" src="assets/models/door-yellow.glb"></a-asset-item>
         <a-asset-item id="bacteria-model" src="assets/models/bacteria-backrooms.glb"></a-asset-item>
+        <a-asset-item id="almond-water-model" src="assets/models/almond-water.glb"></a-asset-item>
+        <a-asset-item id="psx-exit-sign-model" src="assets/models/psx-exit-sign.glb"></a-asset-item>
+        <a-asset-item id="psx-vent-model" src="assets/models/psx-vent.glb"></a-asset-item>
+        <a-asset-item id="psx-door-nowhere-model" src="assets/models/psx-door-nowhere.glb"></a-asset-item>
       </a-assets>
 
       <!-- Rig do jogador: a ordem dos componentes importa (rastreio > gestos > locomoção). -->
@@ -337,10 +341,10 @@
 
       <a-entity id="quantum-ghost" quantum-ghost="player: #player-head; rig: #player"></a-entity>
 
-      <!-- Level 0: luz amarelada e uniforme das fluorescentes. -->
-      <a-entity light="type: ambient; color: #fff0c7; intensity: 0.6"></a-entity>
-      <a-entity light="type: hemisphere; color: #fff6d8; groundColor: #6b5a2c; intensity: 0.55"></a-entity>
-      <a-entity fixture-lights="target: #player-head; count: 2; height: 2.6"></a-entity>
+      <!-- Level 0 sombrio: pouca luz ambiente, só poças de luz sob as fluorescentes. -->
+      <a-entity light="type: ambient; color: #c9b27a; intensity: 0.16"></a-entity>
+      <a-entity light="type: hemisphere; color: #e8d6a0; groundColor: #2a2210; intensity: 0.14"></a-entity>
+      <a-entity fixture-lights="target: #player-head; count: 2; height: 2.6; intensity: 1.15; distance: 5.5; color: #ffe7a8"></a-entity>
 
       <a-entity
         id="backrooms-props"
@@ -374,7 +378,7 @@
       ></a-entity>
 
 
-      <a-sky color="#2a2414"></a-sky>
+      <a-sky color="#0a0805"></a-sky>
     </a-scene>
 
     <script>

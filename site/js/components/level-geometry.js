@@ -95,7 +95,7 @@ export function buildLightPanels(maze, {
       const cx = origin + x * cellSize;
       const cz = origin + z * cellSize;
       const on = random() >= offChance;
-      const shade = on ? 1 : 0.28;
+      const shade = on ? 1 : 0.12;
       const base = buffers.positions.length / 3;
 
       [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]].forEach(([sx, sz, u, v]) => {

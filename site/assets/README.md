@@ -46,6 +46,23 @@ is licensed under CC BY 4.0. The original license is preserved in
 Attribution: heyheythere
 Source: https://heyheythere.itch.io/psx-liminal-kit
 
+`models/psx-exit-sign.glb`, `models/psx-vent.glb` and
+`models/psx-door-nowhere.glb` come from the same kit (PSX Liminal Kit Free, CC
+BY 4.0). The kit's GLBs point to an external `atlas.png`; the atlas is embedded
+in each of these files (and in `door-yellow.glb`) because the external texture
+rendered black in the browser. `textures/psx/damp-stain.png` and
+`textures/psx/wall-stain.png` are decals derived from the kit's damp carpet and
+stained wallpaper textures.
+
+## Almond Water
+
+`models/almond-water.glb` is the Almond Water model by LinVal, licensed CC BY
+4.0. Its 2048 textures were resized (512 for the label, 16 for flat colours) to
+cut the file from 590 KB to 226 KB.
+
+Attribution: LinVal
+Source: https://sketchfab.com/3d-models/almond-water-07bcea44af36424b89a3ecdd79196a3d
+
 ## Bacteria (Backrooms)
 
 `models/bacteria-backrooms.glb` is the Bacteria (Backrooms) model by
