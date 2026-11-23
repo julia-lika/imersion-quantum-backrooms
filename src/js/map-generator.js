@@ -1,43 +1,11 @@
 import { MAZE_SIZE } from './maze-physics.js';
 
-const MAP_SIZE = 4;
-
-const REQUIRED_PATH = [
-  [0, 0], [1, 0], [2, 0], [3, 0],
-  [3, 1], [3, 2], [3, 3],
-];
+// Cada andar é decidido por uma medição de 12 qubits (um bitstring de 12 bits).
+export const QUBITS = 12;
 
 function normalizeBits(bitstring, length) {
   const bits = String(bitstring ?? '').replace(/[^01]/g, '');
   return (bits + '0'.repeat(length)).slice(0, length);
-}
-
-function hasPath(layout) {
-  const queue = [[0, 0]];
-  const visited = new Set(['0,0']);
-
-  while (queue.length > 0) {
-    const [x, z] = queue.shift();
-    if (x === MAP_SIZE - 1 && z === MAP_SIZE - 1) return true;
-
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nextX = x + dx;
-      const nextZ = z + dz;
-      const key = `${nextX},${nextZ}`;
-
-      if (
-        nextX >= 0 && nextX < MAP_SIZE &&
-        nextZ >= 0 && nextZ < MAP_SIZE &&
-        layout[nextZ][nextX] === 1 &&
-        !visited.has(key)
-      ) {
-        visited.add(key);
-        queue.push([nextX, nextZ]);
-      }
-    }
-  }
-
-  return false;
 }
 
 // Gerador do Level 0: em vez de corredores de 1 célula, divide a área em salas
@@ -241,11 +209,11 @@ export const LOBBY = {
     almondWater: { x: 9, z: 10 },
     qps: { x: 3, z: 12 },
   },
-  // Corredor de treino atrás da parede direita (x = 13, z 12..16). A parede em
-  // (12, 12..13) é sólida, para testar o salto de fase; a de (12, 16) fica em
-  // superposição, para testar o visor zeta. Ela abre e fecha, então ninguém
-  // fica preso lá dentro.
-  trainingAlcove: [[13, 12], [13, 13], [13, 14], [13, 15], [13, 16]],
+  // Sala de treino atrás da parede direita (x 13..15, z 12..16). A parede em
+  // (12, 12..13) é sólida, para testar o salto de fase (tunelamento); a de
+  // (12, 16) fica em superposição, para testar o visor zeta. As duas dão para a
+  // mesma sala, e a parede em superposição abre sozinha: ninguém fica preso.
+  trainingRoom: { minX: 13, maxX: 15, minZ: 12, maxZ: 16 },
   superposed: [{ x: 12, z: 16, offset: 0 }],
 };
 
@@ -254,7 +222,10 @@ export function generateLobbyMap(size = MAZE_SIZE) {
     x >= LOBBY.minX && x <= LOBBY.maxX && z >= LOBBY.minZ && z <= LOBBY.maxZ ? '.' : '#'
   )));
   LOBBY.furniture.forEach(([x, z]) => { maze[z][x] = 'F'; });
-  LOBBY.trainingAlcove.forEach(([x, z]) => { maze[z][x] = '.'; });
+  const room = LOBBY.trainingRoom;
+  for (let z = room.minZ; z <= room.maxZ; z += 1) {
+    for (let x = room.minX; x <= room.maxX; x += 1) maze[z][x] = '.';
+  }
 
   return {
     bitstring: '000000000000',
@@ -270,53 +241,43 @@ export function generateLobbyMap(size = MAZE_SIZE) {
   };
 }
 
+// Como o mapa nasce (fiel ao código): o bitstring medido vira a SEMENTE de um
+// gerador clássico (BSP de salas, vãos e pilares). O quântico escolhe QUAL dos
+// 4096 mapas possíveis aparece; a construção das salas é clássica e
+// determinística (mesmo bitstring = mesmo mapa).
 export function generateQuantumMap(bitstring) {
-  const bits = normalizeBits(bitstring, MAP_SIZE * MAP_SIZE);
-  const layout = Array.from({ length: MAP_SIZE }, () => Array(MAP_SIZE).fill(0));
-  const requiredCells = new Set(REQUIRED_PATH.map(([x, z]) => `${x},${z}`));
-  let bitIndex = 0;
-
-  for (let z = 0; z < MAP_SIZE; z += 1) {
-    for (let x = 0; x < MAP_SIZE; x += 1) {
-      const key = `${x},${z}`;
-      layout[z][x] = requiredCells.has(key) ? 1 : Number(bits[bitIndex]);
-      bitIndex += 1;
-    }
-  }
-
-  const state = bits[0] === '1' ? 'poolrooms' : 'level-0';
-
+  const bits = normalizeBits(bitstring, QUBITS);
   const mazeResult = buildMaze(bits);
-  const quantumMetrics = analyzeQuantumState(bits);
   const stairs = findStairsCell(mazeResult.maze, bits);
 
   return {
     bitstring: bits,
-    layout,
     maze: mazeResult.maze,
     roomCenters: mazeResult.roomCenters,
     stairs: { ...stairs, visible: false },
-    quantumMetrics,
-    state,
-    isReachable: hasPath(layout),
-    entangledRooms: [
-      { id: 'room-a', state },
-      { id: 'room-b', state },
-    ],
+    quantumMetrics: analyzeQuantumState(bits),
+    state: 'level-0',
   };
 }
 
-export function sampleQuantumBitstring(randomSource = Math.random) {
-  const entangledPair = randomSource() < 0.5 ? '00' : '11';
-  let bitstring = entangledPair;
+// Plano B clássico, usado só quando o banco de medições não carrega: imita a
+// correlação entre vizinhos que o CX em cadeia cria no circuito (cada bit tende
+// a repetir o anterior). Não é uma medição quântica.
+export function sampleQuantumBitstring(randomSource = Math.random, correlation = 0.7) {
+  let bitstring = randomSource() < 0.5 ? '0' : '1';
 
-  for (let index = 0; index < 10; index += 1) {
-    bitstring += randomSource() < 0.5 ? '0' : '1';
+  for (let index = 1; index < QUBITS; index += 1) {
+    const previous = bitstring[index - 1];
+    const flip = previous === '0' ? '1' : '0';
+    bitstring += randomSource() < correlation ? previous : flip;
   }
 
   return bitstring;
 }
 
+// Indicadores do HUD (QPS, coerência, ruído). São heurísticas do jogo calculadas
+// a partir do equilíbrio de 0/1 e da correlação entre bits vizinhos; não são
+// medidas físicas de coerência de um hardware.
 export function analyzeQuantumState(bitstring) {
   const bits = normalizeBits(bitstring, 12);
   const ones = [...bits].filter((bit) => bit === '1').length;

@@ -7,25 +7,21 @@ import {
 } from '../src/js/map-generator.js';
 import { MAZE_SIZE } from '../src/js/maze-physics.js';
 
-test('gera uma grade 4x4 com entrada e saída conectadas', () => {
-  const map = generateQuantumMap('010110101100');
+test('o bitstring de 12 qubits é a semente: mesmo bitstring, mesmo mapa', () => {
+  const first = generateQuantumMap('010110101100');
+  const second = generateQuantumMap('010110101100');
+  const other = generateQuantumMap('110010011101');
 
-  assert.equal(map.layout.length, 4);
-  assert.equal(map.layout[0].length, 4);
-  assert.equal(map.layout[0][0], 1);
-  assert.equal(map.layout[3][3], 1);
-  assert.equal(map.isReachable, true);
+  assert.equal(first.bitstring.length, 12);
+  assert.deepEqual(first.maze, second.maze);
+  assert.notDeepEqual(first.maze, other.maze);
 });
 
-test('mantém as salas emaranhadas no mesmo estado', () => {
-  const map = generateQuantumMap('000000000000');
-
-  assert.equal(map.entangledRooms[0].state, map.entangledRooms[1].state);
-});
-
-test('simula um par emaranhado com resultados correlacionados', () => {
-  assert.equal(sampleQuantumBitstring(() => 0.1).slice(0, 2), '00');
-  assert.equal(sampleQuantumBitstring(() => 0.9).slice(0, 2), '11');
+test('o plano B clássico gera 12 bits com vizinhos correlacionados', () => {
+  assert.equal(sampleQuantumBitstring(() => 0.1), '000000000000');
+  const alternating = sampleQuantumBitstring(() => 0.9);
+  assert.equal(alternating.length, 12);
+  assert.match(alternating, /^(10)+$/);
 });
 
 test('calcula índices quânticos simulados dentro da escala do HUD', () => {
