@@ -1,6 +1,6 @@
 FROM caddy:2-alpine
 
 COPY Caddyfile /etc/caddy/Caddyfile
-COPY site/ /srv/
+COPY src/ /srv/
 
 EXPOSE 8080 8443

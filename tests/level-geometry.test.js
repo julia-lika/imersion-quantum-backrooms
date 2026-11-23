@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildLightPanels, buildWallGeometry } from '../site/js/components/level-geometry.js';
+import { buildLightPanels, buildWallGeometry } from '../src/js/components/level-geometry.js';
 
 const toMaze = (rows) => rows.map((row) => row.split(''));
 const options = { origin: 0, cellSize: 1, height: 2.8 };
@@ -76,12 +76,12 @@ test('as luminárias apagadas não viram luz que segue o jogador', () => {
 });
 
 test('as texturas do Level 0 são leves o bastante para o Quest', () => {
-  const html = readFileSync(new URL('../site/index.html', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
   const sources = [...html.matchAll(/<img id="[^"]+" src="([^"]+)"/g)].map((match) => match[1]);
 
   assert.ok(sources.length >= 4);
   sources.forEach((src) => {
-    const bytes = readFileSync(new URL(`../site/${src}`, import.meta.url)).length;
+    const bytes = readFileSync(new URL(`../src/${src}`, import.meta.url)).length;
     assert.ok(bytes < 400 * 1024, `${src} tem ${bytes} bytes`);
   });
 });

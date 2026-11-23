@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const indexHtml = readFileSync(
-  new URL('../site/index.html', import.meta.url),
+  new URL('../src/index.html', import.meta.url),
   'utf8'
 );
 

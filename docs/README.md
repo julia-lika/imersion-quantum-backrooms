@@ -8,7 +8,7 @@ Site em [Docusaurus](https://docusaurus.io/) com duas abas:
 ## Rodar localmente
 
 ```bash
-cd docusaurus
+cd docs
 npm ci
 npm run start
 ```
@@ -16,11 +16,11 @@ npm run start
 ## Gerar o build
 
 ```bash
-cd docusaurus
+cd docs
 npm run build
 ```
 
-O resultado fica em `docusaurus/build`. Para publicar num subcaminho, defina
+O resultado fica em `docs/build`. Para publicar num subcaminho, defina
 `DOCS_URL` e `DOCS_BASE_URL` antes do build, por exemplo
 `DOCS_URL=https://julia-lika.github.io DOCS_BASE_URL=/imersion-quantum-backrooms/docs/`.
 

@@ -10,8 +10,8 @@ import {
   pickFloorCells,
   resolveMove,
   worldToCell,
-} from '../site/js/maze-physics.js';
-import { generateQuantumMap } from '../site/js/map-generator.js';
+} from '../src/js/maze-physics.js';
+import { generateQuantumMap } from '../src/js/map-generator.js';
 
 const corridor = [
   '#####',

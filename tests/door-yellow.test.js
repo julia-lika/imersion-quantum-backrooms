@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 
 const root = new URL('../', import.meta.url);
-const indexHtml = readFileSync(new URL('site/index.html', root), 'utf8');
+const indexHtml = readFileSync(new URL('src/index.html', root), 'utf8');
 const quantumMap = readFileSync(
-  new URL('site/js/components/quantum-map.js', root),
+  new URL('src/js/components/quantum-map.js', root),
   'utf8'
 );
 const floorTransition = readFileSync(
-  new URL('site/js/components/floor-transition.js', root),
+  new URL('src/js/components/floor-transition.js', root),
   'utf8'
 );
 const stairsSection = quantumMap.slice(
@@ -19,7 +19,7 @@ const stairsSection = quantumMap.slice(
 
 test('usa a porta amarela animada como saída sem alterar o gatilho de fase', () => {
   assert.ok(
-    existsSync(new URL('site/assets/models/door-yellow.glb', root)),
+    existsSync(new URL('src/assets/models/door-yellow.glb', root)),
     'o modelo door-yellow.glb deve existir nos assets locais'
   );
   assert.match(

@@ -34,10 +34,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: docusaurus/package-lock.json
+          cache-dependency-path: docs/package-lock.json
 
       - name: Build Docusaurus docs
-        working-directory: docusaurus
+        working-directory: docs
         env:
           DOCS_URL: ${{ steps.pages.outputs.origin }}
           DOCS_BASE_URL: ${{ steps.pages.outputs.base_path }}/docs/
@@ -47,13 +47,13 @@ jobs:
 
       - name: Add docs to the site
         run: |
-          rm -rf site/docs
-          cp -r docusaurus/build site/docs
+          rm -rf src/docs
+          cp -r docs/build src/docs
 
       - name: Upload site files
         uses: actions/upload-pages-artifact@v4
         with:
-          path: site
+          path: src
 
       - name: Deploy to GitHub Pages
         id: deployment

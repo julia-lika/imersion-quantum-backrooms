@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getBoxFaceUvScales } from '../site/js/components/box-uv.js';
+import { getBoxFaceUvScales } from '../src/js/components/box-uv.js';
 
 test('mapeia cada face do cubo usando suas dimensões reais', () => {
   assert.deepEqual(

@@ -4,8 +4,8 @@ import {
   analyzeQuantumState,
   generateQuantumMap,
   sampleQuantumBitstring,
-} from '../site/js/map-generator.js';
-import { MAZE_SIZE } from '../site/js/maze-physics.js';
+} from '../src/js/map-generator.js';
+import { MAZE_SIZE } from '../src/js/maze-physics.js';
 
 test('gera uma grade 4x4 com entrada e saída conectadas', () => {
   const map = generateQuantumMap('010110101100');

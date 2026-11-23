@@ -8,7 +8,7 @@ sidebar_position: 0.5
 
 Contexto: projeto solo · alvo Meta Quest (navegador, WebXR) · quântico com simulador e dados reais da IBM pré-gravados.
 
-Para marcar uma tarefa como feita, troque `- [ ]` por `- [x]` neste arquivo (`docusaurus/semanas/plano.md`).
+Para marcar uma tarefa como feita, troque `- [ ]` por `- [x]` neste arquivo (`docs/semanas/plano.md`).
 
 | Semana | Período | Foco |
 | --- | --- | --- |
@@ -63,7 +63,7 @@ Uma pessoa sem explicação consegue jogar cerca de 10 minutos no Quest:
 - [x] Fase 0 jogável: console de medição, escadas, próximo andar e save local.
 - [x] Rodar no Meta Quest.
 - [x] Novo circuito (`backend/quantum_circuit.py`) e `tools/pregen.py`.
-- [x] Banco `site/data/quantum-bank.json` (simulado) e testes do banco.
+- [x] Banco `src/data/quantum-bank.json` (simulado) e testes do banco.
 - [ ] Jobs reais na IBM → movido para a Semana 2.
 - [ ] Licença do Ottoman Signs → movido para a Semana 2.
 
