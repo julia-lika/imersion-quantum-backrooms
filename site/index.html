@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Quantum Backrooms — Level 0</title>
+    <title>Quantum Backrooms — Nível 0</title>
     <style>
       :root {
         color-scheme: dark;
@@ -271,13 +271,14 @@
     <script type="module" src="js/map-generator.js"></script>
     <script type="module" src="js/quantum-bank.js"></script>
     <script type="module" src="js/components/backrooms-wall.js"></script>
-    <script type="module" src="js/phase-zero.js?v=20261123-5"></script>
+    <script type="module" src="js/phase-zero.js?v=20261123-6"></script>
     <script src="js/components/xr-hands.js"></script>
-    <script src="js/components/hand-gestures.js?v=20261123-4"></script>
-    <script src="js/components/player-locomotion.js"></script>
+    <script src="js/components/hand-gestures.js?v=20261123-5"></script>
+    <script src="js/components/player-locomotion.js?v=20261123-2"></script>
     <script src="js/components/terminal-panel.js"></script>
-    <script src="js/components/wrist-hud.js?v=20261123-3"></script>
-    <script src="js/components/lobby.js?v=20261123-2"></script>
+    <script src="js/components/wrist-hud.js?v=20261123-4"></script>
+    <script src="js/components/lobby.js?v=20261123-3"></script>
+    <script src="js/components/entity-tv.js?v=20261123-2"></script>
     <script src="js/components/vr-effects.js?v=20261123-1"></script>
     <script src="js/components/stairs-compass.js?v=20261123-1"></script>
     <script src="js/components/quantum-ghost.js?v=20261123-3"></script>
@@ -285,7 +286,7 @@
     <script src="js/components/light-flicker.js"></script>
     <script src="js/components/fixture-lights.js?v=20261123-1"></script>
     <script src="js/components/floor-transition.js"></script>
-    <script type="module" src="js/components/quantum-map.js?v=20261123-9"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261123-11"></script>
     <script src="js/components/scatter-props.js?v=20261123-3"></script>
   </head>
   <body>
@@ -293,16 +294,16 @@
       <div class="start-card">
         <div class="start-mark">⬡</div>
         <h1>QUANTUM BACKROOMS</h1>
-        <p>AN EXPERIMENT IN SPATIAL UNCERTAINTY</p>
-        <button id="start-game" type="button">ENTER</button>
+        <p>UM EXPERIMENTO DE INCERTEZA ESPACIAL</p>
+        <button id="start-game" type="button">ENTRAR</button>
         <p>
-          VR: BALANCE OS BRAÇOS PARA ANDAR // PINÇA NA TESTA LIGA O VISOR<br />
-          PALMAS NA PAREDE = PHASE SHIFT // MÃOS NOS OLHOS = SE PROTEGER<br />
+          VR: BALANCE OS BRAÇOS PARA ANDAR // PINÇA NA TESTA LIGA O VISOR ZETA<br />
+          PALMAS NA PAREDE = SALTO DE FASE // MÃOS NOS OLHOS = SE PROTEGER<br />
           OLHE PARA O PULSO = PAINEL Q-LINK<br />
-          PINÇA PARA PEGAR O QPS // LEVE A ALMOND WATER À BOCA
+          PINÇA PARA PEGAR O QPS // LEVE A ÁGUA DE AMÊNDOA À BOCA
         </p>
-        <div class="start-note">DESKTOP: WASD // H PAINEL // Q PEGAR QPS // E PEGAR E BEBER ALMOND WATER // Z ZETA VISOR // X PHASE SHIFT // P PAUSA</div>
-        <div class="start-note">MELHOR NO META QUEST COM HAND TRACKING</div>
+        <div class="start-note">DESKTOP: WASD // H PAINEL // Q PEGAR QPS // E PEGAR E BEBER ÁGUA DE AMÊNDOA // Z VISOR ZETA // X SALTO DE FASE // P PAUSA // MOUSE OLHAR</div>
+        <div class="start-note">MELHOR NO META QUEST COM RASTREAMENTO DE MÃOS</div>
       </div>
     </section>
 
@@ -310,28 +311,28 @@
     <div id="eyelid-bottom" class="eyelid"></div>
 
     <div id="hud" hidden>
-      <div>LEVEL 0 // QUANTUM BACKROOMS</div>
-      <div id="hud-state">STATE: UNMEASURED</div>
-      <div id="hud-qpu">QPU: CONNECTING // 12 QUBITS</div>
+      <div>NÍVEL 0 // QUANTUM BACKROOMS</div>
+      <div id="hud-state">ESTADO: NÃO MEDIDO</div>
+      <div id="hud-qpu">QPU: CONECTANDO // 12 QUBITS</div>
       <div id="hud-qps">QPS: --</div>
-      <div id="hud-coherence">COHERENCE: --</div>
-      <div id="hud-noise">NOISE: --</div>
-      <div id="hud-sanity">SANITY: 100%</div>
-      <div id="hud-energy">ENERGY: 100%</div>
-      <div id="hud-measurements">MEASUREMENTS: 0</div>
+      <div id="hud-coherence">COERÊNCIA: --</div>
+      <div id="hud-noise">RUÍDO: --</div>
+      <div id="hud-sanity">SANIDADE: 100%</div>
+      <div id="hud-energy">ENERGIA: 100%</div>
+      <div id="hud-measurements">MEDIÇÕES: 0</div>
     </div>
 
     <div id="phase-telemetry" hidden>
-      <div class="phase-heading">QUANTUM TELEMETRY // PHASE 0</div>
-      <div id="phase-status" class="phase-value">REALITY: COLLAPSED</div>
-      <div><span id="phase-floor">FLOOR 01</span> // <span id="phase-qps">QPS SEARCH</span> // <span id="phase-tick">TICK 0</span></div>
-      <div>OBJECTIVE: FIND THE QPS TO LOCATE STAIRS</div>
-      <div>CURRENT FLOOR: <span id="phase-current" class="phase-value"></span></div>
+      <div class="phase-heading">TELEMETRIA QUÂNTICA // FASE 0</div>
+      <div id="phase-status" class="phase-value">REALIDADE: COLAPSADA</div>
+      <div><span id="phase-floor">ANDAR 01</span> // <span id="phase-qps">BUSCANDO QPS</span> // <span id="phase-tick">CICLO 0</span></div>
+      <div>OBJETIVO: ENCONTRE O QPS PARA LOCALIZAR A PORTA</div>
+      <div>ANDAR ATUAL: <span id="phase-current" class="phase-value"></span></div>
       <div class="phase-candidates" id="phase-candidates"></div>
-      <div>GRID ENTROPY // SUPERPOSED <span id="phase-superposed">0</span> COLLAPSED <span id="phase-collapsed">84</span> TOTAL <span id="phase-total">84</span></div>
-      <div>ENTITY // SENTINEL <span id="phase-sentinel" class="phase-value">CLEAR</span> // GHOST <span id="phase-ghost" class="phase-value">DORMANT</span></div>
-      <div>LOOK_T <span id="phase-look-time">0.0s / 10s</span></div>
-      <div id="phase-visor" class="phase-value">ZETA VISOR OFF</div>
+      <div>ENTROPIA DA GRADE // SOBREPOSTAS <span id="phase-superposed">0</span> COLAPSADAS <span id="phase-collapsed">84</span> TOTAL <span id="phase-total">84</span></div>
+      <div>ENTIDADE // SENTINELA <span id="phase-sentinel" class="phase-value">LIVRE</span> // FANTASMA <span id="phase-ghost" class="phase-value">ADORMECIDA</span></div>
+      <div>TEMPO OLHANDO <span id="phase-look-time">0.0s / 10s</span></div>
+      <div id="phase-visor" class="phase-value">VISOR ZETA DESLIGADO</div>
     </div>
 
     <a-scene
@@ -371,7 +372,7 @@
           <a-entity
             id="desktop-hint"
             position="0 -0.34 -1.1"
-            text="value: WASD ou setas: andar | Q E: girar | arraste o mouse: olhar\nEncontre o QPS para localizar a porta; align: center; color: #fff0c7; width: 1.1"
+            text="value: WASD ou setas: andar | arraste o mouse: olhar e girar\nEncontre o QPS para localizar a porta; align: center; color: #fff0c7; width: 1.1"
           ></a-entity>
         </a-entity>
         <a-entity hand-tracking-controls="hand: left; modelColor: #d8bc75"></a-entity>
@@ -443,8 +444,8 @@
       function updateQuantumHud(bitstring, result) {
         const metrics = window.analyzeQuantumState(bitstring);
         hudQps.textContent = `QPS: ${metrics.qps}/100`;
-        hudCoherence.textContent = `COHERENCE: ${metrics.coherence}%`;
-        hudNoise.textContent = `NOISE: ${metrics.noise}%`;
+        hudCoherence.textContent = `COERÊNCIA: ${metrics.coherence}%`;
+        hudNoise.textContent = `RUÍDO: ${metrics.noise}%`;
         hudQpu.textContent = `QPU: ${result.source.toUpperCase()} // ${result.backend}`;
         return metrics;
       }
@@ -490,7 +491,7 @@
           'text',
           `value: MEDIÇÃO REGISTRADA — ${bitstring}; align: center; color: #fff0c7; width: 1.1`
         );
-        hudState.textContent = `STATE: MEASURED // ${bitstring}`;
+        hudState.textContent = `ESTADO: MEDIDO // ${bitstring}`;
         const metrics = updateQuantumHud(bitstring, result);
         window.dispatchEvent(new CustomEvent('quantum-measured', {
           detail: { result, metrics },

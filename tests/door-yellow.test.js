@@ -28,7 +28,9 @@ test('usa a porta amarela animada como saída sem alterar o gatilho de fase', ()
   );
   assert.match(indexHtml, /aframe-extras/);
   assert.match(quantumMap, /gltf-model["']?,\s*["']#door-yellow-model/);
-  assert.match(quantumMap, /animation-mixer["']?,\s*["']clip: open/);
+  // Clipe "open" controlado à mão: abre ao chegar perto e fecha ao se afastar.
+  assert.match(quantumMap, /item\.name === 'open'/);
+  assert.match(quantumMap, /this\.state = 'closing'/);
   assert.match(quantumMap, /id["']?,\s*["']stairs-trigger/);
   assert.match(quantumMap, /floor-transition["']?,\s*["']target: #player-head; radius: 0\.75/);
   assert.match(floorTransition, /stairs-reached/);

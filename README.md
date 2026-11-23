@@ -82,7 +82,7 @@ stream local abre estados superpostos entre medições.
 
 Controles no desktop: `WASD` movimenta, `H` abre o painel do pulso, `Q` pega o
 QPS, `E` pega e bebe a Almond Water (e abre o caderno do lobby), `Z` alterna o
-Zeta Visor, `X` executa um phase shift e `P` pausa o stream. No headset, os controladores usam
+Visor Zeta, `X` executa um salto de fase e `P` pausa o stream. No headset, os controladores usam
 laser para apontar ao console e o gatilho mede o estado.
 
 Após a medição, o QPS revela uma posição de escadas válida no mapa. Ao entrar

@@ -134,13 +134,13 @@ function isActive() {
 
 function objectiveText() {
   if (game.current.floor === LOBBY_FLOOR) return 'TUTORIAL: EXPLORE O LOBBY';
-  return game.current.measured ? 'DESCEND: STAIRS REVEALED' : 'FIND THE QPS';
+  return game.current.measured ? 'DESÇA: A PORTA FOI REVELADA' : 'ENCONTRE O QPS';
 }
 
 function syncHud() {
-  elements['hud-sanity'].textContent = `SANITY: ${Math.round(game.current.sanity)}%`;
-  elements['hud-energy'].textContent = `ENERGY: ${Math.round(survival.energy)}%`;
-  elements['hud-measurements'].textContent = `MEASUREMENTS: ${game.current.measurements ?? 0}`;
+  elements['hud-sanity'].textContent = `SANIDADE: ${Math.round(game.current.sanity)}%`;
+  elements['hud-energy'].textContent = `ENERGIA: ${Math.round(survival.energy)}%`;
+  elements['hud-measurements'].textContent = `MEDIÇÕES: ${game.current.measurements ?? 0}`;
 }
 
 // Sanidade baixa engrossa a névoa e escurece o andar.
@@ -172,28 +172,28 @@ function renderTelemetry() {
 
   elements['phase-floor'].textContent = game.current.floor === LOBBY_FLOOR
     ? 'LOBBY // FASE 0'
-    : `FLOOR ${String(game.current.floor).padStart(2, '0')}`;
+    : `ANDAR ${String(game.current.floor).padStart(2, '0')}`;
   elements['phase-qps'].textContent = game.current.qps > 0
     ? `QPS ${game.current.qps}`
-    : 'QPS SEARCH';
-  elements['phase-tick'].textContent = `TICK ${current.tick}`;
+    : 'BUSCANDO QPS';
+  elements['phase-tick'].textContent = `CICLO ${current.tick}`;
   elements['phase-current'].textContent = formatBits(current.bitstring);
   elements['phase-candidates'].innerHTML = candidates;
   elements['phase-superposed'].textContent = current.superposedCells;
   elements['phase-collapsed'].textContent = current.collapsedCells;
   elements['phase-total'].textContent = current.totalCells;
   const ghost = window.quantumPlayer.ghost;
-  elements['phase-sentinel'].textContent = current.superposedCells > 16 ? 'ACTIVE' : 'CLEAR';
+  elements['phase-sentinel'].textContent = current.superposedCells > 16 ? 'ATIVA' : 'LIVRE';
   elements['phase-ghost'].textContent = ghost.hunting
-    ? (survival.visor ? 'HUNTING // VISIBLE' : 'HUNTING')
-    : (survival.visor ? 'VISIBLE' : 'DORMANT');
-  elements['phase-look-time'].textContent = `${survival.exposure.toFixed(1)}s / ${SURVIVAL.exposureTime}s${survival.eyesCovered ? ' // EYES COVERED' : ''}`;
+    ? (survival.visor ? 'CAÇANDO // VISÍVEL' : 'CAÇANDO')
+    : (survival.visor ? 'VISÍVEL' : 'ADORMECIDA');
+  elements['phase-look-time'].textContent = `${survival.exposure.toFixed(1)}s / ${SURVIVAL.exposureTime}s${survival.eyesCovered ? ' // OLHOS COBERTOS' : ''}`;
   elements['phase-visor'].textContent = survival.visor
-    ? `ZETA VISOR ON // ${Math.round(survival.energy)}%`
-    : 'ZETA VISOR OFF';
+    ? `VISOR ZETA LIGADO // ${Math.round(survival.energy)}%`
+    : 'VISOR ZETA DESLIGADO';
   elements['phase-status'].textContent = current.superposedCells > 0
-    ? 'REALITY: SUPERPOSED'
-    : 'REALITY: COLLAPSED';
+    ? 'REALIDADE: SOBREPOSTA'
+    : 'REALIDADE: COLAPSADA';
   elements['phase-telemetry'].classList.toggle('zeta-visor', survival.visor);
   syncHud();
 }
@@ -215,15 +215,15 @@ function toggleVisor() {
 
   const next = toggleVisorState(survival);
   if (next === survival) {
-    setHint('ZETA VISOR SEM ENERGIA — encontre Almond Water');
+    setHint('VISOR ZETA SEM ENERGIA — encontre Água de Amêndoa');
     return;
   }
 
   setVisor(next);
   renderTelemetry();
   setHint(survival.visor
-    ? 'ZETA VISOR ATIVO — paredes roxas oscilam; atravesse quando estiverem abertas'
-    : 'PINÇA NA TESTA (ou Z): ZETA VISOR // PALMAS NA PAREDE (ou X): PHASE SHIFT');
+    ? 'VISOR ZETA ATIVO — paredes roxas oscilam; atravesse quando estiverem abertas'
+    : 'PINÇA NA TESTA (ou Z): VISOR ZETA // PALMAS NA PAREDE (ou X): SALTO DE FASE');
 }
 
 function requestPhaseShift() {
@@ -236,7 +236,7 @@ function resolvePhaseShift({ detail }) {
 
   const attempt = attemptPhaseShift(survival, game.current.sanity);
   if (!attempt.allowed) {
-    setHint('PHASE SHIFT INDISPONÍVEL — energia ou sanidade insuficiente');
+    setHint('SALTO DE FASE INDISPONÍVEL — energia ou sanidade insuficiente');
     return;
   }
 
@@ -249,8 +249,8 @@ function resolvePhaseShift({ detail }) {
     target: detail.target,
   });
   setHint(attempt.success
-    ? 'PHASE SHIFT — você atravessou a parede'
-    : 'PHASE SHIFT FALHOU — a parede colapsou de volta');
+    ? 'SALTO DE FASE — você atravessou a parede'
+    : 'SALTO DE FASE FALHOU — a parede colapsou de volta');
   persistProgress();
   renderTelemetry();
 }
@@ -288,7 +288,7 @@ function transitionToNextFloor() {
     syncMap();
     persistProgress();
     document.body.classList.remove('floor-transition');
-    setHint(`FLOOR ${String(game.current.floor).padStart(2, '0')} — encontre o QPS para localizar a porta`);
+    setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — encontre o QPS para localizar a porta`);
     transitioning = false;
     window.quantumPlayer.active = isActive();
     renderTelemetry();
@@ -318,7 +318,7 @@ function loseSanity() {
     syncAtmosphere();
     persistProgress();
     document.body.classList.remove('sanity-lost');
-    setHint('VOCÊ SE PERDEU — de volta ao FLOOR 01');
+    setHint('VOCÊ SE PERDEU — de volta ao ANDAR 01');
     transitioning = false;
     window.quantumPlayer.active = isActive();
     renderTelemetry();
@@ -358,7 +358,7 @@ function updateSurvival() {
   syncAtmosphere();
 
   result.events.forEach((event) => {
-    if (event === 'visor-depleted') setHint('ZETA VISOR DESCARREGADO');
+    if (event === 'visor-depleted') setHint('VISOR ZETA DESCARREGADO');
     if (event === 'ghost-strike') {
       flash('ghost-strike', 700);
       elements['backrooms-scene'].emit('screen-effect', { type: 'flash', color: '#b0001a', duration: 700, peak: 0.7 });
@@ -398,7 +398,7 @@ function bindGameEvents() {
     window.quantumPlayer.active = isActive();
     elements['phase-telemetry'].hidden = false;
     if (game.current.floor === LOBBY_FLOOR) {
-      setHint('LOBBY DE TREINAMENTO — leia as estações e abra o caderno na mesa');
+      setHint('LOBBY DE TREINAMENTO — leia as estações e abra o computador na mesa');
     }
     syncMap();
     syncAtmosphere();
@@ -427,8 +427,8 @@ function bindGameEvents() {
     syncAtmosphere();
     persistProgress();
     setHint(detail?.training
-      ? 'ALMOND WATER DE TREINO BEBIDA — sanidade e energia restauradas; outra garrafa aparece em 10 s'
-      : 'ALMOND WATER — sanidade e energia restauradas');
+      ? 'ÁGUA DE AMÊNDOA DE TREINO BEBIDA — sanidade e energia restauradas; outra garrafa aparece em 10 s'
+      : 'ÁGUA DE AMÊNDOA — sanidade e energia restauradas');
     renderTelemetry();
   });
 

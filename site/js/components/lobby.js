@@ -92,13 +92,13 @@ AFRAME.registerComponent('lobby-notebook', {
     this.onClick = () => this.toggle();
     this.onKey = (event) => {
       if (event.code !== 'KeyE' || event.repeat) return;
-      // Perto ou segurando uma Almond Water, E é da garrafa.
+      // Perto ou segurando uma Água de Amêndoa, E é da garrafa.
       if (window.quantumPlayer?.desktopWaterBusy && !this.open) return;
       this.el.object3D.getWorldPosition(this.world);
       this.data.player.object3D.getWorldPosition(this.headWorld);
       if (Math.hypot(this.world.x - this.headWorld.x, this.world.z - this.headWorld.z) < 2) this.toggle();
     };
-    this.cover.addEventListener('click', this.onClick);
+    this.clickTargets.forEach((target) => target.addEventListener('click', this.onClick));
     window.addEventListener('keydown', this.onKey);
   },
 
@@ -108,54 +108,106 @@ AFRAME.registerComponent('lobby-notebook', {
   },
 
   buildNotebook() {
-    // Caderno: capa vinho com etiqueta "CONFIDENCIAL" e miolo de papel.
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 320;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#5a1620';
-    ctx.fillRect(0, 0, 256, 320);
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    for (let y = 0; y < 320; y += 3) ctx.fillRect(0, y, 256, 1);
-    ctx.fillStyle = '#e8dfc4';
-    ctx.fillRect(40, 90, 176, 70);
-    ctx.fillStyle = '#5a1620';
-    ctx.font = 'bold 22px "Courier New", monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('CONFIDENCIAL', 128, 122);
-    ctx.font = '16px "Courier New", monospace';
-    ctx.fillText('AGENTE M. VIDAL', 128, 146);
-    ctx.fillStyle = '#c9a45a';
-    for (let y = 20; y < 320; y += 22) ctx.fillRect(10, y, 12, 6);
-    const coverTexture = new THREE.CanvasTexture(canvas);
-    if ('colorSpace' in coverTexture) coverTexture.colorSpace = THREE.SRGBColorSpace;
+    // Notebook da Divisão Q: base com teclado e tela de terminal verde (a tela
+    // fica virada para +Z local, a dobradiça na borda de trás).
+    const base = document.createElement('a-box');
+    base.classList.add('clickable');
+    base.setAttribute('width', 0.34);
+    base.setAttribute('height', 0.018);
+    base.setAttribute('depth', 0.23);
+    base.setAttribute('material', 'color: #1c1f22; metalness: 0.4; roughness: 0.5');
+    this.el.appendChild(base);
 
-    this.cover = document.createElement('a-box');
-    this.cover.classList.add('clickable');
-    this.cover.setAttribute('width', 0.22);
-    this.cover.setAttribute('height', 0.025);
-    this.cover.setAttribute('depth', 0.29);
-    this.cover.setAttribute('material', 'color: #e9e2cc; roughness: 0.9');
-    this.cover.addEventListener('loaded', () => {
-      const mesh = this.cover.getObject3D('mesh');
-      const paper = new THREE.MeshStandardMaterial({ color: '#e9e2cc', roughness: 0.9 });
-      const top = new THREE.MeshStandardMaterial({ map: coverTexture, roughness: 0.7 });
-      const side = new THREE.MeshStandardMaterial({ color: '#4a121a', roughness: 0.8 });
-      // Ordem das faces do BoxGeometry: +x, -x, +y, -y, +z, -z.
-      mesh.material = [paper, side, top, side, paper, paper];
+    const keyboardCanvas = document.createElement('canvas');
+    keyboardCanvas.width = 256;
+    keyboardCanvas.height = 128;
+    const keys = keyboardCanvas.getContext('2d');
+    keys.fillStyle = '#15181a';
+    keys.fillRect(0, 0, 256, 128);
+    keys.fillStyle = '#2c3135';
+    for (let row = 0; row < 5; row += 1) {
+      for (let col = 0; col < 13; col += 1) keys.fillRect(14 + col * 18, 8 + row * 13, 15, 10);
+    }
+    keys.fillRect(70, 75, 116, 10);
+    keys.fillStyle = '#23272a';
+    keys.fillRect(92, 92, 72, 30);
+    const keyboard = document.createElement('a-plane');
+    keyboard.setAttribute('width', 0.32);
+    keyboard.setAttribute('height', 0.21);
+    keyboard.setAttribute('rotation', '-90 0 0');
+    keyboard.setAttribute('position', '0 0.0095 0');
+    keyboard.setAttribute('material', 'shader: flat; color: #ffffff');
+    keyboard.addEventListener('loaded', () => {
+      const texture = new THREE.CanvasTexture(keyboardCanvas);
+      if ('colorSpace' in texture) texture.colorSpace = THREE.SRGBColorSpace;
+      keyboard.getObject3D('mesh').material.map = texture;
+      keyboard.getObject3D('mesh').material.needsUpdate = true;
     });
-    this.el.appendChild(this.cover);
+    this.el.appendChild(keyboard);
+
+    const hinge = document.createElement('a-entity');
+    hinge.setAttribute('position', '0 0.009 -0.112');
+    hinge.setAttribute('rotation', '-14 0 0');
+    const lid = document.createElement('a-box');
+    lid.classList.add('clickable');
+    lid.setAttribute('width', 0.34);
+    lid.setAttribute('height', 0.22);
+    lid.setAttribute('depth', 0.012);
+    lid.setAttribute('position', '0 0.11 0');
+    lid.setAttribute('material', 'color: #1c1f22; metalness: 0.4; roughness: 0.5');
+    hinge.appendChild(lid);
+
+    this.screenCanvas = document.createElement('canvas');
+    this.screenCanvas.width = 512;
+    this.screenCanvas.height = 320;
+    this.screenTexture = new THREE.CanvasTexture(this.screenCanvas);
+    if ('colorSpace' in this.screenTexture) this.screenTexture.colorSpace = THREE.SRGBColorSpace;
+    this.drawScreen();
+    const screen = document.createElement('a-plane');
+    screen.classList.add('clickable');
+    screen.setAttribute('width', 0.31);
+    screen.setAttribute('height', 0.194);
+    screen.setAttribute('position', '0 0.112 0.0065');
+    screen.setAttribute('material', 'shader: flat; color: #ffffff');
+    screen.addEventListener('loaded', () => {
+      screen.getObject3D('mesh').material.map = this.screenTexture;
+      screen.getObject3D('mesh').material.needsUpdate = true;
+    });
+    hinge.appendChild(screen);
+    this.el.appendChild(hinge);
+
+    // Brilho verde da tela sobre a mesa.
+    const glow = document.createElement('a-entity');
+    glow.setAttribute('light', 'type: point; color: #39ff88; intensity: 0.35; distance: 1.4');
+    glow.setAttribute('position', '0 0.15 0.12');
+    this.el.appendChild(glow);
+
+    this.clickTargets = [base, lid, screen];
 
     // Anel verde pulsando para chamar atenção.
     const ring = document.createElement('a-ring');
-    ring.setAttribute('radius-inner', 0.2);
-    ring.setAttribute('radius-outer', 0.23);
+    ring.setAttribute('radius-inner', 0.24);
+    ring.setAttribute('radius-outer', 0.27);
     ring.setAttribute('rotation', '-90 0 0');
-    ring.setAttribute('position', '0 -0.011 0');
+    ring.setAttribute('position', '0 -0.008 0');
     ring.setAttribute('material', 'color: #39ff88; shader: flat; transparent: true; opacity: 0.6');
     ring.setAttribute('animation', 'property: material.opacity; from: 0.15; to: 0.8; dir: alternate; loop: true; dur: 900');
     this.ring = ring;
     this.el.appendChild(ring);
+  },
+
+  drawScreen() {
+    window.drawTerminal(this.screenCanvas, {
+      title: 'DIVISÃO Q',
+      subtitle: 'ESTAÇÃO 0',
+      body: this.open
+        ? 'ARQUIVO 0 ABERTO\nLendo relatório...'
+        : 'ARQUIVO 0 // CONFIDENCIAL\nAGENTE M. VIDAL\n\n1 MENSAGEM NÃO LIDA',
+      footer: this.open ? '> CLIQUE PARA FECHAR' : '> CLIQUE OU APERTE E',
+      fontSize: 28,
+      blink: true,
+    });
+    this.screenTexture.needsUpdate = true;
   },
 
   buildMessage() {
@@ -168,11 +220,11 @@ AFRAME.registerComponent('lobby-notebook', {
         '',
         'Último sinal: 72 horas atrás, no Level 0. Ela desceu para medir uma anomalia quântica e o Q-LINK dela parou de responder.',
         '',
-        'Sua missão: atravessar os andares e encontrá-la. Siga os QPS, guarde a Almond Water e não encare a entidade.',
+        'Sua missão: atravessar os andares e encontrá-la. Siga os QPS, guarde a Água de Amêndoa e não encare a entidade.',
         '',
         'Precisamos ir atrás dela.',
       ].join('\\n'),
-      footer: '> TOQUE OU CLIQUE NO CADERNO PARA FECHAR',
+      footer: '> TOQUE OU CLIQUE NO COMPUTADOR PARA FECHAR',
       width: 1.3,
       height: 0.95,
       fontSize: 30,
@@ -190,6 +242,7 @@ AFRAME.registerComponent('lobby-notebook', {
     this.open = !this.open;
     this.message.object3D.visible = this.open;
     this.ring.object3D.visible = !this.open;
+    this.drawScreen();
     // A seta para a porta só aparece depois do briefing e some com o painel aberto.
     if (window.quantumPlayer) {
       window.quantumPlayer.briefingOpen = this.open;
@@ -205,7 +258,11 @@ AFRAME.registerComponent('lobby-notebook', {
     }
   },
 
-  tick() {
+  tick(time) {
+    if (time - (this.lastScreenDraw || 0) > 500) {
+      this.lastScreenDraw = time;
+      this.drawScreen();
+    }
     const tracker = this.data.rig?.components['xr-hands'];
     this.el.object3D.getWorldPosition(this.world);
 

@@ -2,7 +2,7 @@
 // - pinça na testa: liga/desliga o Zeta Visor;
 // - mãos sobre os olhos: protege da exposição ao fantasma;
 // - duas palmas empurrando a parede: phase shift;
-// - pinça perto de um item: pega o QPS ou a Almond Water (beber = levar à boca);
+// - pinça perto de um item: pega o QPS ou a Água de Amêndoa (beber = levar à boca);
 // - estender a mão até um item também pega: o QPS é coletado e a garrafa fica na mão.
 const BROW_OFFSET = new THREE.Vector3(0, 0.09, -0.06);
 const EYES_OFFSET = new THREE.Vector3(0, 0, -0.08);
@@ -178,7 +178,7 @@ AFRAME.registerComponent('hand-gestures', {
 
       const item = this.findNearestItem(hand.world, TOUCH_RADIUS);
       if (item?.dataset.item === 'qps') this.consume(item, 'qps-collected', 600);
-      // Encostar a mão na Almond Water a segura; levar à boca bebe, pinçar e soltar larga.
+      // Encostar a mão na Água de Amêndoa a segura; levar à boca bebe, pinçar e soltar larga.
       const recentlyDropped = performance.now() - Number(item?.dataset.droppedAt || 0) < 1500;
       if (item?.dataset.item === 'almond-water' && !this.held[side] && !this.isHeld(item) && !recentlyDropped) {
         this.grab(side, item, 'touch');
@@ -247,7 +247,7 @@ AFRAME.registerComponent('hand-gestures', {
     return physics.isCellSolid(world, cell.x, cell.z, this.el.sceneEl.time / 1000);
   },
 
-  // Desktop: perto do QPS, Q (ou um clique nele) coleta. A Almond Water é pega
+  // Desktop: perto do QPS, Q (ou um clique nele) coleta. A Água de Amêndoa é pega
   // com E (fica na mão, no canto da tela) e um segundo E leva a garrafa à boca.
   updateDesktopPickup(headWorld) {
     if (!headWorld || !window.quantumPlayer?.active) return;
@@ -272,7 +272,7 @@ AFRAME.registerComponent('hand-gestures', {
     if (nearest['almond-water'] !== this.desktopNearby) {
       this.desktopNearby = nearest['almond-water'];
       if (this.desktopNearby && !this.desktopHeld) {
-        this.el.sceneEl.emit('interaction-hint', { text: 'ALMOND WATER — aperte E para pegar' });
+        this.el.sceneEl.emit('interaction-hint', { text: 'ÁGUA DE AMÊNDOA — aperte E para pegar' });
       }
     }
     // O caderno do lobby também usa E: avisa quando a tecla já está ocupada.
@@ -310,7 +310,7 @@ AFRAME.registerComponent('hand-gestures', {
     this.desktopHeld = item;
     this.drinkStart = 0;
     item.removeAttribute('animation');
-    this.el.sceneEl.emit('interaction-hint', { text: 'ALMOND WATER NA MÃO — aperte E de novo para beber' });
+    this.el.sceneEl.emit('interaction-hint', { text: 'ÁGUA DE AMÊNDOA NA MÃO — aperte E de novo para beber' });
   },
 
   // Garrafa presa à câmera; ao beber, sobe até a boca e inclina.
