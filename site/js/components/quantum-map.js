@@ -157,7 +157,7 @@ AFRAME.registerComponent('quantum-map', {
       stairs: `${map.stairs.x},${map.stairs.z}`,
       doorModel: Boolean(document.querySelector('#door-yellow-model')?.data),
     };
-    this.el.sceneEl.emit('maze-world-updated', { stairs: map.stairs });
+    this.el.sceneEl.emit('maze-world-updated', { stairs: map.stairs, items: this.itemCells });
   },
 
   // Um QPS por andar (até ser coletado) e garrafas de Almond Water espalhadas.
@@ -167,6 +167,8 @@ AFRAME.registerComponent('quantum-map', {
       { x: map.stairs.x, z: map.stairs.z },
     ];
     const cells = window.quantumPhysics.pickFloorCells(map.maze, map.bitstring, 3, exclude);
+    // Os props evitam estas células para não esconder o QPS nem as garrafas.
+    this.itemCells = cells;
     const items = [
       { type: 'qps', cell: cells[0], skip: this.data.stairsVisible },
       { type: 'almond-water', cell: cells[1] },

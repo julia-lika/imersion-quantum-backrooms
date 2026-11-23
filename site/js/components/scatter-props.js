@@ -12,9 +12,11 @@ AFRAME.registerComponent('scatter-props', {
 
   init() {
     this.stairs = null;
+    this.items = [];
     this.onModel = () => this.scatter();
     this.onWorld = ({ detail }) => {
       this.stairs = detail?.stairs || null;
+      this.items = detail?.items || [];
       this.scatter();
     };
     this.el.addEventListener('model-loaded', this.onModel);
@@ -53,6 +55,7 @@ AFRAME.registerComponent('scatter-props', {
       row.forEach((cell, x) => {
         if (cell !== '.' || (x <= 3 && z <= 3)) return;
         if (this.stairs && Math.abs(this.stairs.x - x) + Math.abs(this.stairs.z - z) <= 1) return;
+        if (this.items.some((item) => item.x === x && item.z === z)) return;
 
         const walls = DIRECTIONS.filter(([dx, dz]) => (
           maze[z + dz]?.[x + dx] === '#' && !world.superposed.has(`${x + dx},${z + dz}`)
