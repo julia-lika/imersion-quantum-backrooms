@@ -197,7 +197,7 @@ AFRAME.registerComponent('quantum-map', {
     // Paredes em superposição continuam separadas porque mudam de material.
     superposed.forEach(({ x, z, offset }) => {
       const wall = document.createElement('a-box');
-      wall.setAttribute('superposed-wall', { offset });
+      wall.setAttribute('superposed-wall', { offset, x, z });
       wall.setAttribute('width', cellSize + 0.01);
       wall.setAttribute('height', height);
       wall.setAttribute('depth', cellSize + 0.01);
