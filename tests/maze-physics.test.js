@@ -91,3 +91,17 @@ test('o jogador consegue sair de uma parede superposta que fechou sobre ele', ()
 
   assert.ok(moved.x > inside.x);
 });
+
+test('QPS e Almond Water sempre caem em células livres do Level 0', () => {
+  ['010110101100', '000000000000', '111111111111', '101010101010', '111000111000', '001100110011'].forEach((bits) => {
+    const map = generateQuantumMap(bits);
+    const exclude = [{ x: 1, z: 1 }, { x: 2, z: 1 }, { x: 1, z: 2 }, map.stairs];
+    const cells = pickFloorCells(map.maze, map.bitstring, 3, exclude);
+
+    assert.equal(cells.length, 3, bits);
+    cells.forEach(({ x, z }) => {
+      assert.equal(map.maze[z][x], '.', `${bits} ${x},${z}`);
+      assert.ok(!exclude.some((cell) => cell.x === x && cell.z === z), bits);
+    });
+  });
+});
