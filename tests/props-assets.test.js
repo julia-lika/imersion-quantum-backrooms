@@ -10,7 +10,7 @@ test('a Almond Water usa o modelo GLB leve', () => {
   const model = new URL('site/assets/models/almond-water.glb', root);
   assert.ok(existsSync(model));
   assert.ok(statSync(model).size < 400 * 1024);
-  assert.match(indexHtml, /id="almond-water-model" src="assets\/models\/almond-water\.glb"/);
+  assert.match(indexHtml, /id="almond-water-model" src="assets\/models\/almond-water\.glb(\?v=\d+)?"/);
   assert.match(read('site/js/components/quantum-map.js'), /gltf-model['"],\s*['"]#almond-water-model/);
 });
 
