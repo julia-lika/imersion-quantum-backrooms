@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -8,7 +9,7 @@ import {
   observeSuperposedWalls,
 } from '../src/js/maze-physics.js';
 import { generateLobbyMap, LOBBY } from '../src/js/map-generator.js';
-import { QUANTUM_SLIDES } from '../src/js/content/quantum-slides.js';
+import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../src/js/content/quantum-slides.js';
 
 function openTime(offset) {
   for (let t = 0; t < 20; t += 0.05) if (isSuperposedOpen(offset, t)) return t;
@@ -53,9 +54,29 @@ test('a sala de treino do lobby é alcançável pelas duas paredes', () => {
   assert.equal(maze[16][13], '.', 'sala atrás da parede em superposição');
 });
 
-test('os slides cobrem os conceitos e todos têm diagrama', () => {
-  const titles = QUANTUM_SLIDES.map((slide) => slide.title).join(' ');
-  ['SUPERPOSIÇÃO', 'EMARANHAMENTO', 'ENTROPIA', 'MEDIÇÃO', 'MAPA', 'TUNELAMENTO']
-    .forEach((word) => assert.match(`${titles} ${QUANTUM_SLIDES.map((s) => s.subtitle).join(' ')}`, new RegExp(word)));
-  QUANTUM_SLIDES.forEach((slide) => assert.ok(slide.diagram && slide.body.length > 40));
+test('os slides explicam do bit ao jogo e as imagens existem', () => {
+  const titles = QUANTUM_SLIDES.map((slide) => slide.title).join(' ').toLowerCase();
+  ['bit', 'qubit', 'superposição', 'schrödinger', 'medir', 'emaranhamento', 'entropia', 'mapa', 'tunelamento']
+    .forEach((word) => assert.ok(titles.includes(word), `falta slide sobre ${word}`));
+  QUANTUM_SLIDES.forEach((slide) => {
+    assert.ok(['dark', 'cream', 'yellow'].includes(slide.theme));
+    assert.ok((slide.cards && slide.cards.length >= 1 && slide.cards.length <= 3) || slide.table);
+    (slide.cards || []).forEach((card) => {
+      if (card.image) {
+        assert.ok(SLIDE_IMAGES[card.image], `imagem ${card.image}`);
+        assert.ok(existsSync(new URL(`../src/${SLIDE_IMAGES[card.image]}`, import.meta.url)));
+      }
+    });
+  });
+});
+
+test('Esc volta ao menu, o visor desliga e a dica usa a fonte de terminal', () => {
+  const phase = readFileSync(new URL('../src/js/phase-zero.js', import.meta.url), 'utf8');
+  assert.match(phase, /'Escape'/);
+  assert.match(phase, /function returnToMenu/);
+  assert.match(phase, /style: 'terminal'/);
+  const canvasText = readFileSync(new URL('../src/js/components/canvas-text.js', import.meta.url), 'utf8');
+  assert.match(canvasText, /monospace/);
+  const locomotion = readFileSync(new URL('../src/js/components/player-locomotion.js', import.meta.url), 'utf8');
+  assert.match(locomotion, /start-screen/);
 });

@@ -50,7 +50,7 @@
     measured = true;
     hint.setAttribute(
       'canvas-text',
-      'value: O QPS MEDIU O ESTADO — a realidade está colapsando; align: center; color: #9dffc4; width: 1.1'
+      'value: O QPS MEDIU O ESTADO — a realidade está colapsando; align: center; color: #39ff88; width: 1.1; style: terminal'
     );
     playCollapseBlink(() => commitMeasurement(result));
   }
@@ -64,7 +64,7 @@
     );
     hint.setAttribute(
       'canvas-text',
-      `value: MEDIÇÃO REGISTRADA — ${bitstring}; align: center; color: #fff0c7; width: 1.1`
+      `value: MEDIÇÃO REGISTRADA — ${bitstring}; align: center; color: #39ff88; width: 1.1; style: terminal`
     );
     hudState.textContent = `ESTADO: MEDIDO // ${bitstring}`;
     const metrics = updateQuantumHud(bitstring, result);
@@ -78,7 +78,7 @@
     if (event?.detail?.training) {
       hint.setAttribute(
         'canvas-text',
-        'value: QPS DE TREINO COLETADO — nos andares, isso mede o estado e revela a porta. Outro aparece em 10 s; align: center; color: #9dffc4; width: 1.1'
+        'value: QPS DE TREINO COLETADO — nos andares, isso mede o estado e revela a porta. Outro aparece em 10 s; align: center; color: #39ff88; width: 1.1; style: terminal'
       );
       scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
       return;
@@ -87,7 +87,7 @@
     measuring = true;
     hint.setAttribute(
       'canvas-text',
-      'value: MEDIÇÃO EM ANDAMENTO — o estado está sendo amostrado; align: center; color: #fff0c7; width: 1.1'
+      'value: MEDIÇÃO EM ANDAMENTO — o estado está sendo amostrado; align: center; color: #39ff88; width: 1.1; style: terminal'
     );
 
     try {
@@ -127,7 +127,7 @@
   window.addEventListener('quantum-measured', () => {
     hint.setAttribute(
       'canvas-text',
-      'value: QPS ENCONTRADO — localize a porta antes do próximo colapso; align: center; color: #fff0c7; width: 1.1'
+      'value: QPS ENCONTRADO — localize a porta antes do próximo colapso; align: center; color: #39ff88; width: 1.1; style: terminal'
     );
   });
 })();

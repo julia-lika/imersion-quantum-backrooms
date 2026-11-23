@@ -190,6 +190,12 @@ AFRAME.registerComponent('player-locomotion', {
       this.skipReason = !this.tracker ? 'sem xr-hands' : (!world ? 'sem mundo (quantumWorld)' : 'sem física');
       return;
     }
+    // Com o menu inicial aberto (antes de entrar ou depois do Esc) ninguém anda.
+    this.startScreen = this.startScreen || document.getElementById('start-screen');
+    if (this.startScreen && !this.startScreen.hidden) {
+      this.skipReason = 'menu inicial aberto';
+      return;
+    }
     this.skipReason = 'ok';
 
     if (!this.initialFacingDone) {
