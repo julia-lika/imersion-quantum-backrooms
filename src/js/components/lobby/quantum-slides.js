@@ -1,19 +1,36 @@
-// Sala de briefing quântico do lobby: um telão com slides navegáveis.
+// Telão de slides do lobby: computação quântica do zero, no visual da
+// apresentação do projeto (fundo escuro, creme ou amarelo, cartões arredondados,
+// ilustrações de moedas e gatos). O conteúdo está em js/content/quantum-slides.js.
 // Desktop: clique nos botões (ou na metade esquerda/direita da tela) ou use [ e ].
 // VR: toque os botões com a mão.
-import { QUANTUM_SLIDES } from '../../content/quantum-slides.js';
+import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../../content/quantum-slides.js';
 
-const SLIDE_CANVAS = { width: 1280, height: 800 };
-const GREEN = '#39ff88';
-const DIM = '#1d8a4f';
-const CYAN = '#44ffcc';
-const PURPLE = '#b46bff';
+const CANVAS = { width: 1600, height: 900 };
+const PAD = 72;
 const TOUCH_RADIUS = 0.12;
 const KEY_RADIUS = 4;
+const FONT = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
+const KICKER = 'COMPUTAÇÃO QUÂNTICA DO ZERO';
+
+const THEMES = {
+  dark: { bg: '#15130b', card: '#26230f', text: '#efe9c9', kicker: '#e3cc4b', muted: '#bdb690', accent: '#a78bfa', line: '#3a3518' },
+  cream: { bg: '#efe9c9', card: '#e1d8aa', text: '#15130b', kicker: '#7a6a12', muted: '#5f5836', accent: '#8b5cf6', line: '#c9bf8c' },
+  yellow: { bg: '#e3cc4b', card: '#d6bd38', text: '#15130b', kicker: '#15130b', muted: '#4a4220', accent: '#6d3fd6', line: '#b9a22c' },
+};
+
+const images = {};
+function loadImages(onLoad) {
+  Object.entries(SLIDE_IMAGES).forEach(([key, src]) => {
+    const image = new Image();
+    image.onload = onLoad;
+    image.src = src;
+    images[key] = image;
+  });
+}
 
 function wrap(ctx, text, maxWidth) {
   const lines = [];
-  text.split('\n').forEach((paragraph) => {
+  String(text).split('\n').forEach((paragraph) => {
     if (!paragraph.trim()) {
       lines.push('');
       return;
@@ -33,211 +50,299 @@ function wrap(ctx, text, maxWidth) {
   return lines;
 }
 
-// Diagramas simples, um por slide, desenhados na metade direita da tela.
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// Escreve um bloco de texto e devolve a altura usada.
+function textBlock(ctx, text, x, y, width, { size, color, bold = false, lineHeight = 1.32 }) {
+  ctx.font = `${bold ? 'bold ' : ''}${size}px ${FONT}`;
+  ctx.fillStyle = color;
+  const lines = wrap(ctx, text, width);
+  lines.forEach((line, index) => ctx.fillText(line, x, y + size + index * size * lineHeight));
+  return lines.length * size * lineHeight;
+}
+
+function measureText(ctx, text, width, size, bold = false, lineHeight = 1.32) {
+  ctx.font = `${bold ? 'bold ' : ''}${size}px ${FONT}`;
+  return wrap(ctx, text, width).length * size * lineHeight;
+}
+
+// Diagramas desenhados no canvas, nas cores do tema.
 const DIAGRAMS = {
-  intro(ctx, box) {
-    ctx.strokeStyle = GREEN;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(box.x + box.w / 2, box.y + box.h / 2, box.h * 0.32, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.font = 'bold 120px "Courier New", monospace';
-    ctx.fillStyle = GREEN;
+  switches(ctx, box, theme, time) {
+    const bits = '010110101100';
+    const step = box.w / bits.length;
+    const pulse = Math.floor(time / 900) % bits.length;
+    [...bits].forEach((bit, index) => {
+      const on = bit === '1';
+      const x = box.x + step * (index + 0.5);
+      const y = box.y + box.h * 0.42;
+      ctx.fillStyle = on ? theme.kicker : theme.line;
+      ctx.beginPath();
+      ctx.arc(x, y, step * 0.34, 0, Math.PI * 2);
+      ctx.fill();
+      if (on) {
+        ctx.strokeStyle = theme.kicker;
+        ctx.globalAlpha = 0.35;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(x, y, step * 0.46, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      ctx.font = `bold ${Math.round(step * 0.5)}px ${FONT}`;
+      ctx.fillStyle = index === pulse ? theme.accent : theme.text;
+      ctx.textAlign = 'center';
+      ctx.fillText(bit, x, box.y + box.h * 0.9);
+      ctx.textAlign = 'left';
+    });
+  },
+
+  doubling(ctx, box, theme) {
+    const max = 12;
+    const width = box.w / max;
+    for (let bits = 1; bits <= max; bits += 1) {
+      // Escala logarítmica: cada bit dobra, então a barra cresce em degraus iguais.
+      const h = (box.h - 50) * (bits / max);
+      ctx.fillStyle = bits === max ? theme.accent : theme.kicker;
+      ctx.fillRect(box.x + (bits - 1) * width + 4, box.y + box.h - 30 - h, width - 8, h);
+      ctx.font = `16px ${FONT}`;
+      ctx.fillStyle = theme.muted;
+      ctx.textAlign = 'center';
+      ctx.fillText(String(2 ** bits), box.x + (bits - 0.5) * width, box.y + box.h - 34 - h);
+      ctx.fillText(`${bits}`, box.x + (bits - 0.5) * width, box.y + box.h - 6);
+      ctx.textAlign = 'left';
+    }
+  },
+
+  superposition(ctx, box, theme, time) {
+    const heads = 0.5 + 0.3 * Math.sin(time * 0.0012);
+    [['CARA', heads], ['COROA', 1 - heads]].forEach(([label, p], index) => {
+      const w = box.w * 0.3;
+      const x = box.x + box.w * (0.12 + index * 0.46);
+      const h = (box.h - 70) * p;
+      ctx.fillStyle = index ? theme.accent : theme.kicker;
+      roundRect(ctx, x, box.y + box.h - 40 - h, w, h, 10);
+      ctx.fill();
+      ctx.font = `bold 26px ${FONT}`;
+      ctx.fillStyle = theme.text;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${Math.round(p * 100)}%`, x + w / 2, box.y + box.h - 50 - h);
+      ctx.font = `bold 20px ${FONT}`;
+      ctx.fillText(label, x + w / 2, box.y + box.h - 10);
+      ctx.textAlign = 'left';
+    });
+  },
+
+  entropy(ctx, box, theme) {
+    const y = box.y + box.h * 0.45;
+    roundRect(ctx, box.x, y, box.w, 34, 17);
+    ctx.fillStyle = theme.line;
+    ctx.fill();
+    roundRect(ctx, box.x, y, box.w * (7.6 / 12), 34, 17);
+    ctx.fillStyle = theme.kicker;
+    ctx.fill();
+    ctx.font = `bold 20px ${FONT}`;
+    ctx.fillStyle = theme.text;
+    ctx.fillText('0', box.x, y + 70);
+    ctx.textAlign = 'right';
+    ctx.fillText('12 bits', box.x + box.w, y + 70);
     ctx.textAlign = 'center';
-    ctx.fillText('ψ', box.x + box.w / 2, box.y + box.h / 2 + 40);
+    ctx.fillStyle = theme.accent;
+    ctx.fillText('andares ≈ 7–8', box.x + box.w * (7.6 / 12), y - 18);
     ctx.textAlign = 'left';
   },
 
-  superposition(ctx, box, time) {
-    const p1 = 0.5 + 0.35 * Math.sin(time * 0.0012);
-    const bars = [['|0⟩', 1 - p1], ['|1⟩', p1]];
-    const barWidth = box.w * 0.22;
-    bars.forEach(([label, p], index) => {
-      const x = box.x + box.w * (0.2 + index * 0.4);
-      const h = box.h * 0.7 * p;
-      ctx.fillStyle = index ? CYAN : GREEN;
-      ctx.fillRect(x, box.y + box.h * 0.8 - h, barWidth, h);
-      ctx.fillStyle = GREEN;
-      ctx.font = 'bold 34px "Courier New", monospace';
-      ctx.fillText(label, x + 20, box.y + box.h * 0.92);
-      ctx.fillText(`${Math.round(p * 100)}%`, x + 10, box.y + box.h * 0.8 - h - 12);
-    });
-    ctx.font = '24px "Courier New", monospace';
-    ctx.fillStyle = DIM;
-    ctx.fillText('RY girando: a chance muda até medir', box.x, box.y + 30);
-  },
-
-  entanglement(ctx, box, time) {
-    const count = 12;
-    const step = box.w / count;
-    const y = box.y + box.h * 0.5;
-    ctx.strokeStyle = CYAN;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(box.x + step / 2, y);
-    ctx.lineTo(box.x + box.w - step / 2, y);
-    ctx.stroke();
-    const pulse = Math.floor(time / 300) % count;
-    for (let index = 0; index < count; index += 1) {
-      const x = box.x + step * (index + 0.5);
-      ctx.fillStyle = index <= pulse ? CYAN : '#0b2a1c';
-      ctx.beginPath();
-      ctx.arc(x, y, step * 0.32, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = GREEN;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = GREEN;
-      ctx.font = '20px "Courier New", monospace';
-      ctx.fillText(`q${index}`, x - 14, y + step * 0.75);
-    }
-    ctx.font = '24px "Courier New", monospace';
-    ctx.fillStyle = DIM;
-    ctx.fillText('CX em cadeia: cada qubit afeta o próximo', box.x, box.y + 30);
-  },
-
-  interference(ctx, box) {
-    // Distribuição não uniforme (formato ilustrativo) contra a linha uniforme.
-    const columns = 48;
-    const width = box.w / columns;
-    for (let index = 0; index < columns; index += 1) {
-      const p = Math.abs(Math.sin(index * 0.7) * Math.cos(index * 0.23)) ** 2;
-      const h = box.h * 0.7 * p;
-      ctx.fillStyle = p > 0.5 ? CYAN : GREEN;
-      ctx.fillRect(box.x + index * width, box.y + box.h * 0.85 - h, width - 2, h);
-    }
-    ctx.strokeStyle = PURPLE;
-    ctx.setLineDash([10, 8]);
-    ctx.beginPath();
-    ctx.moveTo(box.x, box.y + box.h * 0.7);
-    ctx.lineTo(box.x + box.w, box.y + box.h * 0.7);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.font = '24px "Courier New", monospace';
-    ctx.fillStyle = PURPLE;
-    ctx.fillText('sem interferência (uniforme)', box.x, box.y + box.h * 0.66);
-    ctx.fillStyle = DIM;
-    ctx.fillText('com interferência: picos e vales', box.x, box.y + 30);
-  },
-
-  measurement(ctx, box, time) {
-    const rows = 7;
-    const chosen = Math.floor(time / 1600) % rows;
-    ctx.font = '30px "Courier New", monospace';
-    for (let index = 0; index < rows; index += 1) {
-      const bits = Array.from({ length: 12 }, (_, q) => ((index * 7 + q * 3 + (q * index)) % 5 < 2 ? '1' : '0')).join('');
-      ctx.fillStyle = index === chosen ? CYAN : DIM;
-      ctx.fillText(`${index === chosen ? '▶' : ' '} ${bits}`, box.x + 20, box.y + 90 + index * 52);
-    }
-    ctx.font = '24px "Courier New", monospace';
-    ctx.fillStyle = GREEN;
-    ctx.fillText('1024 shots gravados → 1 resultado', box.x, box.y + 30);
-  },
-
-  entropy(ctx, box) {
-    const y = box.y + box.h * 0.55;
-    const x0 = box.x + 20;
-    const width = box.w - 40;
-    ctx.fillStyle = '#0b2a1c';
-    ctx.fillRect(x0, y - 20, width, 40);
-    const gradient = ctx.createLinearGradient(x0, 0, x0 + width, 0);
-    gradient.addColorStop(0, GREEN);
-    gradient.addColorStop(1, PURPLE);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(x0, y - 20, width * (7.6 / 12), 40);
-    ctx.fillStyle = GREEN;
-    ctx.font = '26px "Courier New", monospace';
-    ctx.fillText('0 bits', x0, y + 60);
-    ctx.fillText('12 bits', x0 + width - 100, y + 60);
-    ctx.fillStyle = CYAN;
-    ctx.fillText('andares gravados ≈ 7–8 bits', x0 + width * 0.25, y - 40);
-    ctx.fillStyle = DIM;
-    ctx.fillText('H = −Σ p · log₂ p', box.x, box.y + 30);
-  },
-
-  map(ctx, box) {
-    ctx.font = 'bold 30px "Courier New", monospace';
-    ctx.fillStyle = CYAN;
-    ctx.fillText('010110101100', box.x, box.y + 60);
-    ctx.fillStyle = GREEN;
-    ctx.fillText('↓ semente', box.x + 40, box.y + 110);
-    // Mini grade estilo BSP.
-    const gx = box.x + 40;
-    const gy = box.y + 140;
-    const cell = Math.min(box.w - 80, box.h - 170) / 12;
-    const walls = new Set(['5,0', '5,1', '5,2', '5,4', '5,5', '5,6', '5,7', '0,7', '1,7', '2,7', '4,7', '6,4', '7,4', '9,4', '10,4', '11,4', '8,9', '8,10', '8,11']);
+  map(ctx, box, theme) {
+    ctx.font = `bold 30px ${FONT}`;
+    ctx.fillStyle = theme.accent;
+    ctx.fillText('010110101100', box.x, box.y + 32);
+    const cell = Math.min(box.w, box.h - 56) / 12;
+    const gx = box.x + (box.w - cell * 12) / 2;
+    const gy = box.y + 52;
+    const walls = new Set(['5,0', '5,1', '5,2', '5,5', '5,6', '5,7', '0,7', '1,7', '2,7', '6,4', '7,4', '9,4', '10,4', '11,4', '8,9', '8,10', '8,11', '2,3', '9,7']);
     for (let z = 0; z < 12; z += 1) {
       for (let x = 0; x < 12; x += 1) {
-        ctx.fillStyle = walls.has(`${x},${z}`) ? GREEN : '#0b2a1c';
-        ctx.fillRect(gx + x * cell, gy + z * cell, cell - 2, cell - 2);
+        ctx.fillStyle = walls.has(`${x},${z}`) ? theme.text : theme.line;
+        ctx.fillRect(gx + x * cell + 1, gy + z * cell + 1, cell - 2, cell - 2);
       }
     }
-    ctx.fillStyle = '#ffd36b';
-    ctx.fillRect(gx + 11 * cell, gy + 11 * cell, cell - 2, cell - 2);
+    ctx.fillStyle = theme.kicker;
+    ctx.fillRect(gx + 11 * cell + 1, gy + 11 * cell + 1, cell - 2, cell - 2);
   },
 
-  superposedWall(ctx, box, time) {
+  superposedWall(ctx, box, theme, time) {
     const open = Math.sin(time * 0.0016) > 0.35;
-    const x = box.x + box.w * 0.35;
-    ctx.fillStyle = '#0b2a1c';
-    ctx.fillRect(box.x, box.y + 60, box.w, box.h - 80);
-    ctx.fillStyle = open ? 'rgba(68,255,204,0.18)' : PURPLE;
-    ctx.fillRect(x, box.y + 60, box.w * 0.3, box.h - 80);
-    ctx.strokeStyle = open ? CYAN : PURPLE;
+    const w = box.w * 0.34;
+    const x = box.x + (box.w - w) / 2;
+    ctx.fillStyle = theme.line;
+    ctx.fillRect(box.x, box.y + 10, (box.w - w) / 2, box.h - 20);
+    ctx.fillRect(x + w, box.y + 10, (box.w - w) / 2, box.h - 20);
+    ctx.globalAlpha = open ? 0.25 : 1;
+    ctx.fillStyle = theme.accent;
+    ctx.fillRect(x, box.y + 10, w, box.h - 20);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = theme.accent;
     ctx.lineWidth = 4;
-    ctx.strokeRect(x, box.y + 60, box.w * 0.3, box.h - 80);
-    ctx.font = 'bold 30px "Courier New", monospace';
-    ctx.fillStyle = open ? CYAN : PURPLE;
-    ctx.fillText(open ? 'PASSAGEM' : 'PAREDE', x + 10, box.y + box.h / 2);
-    ctx.font = '24px "Courier New", monospace';
-    ctx.fillStyle = DIM;
-    ctx.fillText('|parede⟩ + |passagem⟩ até você entrar', box.x, box.y + 30);
+    ctx.strokeRect(x, box.y + 10, w, box.h - 20);
+    ctx.font = `bold 26px ${FONT}`;
+    ctx.fillStyle = open ? theme.accent : theme.bg;
+    ctx.textAlign = 'center';
+    ctx.fillText(open ? 'PASSAGEM' : 'PAREDE', x + w / 2, box.y + box.h / 2 + 10);
+    ctx.textAlign = 'left';
   },
 
-  tunneling(ctx, box) {
+  tunneling(ctx, box, theme) {
     const mid = box.x + box.w / 2;
-    ctx.fillStyle = GREEN;
-    ctx.fillRect(mid - 30, box.y + 70, 60, box.h - 100);
-    ctx.strokeStyle = CYAN;
-    ctx.lineWidth = 4;
+    ctx.fillStyle = theme.text;
+    ctx.fillRect(mid - 24, box.y + 10, 48, box.h - 20);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = theme.kicker;
     ctx.beginPath();
-    for (let x = box.x; x < mid - 30; x += 4) {
-      const y = box.y + box.h / 2 + Math.sin((x - box.x) * 0.06) * 70;
+    for (let x = box.x; x <= mid - 24; x += 4) {
+      const y = box.y + box.h / 2 + Math.sin((x - box.x) * 0.05) * box.h * 0.32;
       if (x === box.x) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.stroke();
+    ctx.strokeStyle = theme.accent;
     ctx.beginPath();
-    for (let x = mid + 30; x < box.x + box.w; x += 4) {
-      const y = box.y + box.h / 2 + Math.sin((x - box.x) * 0.06) * 22;
-      if (x === mid + 30) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    for (let x = mid + 24; x <= box.x + box.w; x += 4) {
+      const y = box.y + box.h / 2 + Math.sin((x - box.x) * 0.05) * box.h * 0.1;
+      if (x === mid + 24) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.stroke();
-    ctx.font = '24px "Courier New", monospace';
-    ctx.fillStyle = DIM;
-    ctx.fillText('a onda passa a barreira, menor', box.x, box.y + 30);
-  },
-
-  honesty(ctx, box) {
-    ctx.font = 'bold 30px "Courier New", monospace';
-    ctx.fillStyle = CYAN;
-    ctx.fillText('QUÂNTICO', box.x, box.y + 70);
-    ctx.font = '24px "Courier New", monospace';
-    ['circuito de 12 qubits', 'amostragem dos resultados', 'entropia das medições']
-      .forEach((line, index) => ctx.fillText(`✓ ${line}`, box.x, box.y + 110 + index * 34));
-    ctx.font = 'bold 30px "Courier New", monospace';
-    ctx.fillStyle = PURPLE;
-    ctx.fillText('JOGO', box.x, box.y + 260);
-    ctx.font = '24px "Courier New", monospace';
-    ['entidade e sanidade', 'paredes oscilando', 'coerência/ruído do HUD']
-      .forEach((line, index) => ctx.fillText(`◆ ${line}`, box.x, box.y + 300 + index * 34));
   },
 };
+
+function drawVisual(ctx, card, box, theme, time) {
+  if (card.image) {
+    const image = images[card.image];
+    if (!image?.complete || !image.naturalWidth) return;
+    const scale = Math.min(box.w / image.naturalWidth, box.h / image.naturalHeight);
+    const w = image.naturalWidth * scale;
+    const h = image.naturalHeight * scale;
+    ctx.drawImage(image, box.x + (box.w - w) / 2, box.y + (box.h - h) / 2, w, h);
+  } else if (card.diagram) {
+    DIAGRAMS[card.diagram]?.(ctx, box, theme, time);
+  }
+}
+
+function drawCard(ctx, card, rect, theme, time) {
+  const inner = 28;
+  const x = rect.x + inner;
+  const width = rect.w - inner * 2;
+  let y = rect.y + inner - 6;
+  const bottom = rect.y + rect.h - inner;
+
+  roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 16);
+  ctx.fillStyle = theme.card;
+  ctx.fill();
+
+  if (card.label) y += textBlock(ctx, card.label, x, y, width, { size: 22, color: theme.kicker, bold: true }) + 10;
+  if (card.heading) y += textBlock(ctx, card.heading, x, y, width, { size: 38, color: theme.text, bold: true, lineHeight: 1.2 }) + 16;
+
+  const hasVisual = Boolean(card.image || card.diagram);
+  // Texto grande para ler no VR: maior quando o card não divide espaço com imagem.
+  const textSize = hasVisual ? 29 : 33;
+  const textHeight = card.text ? measureText(ctx, card.text, width, textSize) : 0;
+  const captionHeight = card.caption ? measureText(ctx, card.caption, width, 22) + 10 : 0;
+
+  if (hasVisual) {
+    const space = bottom - y - textHeight - captionHeight - (card.text ? 16 : 0);
+    drawVisual(ctx, card, { x, y, w: width, h: Math.max(60, space) }, theme, time);
+    y += Math.max(60, space) + (card.text ? 16 : 0);
+  }
+  if (card.text) y += textBlock(ctx, card.text, x, y, width, { size: textSize, color: theme.text });
+  if (card.caption) textBlock(ctx, card.caption, x, bottom - captionHeight + 6, width, { size: 22, color: theme.muted });
+}
+
+function drawArrow(ctx, x, y, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x - 22, y - 5, 30, 10);
+  ctx.beginPath();
+  ctx.moveTo(x + 8, y - 14);
+  ctx.lineTo(x + 26, y);
+  ctx.lineTo(x + 8, y + 14);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawTable(ctx, rows, rect, theme) {
+  const rowHeight = Math.min(96, rect.h / rows.length);
+  const split = rect.w * 0.38;
+  rows.forEach((row, index) => {
+    const y = rect.y + index * rowHeight;
+    ctx.fillStyle = index === 0 ? theme.card : (index % 2 ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)');
+    ctx.fillRect(rect.x, y, rect.w, rowHeight);
+    ctx.strokeStyle = theme.line;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(rect.x, y, rect.w, rowHeight);
+    ctx.beginPath();
+    ctx.moveTo(rect.x + split, y);
+    ctx.lineTo(rect.x + split, y + rowHeight);
+    ctx.stroke();
+    ctx.font = `${index === 0 ? 'bold ' : ''}32px ${FONT}`;
+    ctx.fillStyle = theme.text;
+    ctx.fillText(row[0], rect.x + 18, y + rowHeight / 2 + 11);
+    ctx.fillText(row[1], rect.x + split + 18, y + rowHeight / 2 + 11);
+  });
+}
+
+export function drawSlide(ctx, slide, index, total, time) {
+  const theme = THEMES[slide.theme] || THEMES.dark;
+  const { width, height } = ctx.canvas;
+  ctx.fillStyle = theme.bg;
+  ctx.fillRect(0, 0, width, height);
+
+  textBlock(ctx, `${KICKER} · ${index + 1} DE ${total}`, PAD, PAD - 30, width - PAD * 2, { size: 22, color: theme.kicker, bold: true });
+  const titleHeight = textBlock(ctx, slide.title, PAD, PAD + 4, width - PAD * 2, { size: 52, color: theme.text, bold: true, lineHeight: 1.12 });
+
+  const footerY = height - PAD + 30;
+  const noteHeight = slide.note ? measureText(ctx, slide.note, width - PAD * 2 - 56, 27) + 44 : 0;
+  const top = PAD + 4 + titleHeight + 30;
+  const bottom = footerY - 34 - (noteHeight ? noteHeight + 22 : 0);
+
+  if (slide.table) {
+    drawTable(ctx, slide.table, { x: PAD, y: top, w: width - PAD * 2, h: bottom - top }, theme);
+  } else if (slide.cards) {
+    const gap = slide.flow ? 70 : 28;
+    const count = slide.cards.length;
+    const cardWidth = (width - PAD * 2 - gap * (count - 1)) / count;
+    slide.cards.forEach((card, cardIndex) => {
+      const x = PAD + cardIndex * (cardWidth + gap);
+      drawCard(ctx, card, { x, y: top, w: cardWidth, h: bottom - top }, theme, time);
+      if (slide.flow && cardIndex < count - 1) drawArrow(ctx, x + cardWidth + gap / 2 - 2, top + (bottom - top) / 2, theme.kicker);
+    });
+  }
+
+  if (slide.note) {
+    const y = bottom + 22;
+    roundRect(ctx, PAD, y, width - PAD * 2, noteHeight, 16);
+    ctx.fillStyle = theme.card;
+    ctx.fill();
+    textBlock(ctx, slide.note, PAD + 28, y + 16, width - PAD * 2 - 56, { size: 27, color: theme.text });
+  }
+
+  ctx.font = `20px ${FONT}`;
+  ctx.fillStyle = theme.muted;
+  ctx.fillText('Quantum Backrooms VR · Lobby de treinamento · [ voltar   ] avançar', PAD, footerY);
+  ctx.textAlign = 'right';
+  ctx.fillText(String(index + 1), width - PAD, footerY);
+  ctx.textAlign = 'left';
+}
 
 AFRAME.registerComponent('quantum-slides', {
   schema: {
     player: { type: 'selector', default: '#player-head' },
     rig: { type: 'selector', default: '#player' },
-    width: { type: 'number', default: 2.1 },
+    width: { type: 'number', default: 2.6 },
   },
 
   init() {
@@ -246,12 +351,14 @@ AFRAME.registerComponent('quantum-slides', {
     this.world = new THREE.Vector3();
     this.headWorld = new THREE.Vector3();
     this.canvas = document.createElement('canvas');
-    this.canvas.width = SLIDE_CANVAS.width;
-    this.canvas.height = SLIDE_CANVAS.height;
+    this.canvas.width = CANVAS.width;
+    this.canvas.height = CANVAS.height;
     this.texture = new THREE.CanvasTexture(this.canvas);
     if ('colorSpace' in this.texture) this.texture.colorSpace = THREE.SRGBColorSpace;
+    this.texture.anisotropy = 4;
+    loadImages(() => this.draw(this.el.sceneEl.time));
 
-    const height = this.data.width * (SLIDE_CANVAS.height / SLIDE_CANVAS.width);
+    const height = this.data.width * (CANVAS.height / CANVAS.width);
     this.screen = document.createElement('a-plane');
     this.screen.classList.add('clickable');
     this.screen.setAttribute('width', this.data.width);
@@ -269,9 +376,18 @@ AFRAME.registerComponent('quantum-slides', {
     });
     this.el.appendChild(this.screen);
 
+    // Moldura escura em volta do telão.
+    const frame = document.createElement('a-box');
+    frame.setAttribute('width', this.data.width + 0.08);
+    frame.setAttribute('height', height + 0.08);
+    frame.setAttribute('depth', 0.03);
+    frame.setAttribute('position', '0 0 -0.02');
+    frame.setAttribute('material', 'color: #0d0b06; roughness: 0.8');
+    this.el.appendChild(frame);
+
     this.buttons = [
-      this.createButton('◀', -1, -this.data.width / 2 + 0.16, -height / 2 - 0.16),
-      this.createButton('▶', 1, this.data.width / 2 - 0.16, -height / 2 - 0.16),
+      this.createButton('◀', -1, -this.data.width / 2 + 0.16, -height / 2 - 0.17),
+      this.createButton('▶', 1, this.data.width / 2 - 0.16, -height / 2 - 0.17),
     ];
 
     this.onKey = (event) => {
@@ -296,13 +412,13 @@ AFRAME.registerComponent('quantum-slides', {
     plate.setAttribute('width', 0.26);
     plate.setAttribute('height', 0.2);
     plate.setAttribute('depth', 0.04);
-    plate.setAttribute('material', `color: #06281a; emissive: ${GREEN}; emissiveIntensity: 0.35`);
+    plate.setAttribute('material', 'color: #26230f; emissive: #e3cc4b; emissiveIntensity: 0.25');
     plate.addEventListener('click', (event) => {
       event.stopPropagation();
       this.flip(direction);
     });
     const text = document.createElement('a-entity');
-    text.setAttribute('canvas-text', { value: label, color: GREEN, width: 0.3, overlay: false });
+    text.setAttribute('canvas-text', { value: label, color: '#e3cc4b', width: 0.3, overlay: false });
     text.setAttribute('position', '0 0 0.025');
     text.setAttribute('scale', '2.4 2.4 1');
     button.append(plate, text);
@@ -325,50 +441,14 @@ AFRAME.registerComponent('quantum-slides', {
   },
 
   draw(time) {
-    const slide = QUANTUM_SLIDES[this.index];
-    const ctx = this.canvas.getContext('2d');
-    const { width, height } = this.canvas;
-    const pad = 48;
-
-    ctx.fillStyle = '#020c07';
-    ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    for (let y = 0; y < height; y += 4) ctx.fillRect(0, y, width, 2);
-    ctx.strokeStyle = GREEN;
-    ctx.lineWidth = 4;
-    ctx.strokeRect(12, 12, width - 24, height - 24);
-
-    ctx.fillStyle = GREEN;
-    ctx.font = 'bold 54px "Courier New", monospace';
-    ctx.fillText(slide.title, pad, pad + 46);
-    ctx.font = '26px "Courier New", monospace';
-    ctx.fillStyle = DIM;
-    ctx.fillText(slide.subtitle, width - pad - ctx.measureText(slide.subtitle).width, pad + 40);
-    ctx.fillRect(pad, pad + 70, width - pad * 2, 3);
-
-    const textWidth = width * 0.5;
-    ctx.font = '30px "Courier New", monospace';
-    ctx.fillStyle = GREEN;
-    wrap(ctx, slide.body, textWidth - pad).forEach((line, index) => {
-      ctx.fillText(line, pad, pad + 130 + index * 40);
-    });
-
-    const box = { x: textWidth + 20, y: pad + 100, w: width - textWidth - pad - 20, h: height - pad * 2 - 160 };
-    DIAGRAMS[slide.diagram]?.(ctx, box, time);
-
-    // Paginação.
-    ctx.font = '24px "Courier New", monospace';
-    ctx.fillStyle = DIM;
-    const dots = QUANTUM_SLIDES.map((_, index) => (index === this.index ? '●' : '○')).join(' ');
-    ctx.fillText(dots, pad, height - pad);
-    ctx.fillText('[ voltar   ] avançar', width - pad - 300, height - pad);
+    drawSlide(this.canvas.getContext('2d'), QUANTUM_SLIDES[this.index], this.index, QUANTUM_SLIDES.length, time);
     this.texture.needsUpdate = true;
   },
 
   tick(time) {
     // Redesenha só por perto (diagramas animados) e checa toque das mãos no VR.
     if (!this.playerNear(6)) return;
-    if (time - (this.lastDraw || 0) > 120) {
+    if (time - (this.lastDraw || 0) > 150) {
       this.lastDraw = time;
       this.draw(time);
     }

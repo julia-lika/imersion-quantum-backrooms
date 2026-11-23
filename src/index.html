@@ -179,7 +179,7 @@
       }
 
       body.floor-transition::after {
-        content: "DESCENDING // RECONFIGURING FLOOR";
+        content: "DESCENDO // RECONFIGURANDO O ANDAR";
         position: fixed;
         inset: 0;
         z-index: 31;
@@ -289,18 +289,18 @@
     <script type="module" src="js/map-generator.js?v=20261123-3"></script>
     <script type="module" src="js/quantum-bank.js"></script>
     <script type="module" src="js/components/backrooms-wall.js"></script>
-    <script type="module" src="js/phase-zero.js?v=20261123-8"></script>
+    <script type="module" src="js/phase-zero.js?v=20261123-30"></script>
     <script src="js/components/xr-hands.js"></script>
     <script src="js/components/hand-gestures.js?v=20261123-5"></script>
-    <script src="js/components/player-locomotion.js?v=20261123-3"></script>
-    <script src="js/components/canvas-text.js?v=20261123-2"></script>
+    <script src="js/components/player-locomotion.js?v=20261123-30"></script>
+    <script src="js/components/canvas-text.js?v=20261123-30"></script>
     <script src="js/components/terminal-panel.js"></script>
     <script src="js/components/wrist-hud.js?v=20261123-4"></script>
     <script src="js/components/door-proximity.js"></script>
     <script src="js/components/lobby/lobby-furniture.js"></script>
     <script src="js/components/lobby/lobby-computer.js"></script>
     <script src="js/components/lobby/training-wall.js"></script>
-    <script type="module" src="js/components/lobby/quantum-slides.js"></script>
+    <script type="module" src="js/components/lobby/quantum-slides.js?v=20261123-30"></script>
     <script src="js/components/entity-tv.js?v=20261123-2"></script>
     <script src="js/components/vr-effects.js?v=20261123-1"></script>
     <script src="js/components/stairs-compass.js?v=20261123-1"></script>
@@ -321,12 +321,12 @@
         <button id="start-game" type="button">ENTRAR NO LOBBY</button>
         <button id="continue-game" type="button" hidden>CONTINUAR</button>
         <p>
-          VR: BALANCE OS BRAÇOS PARA ANDAR // PINÇA NA TESTA LIGA O VISOR ZETA<br />
+          VR: BALANCE OS BRAÇOS PARA ANDAR // PINÇA NA TESTA LIGA/DESLIGA O VISOR ZETA<br />
           PALMAS NA PAREDE = SALTO DE FASE // MÃOS NOS OLHOS = SE PROTEGER<br />
           OLHE PARA O PULSO = PAINEL Q-LINK<br />
           PINÇA PARA PEGAR O QPS // LEVE A ÁGUA DE AMÊNDOA À BOCA
         </p>
-        <div class="start-note">DESKTOP: WASD // H PAINEL // Q PEGAR QPS // E PEGAR E BEBER ÁGUA DE AMÊNDOA // Z VISOR ZETA // X SALTO DE FASE // P PAUSA // MOUSE OLHAR</div>
+        <div class="start-note">DESKTOP: WASD // H PAINEL // Q PEGAR QPS // E PEGAR E BEBER ÁGUA DE AMÊNDOA // Z LIGA/DESLIGA O VISOR ZETA // X SALTO DE FASE // P PAUSA // ESC MENU // MOUSE OLHAR</div>
         <div class="start-note">MELHOR NO META QUEST COM RASTREAMENTO DE MÃOS</div>
       </div>
     </section>
@@ -396,7 +396,7 @@
           <a-entity
             id="desktop-hint"
             position="0 -0.34 -1.1"
-            canvas-text="value: WASD ou setas: andar | arraste o mouse: olhar e girar\nEncontre o QPS para localizar a porta; align: center; color: #fff0c7; width: 1.1"
+            canvas-text="value: WASD ou setas: andar | arraste o mouse: olhar e girar\nEncontre o QPS para localizar a porta; align: center; color: #39ff88; width: 1.1; style: terminal"
           ></a-entity>
         </a-entity>
         <a-entity hand-tracking-controls="hand: left; modelColor: #d8bc75"></a-entity>
@@ -450,6 +450,6 @@
       <a-sky color="#0a0805"></a-sky>
     </a-scene>
 
-    <script src="js/quantum-measurement.js?v=20261123-2"></script>
+    <script src="js/quantum-measurement.js?v=20261123-30"></script>
   </body>
 </html>

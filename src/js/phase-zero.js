@@ -39,6 +39,8 @@ const state = {
 };
 const elements = {};
 let started = false;
+let playedThisSession = false;
+let lastVisorToggle = 0;
 let paused = false;
 let transitioning = false;
 let survival = createSurvivalState();
@@ -115,7 +117,7 @@ function persistProgress() {
 function setHint(message) {
   // Objeto (não string): o texto pode conter ";" sem quebrar o atributo.
   elements['desktop-hint'].setAttribute('canvas-text', {
-    value: message, align: 'center', color: '#fff0c7', width: 1.1,
+    value: message, align: 'center', color: '#39ff88', width: 1.1, style: 'terminal',
   });
 }
 
@@ -214,6 +216,11 @@ function setVisor(next) {
 
 function toggleVisor() {
   if (!isActive()) return;
+  // A pinça do rastreamento de mãos pode tremer (solta e fecha de novo em poucos
+  // quadros); sem esse intervalo o visor liga e desliga no mesmo gesto.
+  const now = performance.now();
+  if (now - lastVisorToggle < 500) return;
+  lastVisorToggle = now;
 
   const next = toggleVisorState(survival);
   if (next === survival) {
@@ -225,7 +232,7 @@ function toggleVisor() {
   renderTelemetry();
   setHint(survival.visor
     ? 'VISOR ZETA ATIVO — paredes roxas oscilam; atravesse quando estiverem abertas'
-    : 'PINÇA NA TESTA (ou Z): VISOR ZETA // PALMAS NA PAREDE (ou X): SALTO DE FASE');
+    : 'VISOR ZETA DESLIGADO — pinça na testa (ou Z) liga de novo');
 }
 
 function requestPhaseShift() {
@@ -398,17 +405,22 @@ function bindGameEvents() {
   function beginGame(mode = 'lobby') {
     if (started) return;
     started = true;
-    if (mode !== 'continue' && game.current.floor !== LOBBY_FLOOR) {
+    // ENTRAR NO LOBBY = jogo novo. Na primeira entrada da página o lobby já está
+    // no estado inicial; depois de voltar ao menu com Esc, recomeça do zero.
+    if (mode !== 'continue' && (game.current.floor !== LOBBY_FLOOR || playedThisSession)) {
       game.current = createGameState(initialBits, LOBBY_FLOOR);
       state.current = createPhaseState(initialBits);
       setVisor(createSurvivalState());
       resetPlayerPosition();
       persistProgress();
     }
+    playedThisSession = true;
     window.quantumPlayer.active = isActive();
     elements['phase-telemetry'].hidden = false;
     if (game.current.floor === LOBBY_FLOOR) {
       setHint('LOBBY DE TREINAMENTO — leia as estações e abra o computador na mesa');
+    } else if (mode === 'continue') {
+      setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — jogo retomado`);
     }
     syncMap();
     syncAtmosphere();
@@ -416,12 +428,36 @@ function bindGameEvents() {
   }
 
   const continueButton = document.getElementById('continue-game');
-  if (continueButton && resumableFloor) {
-    continueButton.hidden = false;
-    continueButton.textContent = `CONTINUAR — ANDAR ${String(resumableFloor).padStart(2, '0')}`;
-    continueButton.addEventListener('click', () => beginGame('continue'));
+  function showContinue(floor) {
+    if (!continueButton) return;
+    continueButton.hidden = floor == null;
+    if (floor == null) return;
+    continueButton.textContent = floor === LOBBY_FLOOR
+      ? 'CONTINUAR — LOBBY'
+      : `CONTINUAR — ANDAR ${String(floor).padStart(2, '0')}`;
   }
+
+  // Esc: salva e volta ao menu inicial. CONTINUAR retoma de onde parou;
+  // ENTRAR NO LOBBY começa um jogo novo.
+  function returnToMenu() {
+    if (!started || transitioning || scene.is('vr-mode')) return;
+    persistProgress();
+    started = false;
+    paused = false;
+    window.quantumPlayer.active = false;
+    elements['phase-telemetry'].hidden = true;
+    document.getElementById('hud').hidden = true;
+    document.getElementById('start-screen').hidden = false;
+    showContinue(game.current.floor);
+    renderTelemetry();
+  }
+
+  showContinue(resumableFloor);
+  continueButton?.addEventListener('click', () => beginGame('continue'));
   document.getElementById('start-game').addEventListener('click', () => beginGame('lobby'));
+  document.addEventListener('keydown', (event) => {
+    if (event.code === 'Escape' && !event.repeat) returnToMenu();
+  });
   scene.addEventListener('enter-vr', () => beginGame('lobby'));
 
   scene.addEventListener('visor-toggle-request', toggleVisor);
