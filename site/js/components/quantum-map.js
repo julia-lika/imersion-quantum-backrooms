@@ -318,12 +318,11 @@ AFRAME.registerComponent('quantum-map', {
 
   createAlmondWater() {
     const bottle = document.createElement('a-entity');
-    // Modelo "Almond Water" (LinVal, CC BY 4.0): ~2,7 unidades de altura com a
-    // base na origem. Escala para ~22 cm e centraliza no ponto do item.
+    // Modelo "Almond Water [Backrooms]" (CrZ, CC BY 4.0): ~4,3 unidades de altura,
+    // já centralizado na origem. Escala para ~22 cm no ponto do item.
     const model = document.createElement('a-entity');
     model.setAttribute('gltf-model', '#almond-water-model');
-    model.setAttribute('scale', '0.08 0.08 0.08');
-    model.setAttribute('position', '0 -0.11 0');
+    model.setAttribute('scale', '0.0515 0.0515 0.0515');
     bottle.appendChild(model);
     // Brilho próprio (emissive) para a garrafa não sumir no escuro, sem luz extra.
     model.addEventListener('model-loaded', () => {

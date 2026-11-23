@@ -56,12 +56,12 @@ stained wallpaper textures.
 
 ## Almond Water
 
-`models/almond-water.glb` is the Almond Water model by LinVal, licensed CC BY
-4.0. Its 2048 textures were resized (512 for the label, 16 for flat colours) to
-cut the file from 590 KB to 226 KB.
+`models/almond-water.glb` is "Almond Water [Backrooms]" by CrZ, licensed CC BY
+4.0. Its 2048 label texture was converted to a 1024 JPEG to cut the file from
+584 KB to 186 KB.
 
-Attribution: LinVal
-Source: https://sketchfab.com/3d-models/almond-water-07bcea44af36424b89a3ecdd79196a3d
+Attribution: CrZ (https://sketchfab.com/CrZZ)
+Source: https://sketchfab.com/3d-models/almond-water-backrooms-c63de5037da941da9c8a636c7a25a73b
 
 ## Bacteria (Backrooms)
 
