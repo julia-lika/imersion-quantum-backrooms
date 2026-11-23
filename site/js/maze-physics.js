@@ -36,6 +36,9 @@ export function createMazeWorld(maze, { cellSize = CELL_SIZE, superposed = [] } 
     cellSize,
     origin: -((cellSize * size) / 2) + cellSize / 2,
     superposed: new Map(superposed.map(({ x, z, offset }) => [cellKey(x, z), offset])),
+    // Paredes em superposição "medidas" pelo jogador: ficam abertas enquanto ele
+    // estiver dentro delas (o estado colapsou em passagem).
+    collapsed: new Set(),
   };
 }
 
@@ -64,8 +67,45 @@ export function isCellSolid(world, x, z, timeSeconds = 0) {
   // 'F' = móvel do lobby: bloqueia como parede, mas não é desenhado como parede.
   if (cell !== '#') return true;
 
-  const offset = world.superposed.get(cellKey(x, z));
-  return offset === undefined || !isSuperposedOpen(offset, timeSeconds);
+  const key = cellKey(x, z);
+  const offset = world.superposed.get(key);
+  if (offset === undefined) return true;
+  if (world.collapsed?.has(key)) return false;
+  return !isSuperposedOpen(offset, timeSeconds);
+}
+
+// Parede em superposição = célula no estado (parede + passagem). Entrar nela
+// enquanto está aberta é uma medição: o estado colapsa em "passagem" e fica
+// assim até o jogador sair da célula. Depois ela volta a oscilar.
+export function observeSuperposedWalls(world, x, z, radius = PLAYER_RADIUS, timeSeconds = 0) {
+  if (!world.superposed?.size) return;
+  const touching = new Set();
+  const half = world.cellSize / 2;
+  const min = worldToCell(world, x - radius, z - radius);
+  const max = worldToCell(world, x + radius, z + radius);
+
+  for (let cz = min.z; cz <= max.z; cz += 1) {
+    for (let cx = min.x; cx <= max.x; cx += 1) {
+      const key = cellKey(cx, cz);
+      if (!world.superposed.has(key)) continue;
+      const center = cellToWorld(world, cx, cz);
+      const nearestX = Math.max(center.x - half, Math.min(x, center.x + half));
+      const nearestZ = Math.max(center.z - half, Math.min(z, center.z + half));
+      if ((x - nearestX) ** 2 + (z - nearestZ) ** 2 < radius ** 2) touching.add(key);
+    }
+  }
+
+  touching.forEach((key) => {
+    if (world.collapsed.has(key)) return;
+    if (isSuperposedOpen(world.superposed.get(key), timeSeconds)) world.collapsed.add(key);
+  });
+  [...world.collapsed].forEach((key) => {
+    if (!touching.has(key)) world.collapsed.delete(key);
+  });
+}
+
+export function isSuperposedCollapsed(world, x, z) {
+  return Boolean(world?.collapsed?.has(cellKey(x, z)));
 }
 
 function overlappingSolidCells(world, x, z, radius, timeSeconds) {
@@ -246,6 +286,8 @@ if (typeof window !== 'undefined') {
     cellToWorld,
     isCellSolid,
     isSuperposedOpen,
+    observeSuperposedWalls,
+    isSuperposedCollapsed,
     resolveMove,
     findPhaseTarget,
     findSuperposedWalls,
