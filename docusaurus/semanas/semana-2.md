@@ -1,10 +1,10 @@
 ---
-title: Semana 2 · Gerador de mapa v2 e loop completo
+title: Semana 2 · Revisão da arquitetura quântica e ambientação
 sidebar_label: Semana 2
 sidebar_position: 2
 ---
 
-# Semana 2 · Gerador de mapa v2 e loop completo
+# Semana 2 · Revisão da arquitetura quântica e ambientação
 
 **Período:** 23 a 27 de novembro de 2026
 

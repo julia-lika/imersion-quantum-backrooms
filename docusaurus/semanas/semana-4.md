@@ -1,10 +1,10 @@
 ---
-title: Semana 4 · Polimento, performance e entrega
+title: Semana 4 · Conteúdo, áudio e conforto
 sidebar_label: Semana 4
 sidebar_position: 4
 ---
 
-# Semana 4 · Polimento, performance e entrega
+# Semana 4 · Conteúdo, áudio e conforto
 
 **Período:** 7 a 11 de dezembro de 2026
 
