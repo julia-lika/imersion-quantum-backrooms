@@ -4,7 +4,7 @@ import {
   advanceQuantumStream,
   collapseQuantumState,
   createPhaseZeroState,
-} from '../site/js/phase-zero-state.js';
+} from '../src/js/phase-zero-state.js';
 
 test('inicia a Fase 0 com a grade colapsada e sem medição', () => {
   const state = createPhaseZeroState('000000000000000000000000');

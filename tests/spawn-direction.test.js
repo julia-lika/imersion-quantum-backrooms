@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bestOpenDirection, createMazeWorld, resolveMove, startPosition, PLAYER_RADIUS } from '../site/js/maze-physics.js';
-import { generateQuantumMap } from '../site/js/map-generator.js';
+import { bestOpenDirection, createMazeWorld, resolveMove, startPosition, PLAYER_RADIUS } from '../src/js/maze-physics.js';
+import { generateQuantumMap } from '../src/js/map-generator.js';
 
 const toMaze = (rows) => rows.map((row) => row.split(''));
 

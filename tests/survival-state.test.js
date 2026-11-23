@@ -7,7 +7,7 @@ import {
   drinkAlmondWater,
   tickSurvival,
   toggleVisor,
-} from '../site/js/survival-state.js';
+} from '../src/js/survival-state.js';
 
 test('a sanidade cai mais rápido em andares mais profundos', () => {
   const state = createSurvivalState();

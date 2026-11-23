@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 
-const dir = new URL('../site/js/components/', import.meta.url);
+const dir = new URL('../src/js/components/', import.meta.url);
 
 // O A-Frame avalia getters da definição ao registrar o componente, quando `this.el`
 // ainda não existe: o registro lança TypeError e o componente nunca funciona.

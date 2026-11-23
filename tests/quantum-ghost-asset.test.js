@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 
 const root = new URL('../', import.meta.url);
-const indexHtml = readFileSync(new URL('site/index.html', root), 'utf8');
+const indexHtml = readFileSync(new URL('src/index.html', root), 'utf8');
 const ghostComponent = readFileSync(
-  new URL('site/js/components/quantum-ghost.js', root),
+  new URL('src/js/components/quantum-ghost.js', root),
   'utf8'
 );
 
 test('usa o modelo Bacteria como visual do fantasma', () => {
   assert.ok(
-    existsSync(new URL('site/assets/models/bacteria-backrooms.glb', root)),
+    existsSync(new URL('src/assets/models/bacteria-backrooms.glb', root)),
     'o modelo bacteria-backrooms.glb deve existir nos assets locais'
   );
   assert.match(

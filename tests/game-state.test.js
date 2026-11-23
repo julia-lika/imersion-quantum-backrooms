@@ -7,7 +7,7 @@ import {
   recordMeasurement,
   restoreGameState,
   serializeGameState,
-} from '../site/js/game-state.js';
+} from '../src/js/game-state.js';
 
 test('registra a medição e revela as escadas no andar atual', () => {
   const measured = recordMeasurement(

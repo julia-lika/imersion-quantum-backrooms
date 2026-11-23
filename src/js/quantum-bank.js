@@ -1,4 +1,4 @@
-// Banco de medições quânticas pré-gravadas (site/data/quantum-bank.json).
+// Banco de medições quânticas pré-gravadas (src/data/quantum-bank.json).
 // Gerado por tools/pregen.py a partir do circuito por andar; o jogo sorteia
 // amostras dos `counts` gravados, sem depender de fila ou cota da IBM.
 // Convenção: o caractere i do bitstring é o qubit i (bit_order "qubit0-first").

@@ -9,9 +9,9 @@ import {
   qubitMarginals,
   sampleFromCounts,
   shannonEntropy,
-} from '../site/js/quantum-bank.js';
+} from '../src/js/quantum-bank.js';
 
-const bankPath = new URL('../site/data/quantum-bank.json', import.meta.url);
+const bankPath = new URL('../src/data/quantum-bank.json', import.meta.url);
 const bank = parseBank(JSON.parse(readFileSync(bankPath, 'utf8')));
 
 test('o banco gravado cobre 5 andares com counts válidos', () => {

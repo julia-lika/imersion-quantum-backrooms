@@ -17,7 +17,7 @@ services:
       - "8080:8080"
       - "8443:8443"
     volumes:
-      - ./site:/srv:ro
+      - ./src:/srv:ro
       - caddy_data:/data
 
 volumes:

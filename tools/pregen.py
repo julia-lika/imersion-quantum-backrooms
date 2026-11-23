@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gera o banco de medições quânticas usado pelo jogo (site/data/quantum-bank.json).
+"""Gera o banco de medições quânticas usado pelo jogo (src/data/quantum-bank.json).
 
 O jogo sorteia amostras destes `counts` em tempo de execução, sem depender da
 fila ou da cota da IBM. O campo `source` diz a verdade sobre a origem:
@@ -106,7 +106,7 @@ def main() -> None:
     parser.add_argument("--shots", type=int, default=1024)
     parser.add_argument("--backend", choices=["local", "ibm"], default="local")
     parser.add_argument("--seed", type=int, default=None, help="semente do simulador (reprodutível)")
-    parser.add_argument("--out", type=Path, default=ROOT / "site" / "data" / "quantum-bank.json")
+    parser.add_argument("--out", type=Path, default=ROOT / "src" / "data" / "quantum-bank.json")
     args = parser.parse_args()
 
     bank = build_bank(args.floors, args.shots, args.backend, args.seed)

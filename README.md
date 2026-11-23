@@ -14,9 +14,9 @@ na documentação: https://julia-lika.github.io/imersion-quantum-backrooms/docs/
 
 - Semana 1, apresentação: https://julia-lika.github.io/imersion-quantum-backrooms/docs/semanas/semana-1/
 - Semana 1, ficha de projeto: https://julia-lika.github.io/imersion-quantum-backrooms/docs/semanas/semana-1/ficha-de-projeto/
-- Plano de 5 semanas, com checklist: https://julia-lika.github.io/imersion-quantum-backrooms/docs/semanas/plano/ (fonte em `docusaurus/semanas/plano.md`)
+- Plano de 5 semanas, com checklist: https://julia-lika.github.io/imersion-quantum-backrooms/docs/semanas/plano/ (fonte em `docs/semanas/plano.md`)
 
-O código da documentação fica em [`docusaurus/`](docusaurus/).
+O código da documentação fica em [`docs/`](docs/).
 
 ## Rodar
 
@@ -26,7 +26,7 @@ docker compose up --build
 
 Abra `https://localhost:8443`. Na primeira execução, aceite o certificado local do Caddy.
 
-O conteúdo de desenvolvimento fica em `site/`. Como essa pasta é montada no contêiner, alterações em `site/index.html` aparecem após recarregar o navegador sem refazer a imagem.
+O conteúdo de desenvolvimento fica em `src/`. Como essa pasta é montada no contêiner, alterações em `src/index.html` aparecem após recarregar o navegador sem refazer a imagem.
 
 ## IBM Quantum
 
@@ -53,7 +53,7 @@ plano gratuito a cada entrada e saída do raio de medição.
 
 ## Banco de medições (caminho padrão)
 
-O jogo sorteia amostras de `site/data/quantum-bank.json`, sem depender da fila
+O jogo sorteia amostras de `src/data/quantum-bank.json`, sem depender da fila
 ou da cota da IBM. O HUD mostra a origem verdadeira, por exemplo
 `LOCAL-SIM // python-statevector (gravado)` ou `IBM-QPU // <backend> (gravado)`.
 Para forçar a API ao vivo, abra a página com `?live`.
