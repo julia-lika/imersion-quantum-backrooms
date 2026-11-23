@@ -241,6 +241,12 @@ export const LOBBY = {
     almondWater: { x: 9, z: 10 },
     qps: { x: 3, z: 12 },
   },
+  // Corredor de treino atrás da parede direita (x = 13, z 12..16). A parede em
+  // (12, 12..13) é sólida, para testar o salto de fase; a de (12, 16) fica em
+  // superposição, para testar o visor zeta. Ela abre e fecha, então ninguém
+  // fica preso lá dentro.
+  trainingAlcove: [[13, 12], [13, 13], [13, 14], [13, 15], [13, 16]],
+  superposed: [{ x: 12, z: 16, offset: 0 }],
 };
 
 export function generateLobbyMap(size = MAZE_SIZE) {
@@ -248,6 +254,7 @@ export function generateLobbyMap(size = MAZE_SIZE) {
     x >= LOBBY.minX && x <= LOBBY.maxX && z >= LOBBY.minZ && z <= LOBBY.maxZ ? '.' : '#'
   )));
   LOBBY.furniture.forEach(([x, z]) => { maze[z][x] = 'F'; });
+  LOBBY.trainingAlcove.forEach(([x, z]) => { maze[z][x] = '.'; });
 
   return {
     bitstring: '000000000000',
