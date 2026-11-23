@@ -8,6 +8,10 @@ const quantumMap = readFileSync(
   new URL('src/js/components/quantum-map.js', root),
   'utf8'
 );
+const doorProximity = readFileSync(
+  new URL('src/js/components/door-proximity.js', root),
+  'utf8'
+);
 const floorTransition = readFileSync(
   new URL('src/js/components/floor-transition.js', root),
   'utf8'
@@ -29,8 +33,8 @@ test('usa a porta amarela animada como saída sem alterar o gatilho de fase', ()
   assert.match(indexHtml, /aframe-extras/);
   assert.match(quantumMap, /gltf-model["']?,\s*["']#door-yellow-model/);
   // Clipe "open" controlado à mão: abre ao chegar perto e fecha ao se afastar.
-  assert.match(quantumMap, /item\.name === 'open'/);
-  assert.match(quantumMap, /this\.state = 'closing'/);
+  assert.match(doorProximity, /item\.name === 'open'/);
+  assert.match(doorProximity, /this\.state = 'closing'/);
   assert.match(quantumMap, /id["']?,\s*["']stairs-trigger/);
   assert.match(quantumMap, /floor-transition["']?,\s*["']target: #player-head; radius: 0\.75/);
   assert.match(floorTransition, /stairs-reached/);

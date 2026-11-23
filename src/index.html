@@ -278,7 +278,11 @@
     <script src="js/components/canvas-text.js?v=20261123-2"></script>
     <script src="js/components/terminal-panel.js"></script>
     <script src="js/components/wrist-hud.js?v=20261123-4"></script>
-    <script src="js/components/lobby.js?v=20261123-5"></script>
+    <script src="js/components/door-proximity.js"></script>
+    <script src="js/components/lobby/lobby-furniture.js"></script>
+    <script src="js/components/lobby/lobby-computer.js"></script>
+    <script src="js/components/lobby/training-wall.js"></script>
+    <script type="module" src="js/components/lobby/quantum-slides.js"></script>
     <script src="js/components/entity-tv.js?v=20261123-2"></script>
     <script src="js/components/vr-effects.js?v=20261123-1"></script>
     <script src="js/components/stairs-compass.js?v=20261123-1"></script>
@@ -287,7 +291,7 @@
     <script src="js/components/light-flicker.js"></script>
     <script src="js/components/fixture-lights.js?v=20261123-1"></script>
     <script src="js/components/floor-transition.js"></script>
-    <script type="module" src="js/components/quantum-map.js?v=20261123-14"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261123-15"></script>
     <script src="js/components/scatter-props.js?v=20261123-3"></script>
   </head>
   <body>
@@ -427,135 +431,6 @@
       <a-sky color="#0a0805"></a-sky>
     </a-scene>
 
-    <script>
-      const scene = document.querySelector('#backrooms-scene');
-      const hint = document.querySelector('#desktop-hint');
-      const quantumMap = document.querySelector('#quantum-map');
-      const startScreen = document.querySelector('#start-screen');
-      const startGame = document.querySelector('#start-game');
-      const hud = document.querySelector('#hud');
-      const hudState = document.querySelector('#hud-state');
-      const hudQpu = document.querySelector('#hud-qpu');
-      const hudQps = document.querySelector('#hud-qps');
-      const hudCoherence = document.querySelector('#hud-coherence');
-      const hudNoise = document.querySelector('#hud-noise');
-      let measured = false;
-      let measuring = false;
-
-      function updateQuantumHud(bitstring, result) {
-        const metrics = window.analyzeQuantumState(bitstring);
-        hudQps.textContent = `QPS: ${metrics.qps}/100`;
-        hudCoherence.textContent = `COERÊNCIA: ${metrics.coherence}%`;
-        hudNoise.textContent = `RUÍDO: ${metrics.noise}%`;
-        hudQpu.textContent = `QPU: ${result.source.toUpperCase()} // ${result.backend}`;
-        return metrics;
-      }
-
-      function hideStartScreen() {
-        startScreen.hidden = true;
-        hud.hidden = false;
-      }
-
-      startGame.addEventListener('click', hideStartScreen);
-      // Entrar em VR sem clicar em ENTER também inicia o jogo.
-      scene.addEventListener('enter-vr', hideStartScreen);
-
-      const BLINK_MS = 2600;
-
-      // Piscar lento: o mapa só troca quando os olhos estão fechados.
-      function playCollapseBlink(onClosed) {
-        document.body.classList.remove('blink-transition');
-        void document.body.offsetWidth;
-        document.body.classList.add('blink-transition');
-        scene.emit('screen-effect', { type: 'blink', color: '#000000', duration: BLINK_MS });
-        window.setTimeout(onClosed, BLINK_MS * 0.46);
-        window.setTimeout(() => document.body.classList.remove('blink-transition'), BLINK_MS + 50);
-      }
-
-      function applyMeasurement(result) {
-        measured = true;
-        hint.setAttribute(
-          'canvas-text',
-          'value: O QPS MEDIU O ESTADO — a realidade está colapsando; align: center; color: #9dffc4; width: 1.1'
-        );
-        playCollapseBlink(() => commitMeasurement(result));
-      }
-
-      function commitMeasurement(result) {
-        const bitstring = result.bitstring;
-
-        quantumMap.setAttribute(
-          'quantum-map',
-          `bitstring: ${bitstring}`
-        );
-        hint.setAttribute(
-          'canvas-text',
-          `value: MEDIÇÃO REGISTRADA — ${bitstring}; align: center; color: #fff0c7; width: 1.1`
-        );
-        hudState.textContent = `ESTADO: MEDIDO // ${bitstring}`;
-        const metrics = updateQuantumHud(bitstring, result);
-        window.dispatchEvent(new CustomEvent('quantum-measured', {
-          detail: { result, metrics },
-        }));
-      }
-
-      async function collapseQuantumState(event) {
-        // QPS de treino do lobby: só explica, não mede nem muda o mapa.
-        if (event?.detail?.training) {
-          hint.setAttribute(
-            'canvas-text',
-            'value: QPS DE TREINO COLETADO — nos andares, isso mede o estado e revela a porta. Outro aparece em 10 s; align: center; color: #9dffc4; width: 1.1'
-          );
-          scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
-          return;
-        }
-        if (measuring) return;
-        measuring = true;
-        hint.setAttribute(
-          'canvas-text',
-          'value: MEDIÇÃO EM ANDAMENTO — o estado está sendo amostrado; align: center; color: #fff0c7; width: 1.1'
-        );
-
-        try {
-          const floor = window.quantumPlayer?.floor ?? 1;
-          // Caminho padrão: banco de medições gravadas (sem fila nem cota). Use ?live para chamar a API.
-          const bank = new URLSearchParams(location.search).has('live')
-            ? null
-            : await window.quantumBank?.ready;
-          if (bank) {
-            applyMeasurement(window.quantumBank.measureFromBank(bank, floor));
-            return;
-          }
-
-          const response = await fetch('/api/measure', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ shots: 128, floor }),
-          });
-
-          if (!response.ok) throw new Error(`quantum-api-${response.status}`);
-          applyMeasurement(await response.json());
-        } catch (error) {
-          console.warn('[quantum-backrooms] IBM unavailable, using local fallback', error);
-          applyMeasurement({
-            bitstring: window.sampleQuantumBitstring(),
-            source: 'local-sim',
-            backend: 'browser-fallback',
-          });
-        } finally {
-          measuring = false;
-        }
-      }
-
-      // O QPS é coletado com uma pinça (VR) ou ao passar por ele (desktop).
-      scene.addEventListener('qps-collected', collapseQuantumState);
-
-      window.addEventListener('quantum-measured', () => {
-        hint.setAttribute(
-          'canvas-text',
-          'value: QPS ENCONTRADO — localize a porta antes do próximo colapso; align: center; color: #fff0c7; width: 1.1'
-        );
-      });
-    </script>
+    <script src="js/quantum-measurement.js"></script>
   </body>
 </html>
