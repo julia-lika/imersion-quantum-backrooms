@@ -57,6 +57,8 @@ AFRAME.registerComponent('door-proximity-animation', {
   },
 });
 
+const LOBBY_RESPAWN_MS = 10000;
+
 AFRAME.registerComponent('quantum-map', {
   schema: {
     bitstring: { type: 'string', default: '010110101100' },
@@ -67,7 +69,11 @@ AFRAME.registerComponent('quantum-map', {
   init() {
     this.materials = this.createMaterials();
     this.consumed = new Set();
-    this.onItemConsumed = ({ detail }) => this.consumed.add(detail.id);
+    this.respawnTimers = new Map();
+    this.onItemConsumed = ({ detail }) => {
+      this.consumed.add(detail.id);
+      this.scheduleLobbyRespawn(detail.id);
+    };
     this.el.sceneEl.addEventListener('qps-collected', this.onItemConsumed);
     this.el.sceneEl.addEventListener('almond-water-drunk', this.onItemConsumed);
     this.onGeneratorReady = () => this.renderMap();
@@ -84,11 +90,31 @@ AFRAME.registerComponent('quantum-map', {
     window.removeEventListener('quantum-generator-ready', this.onGeneratorReady);
     this.el.sceneEl.removeEventListener('qps-collected', this.onItemConsumed);
     this.el.sceneEl.removeEventListener('almond-water-drunk', this.onItemConsumed);
+    this.clearRespawnTimers();
+  },
+
+  clearRespawnTimers() {
+    this.respawnTimers.forEach((timer) => window.clearTimeout(timer));
+    this.respawnTimers.clear();
+  },
+
+  // No lobby, os itens de treino voltam LOBBY_RESPAWN_MS depois de usados.
+  scheduleLobbyRespawn(id) {
+    const def = this.lobbyItems?.find((item) => item.id === id);
+    if (this.data.floor !== 0 || !def || this.respawnTimers.has(id)) return;
+
+    this.respawnTimers.set(id, window.setTimeout(() => {
+      this.respawnTimers.delete(id);
+      this.consumed.delete(id);
+      if (this.data.floor !== 0 || this.el.querySelector(`[data-item-id="${id}"]:not([data-consumed])`)) return;
+      this.spawnLobbyItem(def);
+    }, LOBBY_RESPAWN_MS));
   },
 
   update(oldData) {
     if (oldData.floor !== undefined && oldData.floor !== this.data.floor) {
       this.consumed.clear();
+      this.clearRespawnTimers();
     }
 
     if (
@@ -204,18 +230,22 @@ AFRAME.registerComponent('quantum-map', {
   addLobbyItems(origin, cellSize) {
     const { almondWater, qps } = window.LOBBY_LAYOUT.items;
     this.itemCells = [almondWater, qps];
-    [
-      { type: 'qps', cell: qps, id: '0-qps-training', training: true },
-      { type: 'almond-water', cell: almondWater, id: '0-almond-water-0' },
-    ].forEach(({ type, cell, id, training }) => {
-      if (this.consumed.has(id)) return;
-      const item = type === 'qps' ? this.createQps() : this.createAlmondWater();
-      item.setAttribute('position', `${origin + cell.x * cellSize} 1.05 ${origin + cell.z * cellSize}`);
-      item.dataset.item = type;
-      item.dataset.itemId = id;
-      if (training) item.dataset.training = 'true';
-      this.el.appendChild(item);
+    this.lobbyItems = [
+      { type: 'qps', cell: qps, id: '0-qps-training', origin, cellSize },
+      { type: 'almond-water', cell: almondWater, id: '0-almond-water-0', origin, cellSize },
+    ];
+    this.lobbyItems.forEach((def) => {
+      if (!this.consumed.has(def.id)) this.spawnLobbyItem(def);
     });
+  },
+
+  spawnLobbyItem({ type, cell, id, origin, cellSize }) {
+    const item = type === 'qps' ? this.createQps() : this.createAlmondWater();
+    item.setAttribute('position', `${origin + cell.x * cellSize} 1.05 ${origin + cell.z * cellSize}`);
+    item.dataset.item = type;
+    item.dataset.itemId = id;
+    item.dataset.training = 'true';
+    this.el.appendChild(item);
   },
 
   addLobby(origin, cellSize) {
@@ -259,17 +289,17 @@ AFRAME.registerComponent('quantum-map', {
       {
         x: rightWall, z: at(10.5), rotation: -90,
         title: 'ALMOND WATER', subtitle: 'SUPRIMENTO',
-        body: 'Garrafas espalhadas pelos andares. Estenda a mão até a garrafa para pegar e leve à boca para beber. No desktop: F pega, F de novo bebe.\n\nRestaura SANIDADE e recarrega toda a ENERGIA. Experimente a garrafa ao lado.',
+        body: 'Garrafas espalhadas pelos andares. Estenda a mão até a garrafa para pegar e leve à boca para beber. No desktop: E pega, E de novo bebe.\n\nRestaura SANIDADE e recarrega toda a ENERGIA. Experimente a garrafa ao lado: outra aparece a cada 10 s.',
       },
       {
         x: leftWall, z: at(12), rotation: 90,
         title: 'QPS', subtitle: 'QUANTUM POSITIONING',
-        body: 'Cada andar esconde um QPS. Pegue com pinça ou encostando a mão (desktop: passe por ele).\n\nEle mede o estado quântico: o mapa colapsa, a PORTA de saída aparece e uma seta ciano aponta para ela. Este aqui é de treino.',
+        body: 'Cada andar esconde um QPS. Pegue com pinça ou encostando a mão (desktop: chegue perto e aperte Q ou clique nele).\n\nEle mede o estado quântico: o mapa colapsa, a PORTA de saída aparece e uma seta ciano aponta para ela. Este aqui é de treino e renasce a cada 10 s.',
       },
       {
         x: rightWall, z: at(14.5), rotation: -90,
         title: 'ENTIDADE', subtitle: 'PERIGO',
-        body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nZETA VISOR: pinça na testa (V) revela paredes em superposição.\nPHASE SHIFT: palmas na parede (Space + W) para atravessar.',
+        body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nZETA VISOR: pinça na testa (Z) revela paredes em superposição.\nPHASE SHIFT: palmas na parede (X) para atravessar.',
       },
       {
         x: at(8.6), z: farWall, rotation: 180,
@@ -312,6 +342,7 @@ AFRAME.registerComponent('quantum-map', {
     const glow = document.createElement('a-entity');
     glow.setAttribute('light', 'type: point; color: #44ffcc; intensity: 0.6; distance: 2.5');
     qps.append(device, screen, glow);
+    qps.classList.add('clickable');
     qps.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear');
     return qps;
   },

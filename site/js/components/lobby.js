@@ -91,7 +91,9 @@ AFRAME.registerComponent('lobby-notebook', {
 
     this.onClick = () => this.toggle();
     this.onKey = (event) => {
-      if (event.code !== 'KeyE') return;
+      if (event.code !== 'KeyE' || event.repeat) return;
+      // Perto ou segurando uma Almond Water, E é da garrafa.
+      if (window.quantumPlayer?.desktopWaterBusy && !this.open) return;
       this.el.object3D.getWorldPosition(this.world);
       this.data.player.object3D.getWorldPosition(this.headWorld);
       if (Math.hypot(this.world.x - this.headWorld.x, this.world.z - this.headWorld.z) < 2) this.toggle();

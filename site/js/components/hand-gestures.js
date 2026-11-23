@@ -15,7 +15,6 @@ const PHASE_HOLD_SECONDS = 1.1;
 const PHASE_COOLDOWN_SECONDS = 2;
 const GRAB_RADIUS = 0.3;
 const TOUCH_RADIUS = 0.2;
-const DESKTOP_PICKUP_RADIUS = 0.85;
 const DESKTOP_GRAB_RADIUS = 1.3;
 const DESKTOP_DRINK_MS = 700;
 
@@ -44,6 +43,8 @@ AFRAME.registerComponent('hand-gestures', {
     this.desktopHold = new THREE.Vector3();
     this.onDesktopKeyDown = (event) => this.onDesktopKey(event);
     window.addEventListener('keydown', this.onDesktopKeyDown);
+    this.onDesktopClickEvent = (event) => this.onDesktopClick(event);
+    this.el.sceneEl.addEventListener('click', this.onDesktopClickEvent);
 
     this.onPinchStart = ({ detail }) => this.handlePinch(detail.hand);
     this.onPinchEnd = ({ detail }) => this.release(detail.hand);
@@ -54,6 +55,7 @@ AFRAME.registerComponent('hand-gestures', {
 
   remove() {
     window.removeEventListener('keydown', this.onDesktopKeyDown);
+    this.el.sceneEl.removeEventListener('click', this.onDesktopClickEvent);
     this.el.removeEventListener('hand-pinchstart', this.onPinchStart);
     this.el.removeEventListener('hand-pinchend', this.onPinchEnd);
   },
@@ -245,40 +247,58 @@ AFRAME.registerComponent('hand-gestures', {
     return physics.isCellSolid(world, cell.x, cell.z, this.el.sceneEl.time / 1000);
   },
 
-  // Desktop: o QPS é coletado ao passar por ele. A Almond Water é pega com F
-  // (fica na mão, no canto da tela) e um segundo F leva a garrafa à boca.
+  // Desktop: perto do QPS, Q (ou um clique nele) coleta. A Almond Water é pega
+  // com E (fica na mão, no canto da tela) e um segundo E leva a garrafa à boca.
   updateDesktopPickup(headWorld) {
     if (!headWorld || !window.quantumPlayer?.active) return;
 
-    let nearestWater = null;
-    let nearestDistance = DESKTOP_GRAB_RADIUS;
+    const nearest = { qps: null, 'almond-water': null };
+    const best = { qps: DESKTOP_GRAB_RADIUS, 'almond-water': DESKTOP_GRAB_RADIUS };
     this.el.sceneEl.querySelectorAll('[data-item]').forEach((item) => {
-      if (item.dataset.consumed || item === this.desktopHeld) return;
+      const type = item.dataset.item;
+      if (item.dataset.consumed || item === this.desktopHeld || !(type in nearest)) return;
       item.object3D.getWorldPosition(this.itemWorld);
       const distance = Math.hypot(this.itemWorld.x - headWorld.x, this.itemWorld.z - headWorld.z);
-
-      if (item.dataset.item === 'qps') {
-        if (distance <= DESKTOP_PICKUP_RADIUS) this.consume(item, 'qps-collected');
-        return;
-      }
-      if (distance < nearestDistance) {
-        nearestWater = item;
-        nearestDistance = distance;
+      if (distance < best[type]) {
+        nearest[type] = item;
+        best[type] = distance;
       }
     });
 
-    if (nearestWater !== this.desktopNearby) {
-      this.desktopNearby = nearestWater;
-      if (nearestWater && !this.desktopHeld) {
-        this.el.sceneEl.emit('interaction-hint', { text: 'ALMOND WATER — aperte F para pegar' });
+    if (nearest.qps !== this.desktopNearbyQps) {
+      this.desktopNearbyQps = nearest.qps;
+      if (nearest.qps) this.el.sceneEl.emit('interaction-hint', { text: 'QPS — aperte Q ou clique nele para pegar' });
+    }
+    if (nearest['almond-water'] !== this.desktopNearby) {
+      this.desktopNearby = nearest['almond-water'];
+      if (this.desktopNearby && !this.desktopHeld) {
+        this.el.sceneEl.emit('interaction-hint', { text: 'ALMOND WATER — aperte E para pegar' });
       }
     }
+    // O caderno do lobby também usa E: avisa quando a tecla já está ocupada.
+    window.quantumPlayer.desktopWaterBusy = Boolean(this.desktopNearby || this.desktopHeld);
     this.updateDesktopHeld();
   },
 
+  collectDesktopQps(item = this.desktopNearbyQps) {
+    if (!item?.isConnected || item.dataset.consumed || item.dataset.item !== 'qps') return;
+    this.desktopNearbyQps = null;
+    this.consume(item, 'qps-collected');
+  },
+
+  onDesktopClick(event) {
+    if (this.tracker?.inVr || !window.quantumPlayer?.active) return;
+    const item = event.target?.closest?.('[data-item="qps"]');
+    if (item && item === this.desktopNearbyQps) this.collectDesktopQps(item);
+  },
+
   onDesktopKey(event) {
-    if (event.code !== 'KeyF' || event.repeat || this.tracker?.inVr) return;
-    if (!window.quantumPlayer?.active) return;
+    if (event.repeat || this.tracker?.inVr || !window.quantumPlayer?.active) return;
+    if (event.code === 'KeyQ') {
+      this.collectDesktopQps();
+      return;
+    }
+    if (event.code !== 'KeyE') return;
 
     if (this.desktopHeld && !this.drinkStart) {
       this.drinkStart = performance.now();
@@ -290,7 +310,7 @@ AFRAME.registerComponent('hand-gestures', {
     this.desktopHeld = item;
     this.drinkStart = 0;
     item.removeAttribute('animation');
-    this.el.sceneEl.emit('interaction-hint', { text: 'ALMOND WATER NA MÃO — aperte F de novo para beber' });
+    this.el.sceneEl.emit('interaction-hint', { text: 'ALMOND WATER NA MÃO — aperte E de novo para beber' });
   },
 
   // Garrafa presa à câmera; ao beber, sobe até a boca e inclina.

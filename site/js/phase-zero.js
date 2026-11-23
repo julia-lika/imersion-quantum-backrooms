@@ -39,7 +39,6 @@ const elements = {};
 let started = false;
 let paused = false;
 let transitioning = false;
-let spaceHeld = false;
 let survival = createSurvivalState();
 let lastSave = 0;
 let lastWristUpdate = 0;
@@ -224,7 +223,7 @@ function toggleVisor() {
   renderTelemetry();
   setHint(survival.visor
     ? 'ZETA VISOR ATIVO — paredes roxas oscilam; atravesse quando estiverem abertas'
-    : 'PINÇA NA TESTA (ou V): ZETA VISOR // PALMAS NA PAREDE (ou Space + W): PHASE SHIFT');
+    : 'PINÇA NA TESTA (ou Z): ZETA VISOR // PALMAS NA PAREDE (ou X): PHASE SHIFT');
 }
 
 function requestPhaseShift() {
@@ -258,18 +257,14 @@ function resolvePhaseShift({ detail }) {
 
 function bindControls() {
   document.addEventListener('keydown', (event) => {
-    if (event.code === 'Space') spaceHeld = true;
-    if (event.code === 'KeyV') toggleVisor();
+    if (event.repeat) return;
+    if (event.code === 'KeyZ') toggleVisor();
+    if (event.code === 'KeyX') requestPhaseShift();
     if (event.code === 'KeyP') {
       paused = !paused;
       window.quantumPlayer.active = isActive();
       renderTelemetry();
     }
-    if (event.code === 'KeyW' && spaceHeld) requestPhaseShift();
-  });
-
-  document.addEventListener('keyup', (event) => {
-    if (event.code === 'Space') spaceHeld = false;
   });
 }
 
@@ -425,13 +420,15 @@ function bindGameEvents() {
     survival = { ...survival, eyesCovered: detail.covered };
     window.quantumPlayer.eyesCovered = detail.covered;
   });
-  scene.addEventListener('almond-water-drunk', () => {
+  scene.addEventListener('almond-water-drunk', ({ detail }) => {
     const restored = drinkAlmondWater(survival, game.current.sanity);
     survival = restored.state;
     setSanity(restored.sanity);
     syncAtmosphere();
     persistProgress();
-    setHint('ALMOND WATER — sanidade e energia restauradas');
+    setHint(detail?.training
+      ? 'ALMOND WATER DE TREINO BEBIDA — sanidade e energia restauradas; outra garrafa aparece em 10 s'
+      : 'ALMOND WATER — sanidade e energia restauradas');
     renderTelemetry();
   });
 

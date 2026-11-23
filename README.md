@@ -80,8 +80,9 @@ telemetria acompanha `FLOOR`, `QPS`, `TICK`, estados candidatos e entropia da
 grade; a medição do console colapsa os candidatos e atualiza a sanidade; e o
 stream local abre estados superpostos entre medições.
 
-Controles no desktop: `WASD` movimenta, `V` alterna o Zeta Visor, `Space + W`
-executa um phase shift e `P` pausa o stream. No headset, os controladores usam
+Controles no desktop: `WASD` movimenta, `H` abre o painel do pulso, `Q` pega o
+QPS, `E` pega e bebe a Almond Water (e abre o caderno do lobby), `Z` alterna o
+Zeta Visor, `X` executa um phase shift e `P` pausa o stream. No headset, os controladores usam
 laser para apontar ao console e o gatilho mede o estado.
 
 Após a medição, o QPS revela uma posição de escadas válida no mapa. Ao entrar
