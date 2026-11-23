@@ -206,6 +206,9 @@ AFRAME.registerComponent('player-locomotion', {
 
     if (!this.lastValid) this.lastValid = { x: head.x, z: head.z };
 
+    // Encostar numa parede em superposição aberta a "mede" e a mantém aberta.
+    physics.observeSuperposedWalls(world, this.lastValid.x, this.lastValid.z, physics.PLAYER_RADIUS, this.sceneTime);
+
     // O movimento físico da cabeça também passa pela colisão (room-scale).
     const desired = { x: head.x + move.x, z: head.z + move.z };
     const resolved = physics.resolveMove(
