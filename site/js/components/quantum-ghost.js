@@ -1,7 +1,10 @@
-// Entidade que vaga pelos corredores e caça o jogador quando ele está perto.
-// Mantém o modelo visível no escuro; o Zeta Visor intensifica o brilho violeta.
-const WANDER_INTERVAL_MS = 3200;
-const HUNT_INTERVAL_MS = 1600;
+// Entidade que persegue o jogador pelo labirinto o tempo todo, pelo caminho mais
+// curto, e acelera quando chega perto. Mantém o modelo visível no escuro; o Zeta
+// Visor intensifica o brilho violeta.
+// Uma célula por intervalo: ~1,2 m/s de longe e ~1,6 m/s perto. O jogador anda a
+// ~2,2 m/s, então ainda dá para fugir, mas parar é perigoso.
+const CHASE_INTERVAL_MS = 900;
+const HUNT_INTERVAL_MS = 650;
 const HUNT_RADIUS_CELLS = 5;
 const MAX_GHOST_MESH_EXTENT = 30;
 const VIEW_HALF_ANGLE = THREE.MathUtils.degToRad(37.5);
@@ -101,25 +104,8 @@ AFRAME.registerComponent('quantum-ghost', {
 
   step(player) {
     const world = window.quantumWorld;
-    const physics = window.quantumPhysics;
-
-    if (physics.cellDistance(this.cell, player) <= HUNT_RADIUS_CELLS) {
-      this.previousCell = this.cell;
-      this.cell = physics.nextStepToward(world.maze, this.cell, player);
-      return;
-    }
-
-    const options = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-      .map(([dx, dz]) => ({ x: this.cell.x + dx, z: this.cell.z + dz }))
-      .filter(({ x, z }) => world.maze[z]?.[x] === '.');
-    const forward = options.filter(({ x, z }) => (
-      !this.previousCell || x !== this.previousCell.x || z !== this.previousCell.z
-    ));
-    const pool = forward.length > 0 ? forward : options;
-    if (pool.length === 0) return;
-
     this.previousCell = this.cell;
-    this.cell = pool[Math.floor(Math.random() * pool.length)];
+    this.cell = window.quantumPhysics.nextStepToward(world.maze, this.cell, player);
   },
 
   // Linha de visão simples: amostra o segmento e para em paredes sólidas.
@@ -147,15 +133,20 @@ AFRAME.registerComponent('quantum-ghost', {
     if (!this.cell) return;
 
     const hunting = window.quantumPhysics.cellDistance(this.cell, player) <= HUNT_RADIUS_CELLS;
-    const interval = hunting ? HUNT_INTERVAL_MS : WANDER_INTERVAL_MS;
+    const interval = hunting ? HUNT_INTERVAL_MS : CHASE_INTERVAL_MS;
     if (shared.active && time - this.lastStep > interval) {
       this.lastStep = time;
       this.step(player);
     }
 
+    // Anda em velocidade constante até a próxima célula (sem o atraso do lerp).
     const goal = window.quantumPhysics.cellToWorld(world, this.cell.x, this.cell.z);
     this.target.set(goal.x, 0, goal.z);
-    this.el.object3D.position.lerp(this.target, Math.min(1, (delta / 1000) * 1.6));
+    const position = this.el.object3D.position;
+    const remaining = position.distanceTo(this.target);
+    const stepLength = (world.cellSize / interval) * delta * 1.15;
+    if (remaining <= stepLength) position.copy(this.target);
+    else position.lerp(this.target, stepLength / remaining);
 
     const headWorld = this.data.player.object3D.position;
     const ghostEyes = this.el.object3D.position.clone().setY(headWorld.y);

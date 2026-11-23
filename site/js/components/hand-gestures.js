@@ -2,7 +2,8 @@
 // - pinça na testa: liga/desliga o Zeta Visor;
 // - mãos sobre os olhos: protege da exposição ao fantasma;
 // - duas palmas empurrando a parede: phase shift;
-// - pinça perto de um item: pega o QPS ou a Almond Water (beber = levar à boca).
+// - pinça perto de um item: pega o QPS ou a Almond Water (beber = levar à boca);
+// - estender a mão até um item também pega: o QPS é coletado e a garrafa fica na mão.
 const BROW_OFFSET = new THREE.Vector3(0, 0.09, -0.06);
 const EYES_OFFSET = new THREE.Vector3(0, 0, -0.08);
 const MOUTH_OFFSET = new THREE.Vector3(0, -0.09, -0.07);
@@ -25,6 +26,8 @@ AFRAME.registerComponent('hand-gestures', {
     });
 
     this.held = { left: null, right: null };
+    // 'touch' (estendeu a mão) ou 'pinch': só a pinça larga o item ao soltar.
+    this.grabMode = { left: null, right: null };
     this.phaseCharge = 0;
     this.phaseCooldown = 0;
     this.eyesCovered = false;
@@ -65,20 +68,39 @@ AFRAME.registerComponent('hand-gestures', {
       return;
     }
 
+    if (this.held[side]) return;
     const item = window.quantumPlayer?.active && this.findNearestItem(hand.world, GRAB_RADIUS);
     if (!item) return;
 
-    this.held[side] = item;
-    item.emit('item-grabbed', { hand: side });
+    this.grab(side, item, 'pinch');
     if (item.dataset.item === 'qps') this.consume(item, 'qps-collected', 1200);
   },
 
+  grab(side, item, mode) {
+    const other = side === 'left' ? 'right' : 'left';
+    if (this.held[other] === item) this.held[other] = null;
+    this.held[side] = item;
+    this.grabMode[side] = mode;
+    // Na mão a garrafa para de girar.
+    item.removeAttribute('animation');
+    item.object3D.rotation.set(0, 0, 0);
+    item.emit('item-grabbed', { hand: side });
+  },
+
+  isHeld(item) {
+    return this.held.left === item || this.held.right === item;
+  },
+
   release(side) {
+    // Fechar e abrir a mão ao pegar pela ponta dos dedos não deve largar a garrafa.
+    if (this.grabMode[side] === 'touch') return;
     const item = this.held[side];
     this.held[side] = null;
     if (!item?.isConnected || item.dataset.consumed) return;
 
-    item.object3D.position.y = 0.16;
+    item.dataset.droppedAt = String(performance.now());
+    // Larga a garrafa na altura da cintura, onde dá para pegar de novo.
+    item.object3D.position.y = Math.max(0.6, item.object3D.position.y);
   },
 
   findNearestItem(position, radius) {
@@ -127,13 +149,13 @@ AFRAME.registerComponent('hand-gestures', {
     );
 
     this.updateHeldItems();
-    this.touchCollectQps();
+    this.touchCollectItems();
     this.updatePhasePress(dt, bothTracked);
   },
 
-  // Reserva para a pinça: tocar o QPS com a mão também o coleta. Evita depender
+  // Reserva para a pinça: tocar um item com a mão também o pega. Evita depender
   // do evento select do navegador (que varia entre mãos e controles).
-  touchCollectQps() {
+  touchCollectItems() {
     if (!window.quantumPlayer?.active) return;
 
     ['left', 'right'].forEach((side) => {
@@ -142,6 +164,11 @@ AFRAME.registerComponent('hand-gestures', {
 
       const item = this.findNearestItem(hand.world, TOUCH_RADIUS);
       if (item?.dataset.item === 'qps') this.consume(item, 'qps-collected', 600);
+      // Encostar a mão na Almond Water a segura; levar à boca bebe, pinçar e soltar larga.
+      const recentlyDropped = performance.now() - Number(item?.dataset.droppedAt || 0) < 1500;
+      if (item?.dataset.item === 'almond-water' && !this.held[side] && !this.isHeld(item) && !recentlyDropped) {
+        this.grab(side, item, 'touch');
+      }
     });
   },
 
