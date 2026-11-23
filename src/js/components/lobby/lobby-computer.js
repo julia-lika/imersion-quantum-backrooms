@@ -1,79 +1,6 @@
-// Fase 0 (lobby de treinamento): móveis do furniture pack, o caderno com o
-// briefing da missão e as placas que explicam as mecânicas.
-
-// Peças do furniture_pack.glb (Sketchfab, CC BY 4.0). Cada objeto é um conjunto
-// de nós "Object_N" do GLB; as unidades do arquivo são ~4,7x o tamanho real.
-const FURNITURE_GROUPS = {
-  sofa: [12],
-  metalTable: [7],
-  terminal: [0, 1, 2, 3, 6, 10, 11, 15, 16, 17, 18],
-  desk: [9],
-  blueChair: [13, 14],
-  officeChair: [5, 8],
-  armchair: [4],
-};
-const FURNITURE_SCALE = 0.214;
-
-AFRAME.registerComponent('lobby-furniture', {
-  schema: {
-    source: { type: 'selector', default: '#furniture-source' },
-  },
-
-  init() {
-    this.onLoaded = () => this.build();
-    const source = this.data.source;
-    if (source?.getObject3D('mesh')) this.build();
-    else source?.addEventListener('model-loaded', this.onLoaded, { once: true });
-  },
-
-  remove() {
-    this.data.source?.removeEventListener('model-loaded', this.onLoaded);
-  },
-
-  buildGroup(root, indices) {
-    const source = this.data.source.object3D;
-    source.updateMatrixWorld(true);
-    const inverse = source.matrixWorld.clone().invert();
-    const inner = new THREE.Group();
-
-    indices.forEach((index) => {
-      const node = root.getObjectByName(`Object_${index + 2}`);
-      if (!node) return;
-      const clone = node.clone();
-      clone.visible = true;
-      inverse.clone().multiply(node.matrixWorld).decompose(clone.position, clone.quaternion, clone.scale);
-      inner.add(clone);
-    });
-
-    inner.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(inner);
-    const center = box.getCenter(new THREE.Vector3());
-    inner.position.set(-center.x, -box.min.y, -center.z);
-    const group = new THREE.Group();
-    group.add(inner);
-    group.scale.setScalar(FURNITURE_SCALE);
-    return group;
-  },
-
-  build() {
-    const root = this.data.source?.getObject3D('mesh');
-    const layout = this.el.lobbyLayout || [];
-    if (!root || this.built) return;
-    this.built = true;
-
-    layout.forEach(({ piece, x, z, y = 0, rotation = 0 }) => {
-      const indices = FURNITURE_GROUPS[piece];
-      if (!indices) return;
-      const group = this.buildGroup(root, indices);
-      group.position.set(x, y, z);
-      group.rotation.y = THREE.MathUtils.degToRad(rotation);
-      this.el.object3D.add(group);
-    });
-  },
-});
-
-// Caderno sobre a mesa: clicar (mouse) ou encostar a mão (VR) abre o briefing.
-AFRAME.registerComponent('lobby-notebook', {
+// Notebook do briefing sobre a mesa: clicar, apertar E por perto ou encostar a
+// mão (VR) abre o arquivo da agente desaparecida.
+AFRAME.registerComponent('lobby-computer', {
   schema: {
     player: { type: 'selector', default: '#player-head' },
     rig: { type: 'selector', default: '#player' },
@@ -86,7 +13,7 @@ AFRAME.registerComponent('lobby-notebook', {
     this.lastToggle = 0;
     this.world = new THREE.Vector3();
     this.headWorld = new THREE.Vector3();
-    this.buildNotebook();
+    this.buildComputer();
     this.buildMessage();
 
     this.onClick = () => this.toggle();
@@ -107,7 +34,7 @@ AFRAME.registerComponent('lobby-notebook', {
     if (window.quantumPlayer) window.quantumPlayer.briefingOpen = false;
   },
 
-  buildNotebook() {
+  buildComputer() {
     // Notebook da Divisão Q: base com teclado e tela de terminal verde (a tela
     // fica virada para +Z local, a dobradiça na borda de trás).
     const base = document.createElement('a-box');
@@ -279,124 +206,5 @@ AFRAME.registerComponent('lobby-notebook', {
       const distance = Math.hypot(this.world.x - this.headWorld.x, this.world.z - this.headWorld.z);
       if (distance > this.data.closeDistance) this.toggle();
     }
-  },
-});
-
-// Marca uma parede de treino do lobby para ficar impossível de não ver: campo
-// listrado brilhante na parede, moldura, faixa no chão com a tecla e um aviso
-// quando o jogador chega perto. A frente (+Z local) aponta para dentro da sala.
-AFRAME.registerComponent('training-wall', {
-  schema: {
-    player: { type: 'selector', default: '#player-head' },
-    color: { type: 'color', default: '#44ffcc' },
-    title: { type: 'string', default: 'ATRAVESSE AQUI' },
-    floorText: { type: 'string', default: 'SALTO DE FASE — APERTE X' },
-    hint: { type: 'string', default: '' },
-    width: { type: 'number', default: 2 },
-    height: { type: 'number', default: 1.8 },
-    hintRadius: { type: 'number', default: 1.8 },
-  },
-
-  init() {
-    const { color, width, height } = this.data;
-    this.world = new THREE.Vector3();
-    this.headWorld = new THREE.Vector3();
-    this.near = false;
-
-    // Campo listrado que desliza: deixa claro que a parede "não é normal".
-    this.fieldCanvas = document.createElement('canvas');
-    this.fieldCanvas.width = 256;
-    this.fieldCanvas.height = 256;
-    this.fieldTexture = new THREE.CanvasTexture(this.fieldCanvas);
-    this.fieldTexture.wrapS = THREE.RepeatWrapping;
-    this.fieldTexture.wrapT = THREE.RepeatWrapping;
-    this.fieldTexture.repeat.set(width / 0.6, height / 0.6);
-    this.drawField();
-    const field = new THREE.Mesh(
-      new THREE.PlaneGeometry(width, height),
-      new THREE.MeshBasicMaterial({ map: this.fieldTexture, transparent: true, opacity: 0.55, depthWrite: false, fog: false })
-    );
-    field.position.set(0, height / 2 + 0.06, 0.012);
-    this.field = field;
-    this.el.object3D.add(field);
-
-    // Moldura brilhante.
-    const frameMaterial = new THREE.MeshBasicMaterial({ color, fog: false });
-    const bar = (w, h, x, y) => {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.03), frameMaterial);
-      mesh.position.set(x, y, 0.02);
-      this.el.object3D.add(mesh);
-    };
-    const top = height + 0.06;
-    bar(width + 0.06, 0.05, 0, top);
-    bar(width + 0.06, 0.05, 0, 0.06);
-    bar(0.05, height, -width / 2, height / 2 + 0.06);
-    bar(0.05, height, width / 2, height / 2 + 0.06);
-    this.frameMaterial = frameMaterial;
-
-    // Letreiro grande no meio do campo.
-    const label = document.createElement('a-entity');
-    label.setAttribute('canvas-text', { value: this.data.title, color: '#ffffff', width: 1.5, align: 'center', overlay: false });
-    label.setAttribute('position', `0 ${height * 0.62} 0.03`);
-    label.setAttribute('scale', '2.2 2.2 1');
-    this.el.appendChild(label);
-
-    // Faixa no chão com a tecla.
-    const plateCanvas = document.createElement('canvas');
-    plateCanvas.width = 512;
-    plateCanvas.height = 160;
-    const ctx = plateCanvas.getContext('2d');
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(0, 0, 512, 160);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 8;
-    ctx.setLineDash([26, 14]);
-    ctx.strokeRect(8, 8, 496, 144);
-    ctx.fillStyle = color;
-    ctx.font = 'bold 40px system-ui, Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(this.data.floorText, 256, 80);
-    const plateTexture = new THREE.CanvasTexture(plateCanvas);
-    if ('colorSpace' in plateTexture) plateTexture.colorSpace = THREE.SRGBColorSpace;
-    const plate = new THREE.Mesh(
-      new THREE.PlaneGeometry(width, width * (160 / 512)),
-      new THREE.MeshBasicMaterial({ map: plateTexture, transparent: true, depthWrite: false, fog: false })
-    );
-    plate.rotation.x = -Math.PI / 2;
-    plate.position.set(0, 0.012, 0.55);
-    this.el.object3D.add(plate);
-
-    const glow = document.createElement('a-entity');
-    glow.setAttribute('light', `type: point; color: ${color}; intensity: 0.7; distance: 3`);
-    glow.setAttribute('position', `0 ${height * 0.6} 0.6`);
-    this.el.appendChild(glow);
-  },
-
-  drawField() {
-    const ctx = this.fieldCanvas.getContext('2d');
-    ctx.clearRect(0, 0, 256, 256);
-    ctx.strokeStyle = this.data.color;
-    ctx.lineWidth = 22;
-    ctx.globalAlpha = 0.8;
-    for (let i = -512; i < 768; i += 64) {
-      ctx.beginPath();
-      ctx.moveTo(i, 256);
-      ctx.lineTo(i + 256, 0);
-      ctx.stroke();
-    }
-    this.fieldTexture.needsUpdate = true;
-  },
-
-  tick(time) {
-    this.fieldTexture.offset.x = (time * 0.00025) % 1;
-    this.field.material.opacity = 0.35 + 0.25 * (0.5 + 0.5 * Math.sin(time * 0.004));
-
-    if (!this.data.hint || !this.data.player) return;
-    this.el.object3D.getWorldPosition(this.world);
-    this.data.player.object3D.getWorldPosition(this.headWorld);
-    const near = Math.hypot(this.world.x - this.headWorld.x, this.world.z - this.headWorld.z) < this.data.hintRadius;
-    if (near && !this.near) this.el.sceneEl.emit('interaction-hint', { text: this.data.hint });
-    this.near = near;
   },
 });
