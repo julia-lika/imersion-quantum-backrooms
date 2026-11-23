@@ -268,13 +268,14 @@
     <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.7.x/dist/aframe-extras.min.js"></script>
     <script type="module" src="js/maze-physics.js"></script>
-    <script type="module" src="js/map-generator.js"></script>
+    <script type="module" src="js/map-generator.js?v=20261123-2"></script>
     <script type="module" src="js/quantum-bank.js"></script>
     <script type="module" src="js/components/backrooms-wall.js"></script>
-    <script type="module" src="js/phase-zero.js?v=20261123-6"></script>
+    <script type="module" src="js/phase-zero.js?v=20261123-7"></script>
     <script src="js/components/xr-hands.js"></script>
     <script src="js/components/hand-gestures.js?v=20261123-5"></script>
     <script src="js/components/player-locomotion.js?v=20261123-2"></script>
+    <script src="js/components/canvas-text.js"></script>
     <script src="js/components/terminal-panel.js"></script>
     <script src="js/components/wrist-hud.js?v=20261123-4"></script>
     <script src="js/components/lobby.js?v=20261123-3"></script>
@@ -286,7 +287,7 @@
     <script src="js/components/light-flicker.js"></script>
     <script src="js/components/fixture-lights.js?v=20261123-1"></script>
     <script src="js/components/floor-transition.js"></script>
-    <script type="module" src="js/components/quantum-map.js?v=20261123-11"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261123-12"></script>
     <script src="js/components/scatter-props.js?v=20261123-3"></script>
   </head>
   <body>
@@ -372,7 +373,7 @@
           <a-entity
             id="desktop-hint"
             position="0 -0.34 -1.1"
-            text="value: WASD ou setas: andar | arraste o mouse: olhar e girar\nEncontre o QPS para localizar a porta; align: center; color: #fff0c7; width: 1.1"
+            canvas-text="value: WASD ou setas: andar | arraste o mouse: olhar e girar\nEncontre o QPS para localizar a porta; align: center; color: #fff0c7; width: 1.1"
           ></a-entity>
         </a-entity>
         <a-entity hand-tracking-controls="hand: left; modelColor: #d8bc75"></a-entity>
@@ -474,7 +475,7 @@
       function applyMeasurement(result) {
         measured = true;
         hint.setAttribute(
-          'text',
+          'canvas-text',
           'value: O QPS MEDIU O ESTADO — a realidade está colapsando; align: center; color: #9dffc4; width: 1.1'
         );
         playCollapseBlink(() => commitMeasurement(result));
@@ -488,7 +489,7 @@
           `bitstring: ${bitstring}`
         );
         hint.setAttribute(
-          'text',
+          'canvas-text',
           `value: MEDIÇÃO REGISTRADA — ${bitstring}; align: center; color: #fff0c7; width: 1.1`
         );
         hudState.textContent = `ESTADO: MEDIDO // ${bitstring}`;
@@ -502,7 +503,7 @@
         // QPS de treino do lobby: só explica, não mede nem muda o mapa.
         if (event?.detail?.training) {
           hint.setAttribute(
-            'text',
+            'canvas-text',
             'value: QPS DE TREINO COLETADO — nos andares, isso mede o estado e revela a porta. Outro aparece em 10 s; align: center; color: #9dffc4; width: 1.1'
           );
           scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
@@ -511,7 +512,7 @@
         if (measuring) return;
         measuring = true;
         hint.setAttribute(
-          'text',
+          'canvas-text',
           'value: MEDIÇÃO EM ANDAMENTO — o estado está sendo amostrado; align: center; color: #fff0c7; width: 1.1'
         );
 
@@ -551,7 +552,7 @@
 
       window.addEventListener('quantum-measured', () => {
         hint.setAttribute(
-          'text',
+          'canvas-text',
           'value: QPS ENCONTRADO — localize a porta antes do próximo colapso; align: center; color: #fff0c7; width: 1.1'
         );
       });

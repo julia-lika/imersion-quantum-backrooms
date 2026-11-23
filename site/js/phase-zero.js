@@ -111,10 +111,10 @@ function persistProgress() {
 }
 
 function setHint(message) {
-  elements['desktop-hint'].setAttribute(
-    'text',
-    `value: ${message}; align: center; color: #fff0c7; width: 1.1`
-  );
+  // Objeto (não string): o texto pode conter ";" sem quebrar o atributo.
+  elements['desktop-hint'].setAttribute('canvas-text', {
+    value: message, align: 'center', color: '#fff0c7', width: 1.1,
+  });
 }
 
 function flash(className, duration = 420) {

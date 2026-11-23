@@ -165,7 +165,9 @@ AFRAME.registerComponent('quantum-map', {
     const size = map.maze.length;
     const height = physics.WALL_HEIGHT;
     const origin = -((cellSize * size) / 2) + cellSize / 2;
-    const superposed = lobby ? [] : physics.findSuperposedWalls(map.maze, map.bitstring);
+    const superposed = lobby
+      ? window.LOBBY_LAYOUT.superposed.map((wall) => ({ ...wall }))
+      : physics.findSuperposedWalls(map.maze, map.bitstring);
     const superposedOffsets = new Map(superposed.map(({ x, z, offset }) => [`${x},${z}`, offset]));
 
     window.quantumWorld = physics.createMazeWorld(map.maze, { cellSize, superposed });
@@ -203,8 +205,6 @@ AFRAME.registerComponent('quantum-map', {
       wall.setAttribute('backrooms-wall', 'repeat: 1 1; offset: 0 0; textureScale: 0.8');
       this.el.appendChild(wall);
     });
-
-    this.addMarker(1, 1, '#ffe69b', 'ENTRADA');
 
     if (lobby) this.addLobby(origin, cellSize);
 
@@ -323,9 +323,15 @@ AFRAME.registerComponent('quantum-map', {
         body: 'Cada andar esconde um QPS. Pegue com pinça ou encostando a mão (desktop: chegue perto e aperte Q ou clique nele).\n\nEle mede o estado quântico: o mapa colapsa, a PORTA de saída aparece e uma seta ciano aponta para ela. Este aqui é de treino e renasce a cada 10 s.',
       },
       {
+        x: rightWall, z: at(12.5), rotation: -90,
+        title: 'PAREDE DE TREINO', subtitle: 'SALTO + VISOR',
+        body: 'SALTO DE FASE: encoste as palmas nesta parede (ou olhe para ela e aperte X) para passar ao corredor de trás.\n\nVISOR ZETA (pinça na testa ou Z): mais adiante, uma parede roxa abre e fecha. Passe por ela quando abrir.',
+        height: 0.75,
+      },
+      {
         x: rightWall, z: at(14.5), rotation: -90,
         title: 'ENTIDADE', subtitle: 'PERIGO',
-        body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nVISOR ZETA: pinça na testa (Z) revela paredes em superposição.\nSALTO DE FASE: palmas na parede (X) para atravessar.',
+        body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nVISOR ZETA: pinça na testa (Z) revela paredes em superposição.\nSALTO DE FASE: palmas na parede (X) para atravessar.\nTeste os dois na parede de treino ao lado.',
       },
       {
         x: at(8.6), z: farWall, rotation: 180,
@@ -508,20 +514,5 @@ AFRAME.registerComponent('quantum-map', {
       seed = (seed * 1664525 + 1013904223) % 4294967296;
       return seed / 4294967296;
     };
-  },
-
-  addMarker(x, z, color, label) {
-    const marker = document.createElement('a-cylinder');
-    const cellSize = window.quantumPhysics.CELL_SIZE;
-    const size = window.quantumWorld?.size ?? window.quantumPhysics.MAZE_SIZE;
-    const origin = -((cellSize * size) / 2) + cellSize / 2;
-
-    marker.setAttribute('radius', '0.28');
-    marker.setAttribute('height', '0.08');
-    marker.setAttribute('color', color);
-    marker.setAttribute('position', `${origin + x * cellSize} 0.12 ${origin + z * cellSize}`);
-    marker.setAttribute('animation', 'property: material.emissiveIntensity; from: 0.2; to: 0.9; dir: alternate; loop: true; dur: 900');
-    marker.setAttribute('data-label', label);
-    this.el.appendChild(marker);
   },
 });
