@@ -233,7 +233,7 @@ export const LOBBY = {
   // Células ocupadas por móveis (bloqueiam o jogador).
   furniture: [
     [1, 4], [1, 5], [1, 6], // sofá
-    [5, 4], [6, 4], // mesa com o caderno
+    [5, 4], [6, 4], // mesa com o computador
     [11, 7], [11, 8], // mesa de metal com o terminal
     [3, 5], // poltrona
   ],

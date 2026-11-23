@@ -11,8 +11,8 @@ const KEY_DIRECTIONS = {
   ArrowRight: [1, 0],
 };
 
-// Q gira para a esquerda, E para a direita.
-const TURN_KEYS = { KeyQ: 1, KeyE: -1 };
+// Q e E agora pegam o QPS e a Água de Amêndoa; no desktop o giro fica com o mouse.
+const TURN_KEYS = {};
 
 AFRAME.registerComponent('player-locomotion', {
   schema: {

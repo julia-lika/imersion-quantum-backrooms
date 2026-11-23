@@ -1,32 +1,55 @@
 import { buildLightPanels, buildWallGeometry } from './level-geometry.js';
 
+// O clipe "open" da door yellow abre até ~100° em 1,2 s e fecha de novo até 2,4 s.
+// A porta abre quando o jogador chega perto e toca a metade de fechar quando ele
+// se afasta; voltando no meio do fechamento, ela reabre de onde estava.
+const DOOR_OPEN_END = 1.2;
+const DOOR_CLOSE_END = 2.4;
+
 AFRAME.registerComponent('door-proximity-animation', {
   schema: {
     target: { type: 'selector' },
     radius: { type: 'number', default: 2.5 },
+    closeMargin: { type: 'number', default: 0.8 },
   },
 
   init() {
-    this.openRequested = false;
-    this.opened = false;
+    this.state = 'closed';
+    this.time = 0;
     this.playerPosition = new THREE.Vector3();
     this.doorPosition = new THREE.Vector3();
-    this.onModelLoaded = () => {
-      this.modelReady = true;
-      this.openIfReady();
-    };
-    this.modelReady = Boolean(this.el.getObject3D('mesh'));
+    this.onModelLoaded = () => this.setupMixer();
     this.el.addEventListener('model-loaded', this.onModelLoaded);
+    if (this.el.getObject3D('mesh')) this.setupMixer();
   },
 
   remove() {
     this.el.removeEventListener('model-loaded', this.onModelLoaded);
-    window.clearTimeout(this.pauseTimer);
+    this.mixer?.stopAllAction();
   },
 
-  tick() {
+  setupMixer() {
+    const mesh = this.el.getObject3D('mesh');
+    const clip = mesh?.animations?.find((item) => item.name === 'open') || mesh?.animations?.[0];
+    if (!clip) return;
+    this.mixer = new THREE.AnimationMixer(mesh);
+    this.action = this.mixer.clipAction(clip);
+    this.action.setLoop(THREE.LoopOnce, 1);
+    this.action.clampWhenFinished = true;
+    this.action.play();
+    this.action.paused = true;
+    this.applyTime(0);
+  },
+
+  applyTime(time) {
+    this.time = time;
+    this.action.time = time;
+    this.mixer.update(0);
+  },
+
+  tick(time, delta) {
     const target = this.data.target;
-    if (this.openRequested || !target) return;
+    if (!target || !this.action) return;
 
     this.el.object3D.getWorldPosition(this.doorPosition);
     target.object3D.getWorldPosition(this.playerPosition);
@@ -35,25 +58,28 @@ AFRAME.registerComponent('door-proximity-animation', {
       this.doorPosition.z - this.playerPosition.z
     );
 
-    if (distance <= this.data.radius) {
-      this.openRequested = true;
-      this.openIfReady();
+    if (distance <= this.data.radius && (this.state === 'closed' || this.state === 'closing')) {
+      // Reabre a partir do ângulo atual (a metade de fechar é o espelho da de abrir).
+      if (this.state === 'closing') this.applyTime(DOOR_CLOSE_END - this.time);
+      this.state = 'opening';
+    } else if (distance > this.data.radius + this.data.closeMargin && (this.state === 'open' || this.state === 'opening')) {
+      if (this.state === 'opening') this.applyTime(DOOR_CLOSE_END - this.time);
+      this.state = 'closing';
     }
-  },
 
-  openIfReady() {
-    if (!this.openRequested || !this.modelReady || this.opened) return;
-
-    this.opened = true;
-    this.el.setAttribute(
-      'animation-mixer',
-      'clip: open; loop: once; clampWhenFinished: true'
-    );
-    // O clipe "open" abre até ~100° e fecha de novo (2,4 s): congela no meio,
-    // com a porta aberta para a escuridão.
-    this.pauseTimer = window.setTimeout(() => {
-      if (this.el.isConnected) this.el.setAttribute('animation-mixer', 'timeScale', 0);
-    }, 1200);
+    const dt = Math.min(0.1, delta / 1000);
+    if (this.state === 'opening') {
+      const next = Math.min(DOOR_OPEN_END, this.time + dt);
+      this.applyTime(next);
+      if (next >= DOOR_OPEN_END) this.state = 'open';
+    } else if (this.state === 'closing') {
+      const next = Math.min(DOOR_CLOSE_END, this.time + dt);
+      this.applyTime(next);
+      if (next >= DOOR_CLOSE_END) {
+        this.state = 'closed';
+        this.applyTime(0);
+      }
+    }
   },
 });
 
@@ -199,7 +225,7 @@ AFRAME.registerComponent('quantum-map', {
     this.el.sceneEl.emit('maze-world-updated', { stairs: map.stairs, items: this.itemCells, lobby });
   },
 
-  // Um QPS por andar (até ser coletado) e garrafas de Almond Water espalhadas.
+  // Um QPS por andar (até ser coletado) e garrafas de Água de Amêndoa espalhadas.
   addItems(map, origin, cellSize) {
     const exclude = [
       { x: 1, z: 1 }, { x: 2, z: 1 }, { x: 1, z: 2 },
@@ -226,7 +252,7 @@ AFRAME.registerComponent('quantum-map', {
     });
   },
 
-  // Lobby: QPS de treino (não mede nada) e uma Almond Water de verdade.
+  // Lobby: QPS de treino (não mede nada) e uma Água de Amêndoa de verdade.
   addLobbyItems(origin, cellSize) {
     const { almondWater, qps } = window.LOBBY_LAYOUT.items;
     this.itemCells = [almondWater, qps];
@@ -270,8 +296,8 @@ AFRAME.registerComponent('quantum-map', {
     this.el.appendChild(furniture);
 
     const notebook = document.createElement('a-entity');
-    notebook.setAttribute('position', `${at(5.5)} 0.76 ${at(4) - 0.3}`);
-    notebook.setAttribute('rotation', '0 168 0');
+    notebook.setAttribute('position', `${at(5.5)} 0.76 ${at(4) + 0.05}`);
+    notebook.setAttribute('rotation', '0 -10 0');
     notebook.setAttribute('lobby-notebook', '');
     this.el.appendChild(notebook);
 
@@ -279,35 +305,42 @@ AFRAME.registerComponent('quantum-map', {
       {
         x: rightWall, z: at(2.5), rotation: -90,
         title: 'FASE 0 // LOBBY', subtitle: 'TREINAMENTO',
-        body: 'Bem-vindo, agente. Este é o lobby de treinamento.\n\nANDAR: balance os braços (VR) ou WASD/setas. Q e E giram.\n\nLeia as estações ao longo do salão e abra o CADERNO na mesa: toque com a mão (VR), clique ou aperte E.',
+        body: 'Bem-vindo, agente. Este é o lobby de treinamento.\n\nANDAR: balance os braços (VR) ou WASD/setas, olhando com o mouse.\n\nLeia as estações ao longo do salão e abra o COMPUTADOR na mesa: toque com a mão (VR), clique ou aperte E.',
       },
       {
         x: leftWall, z: at(8), rotation: 90,
         title: 'PAINEL DO PULSO', subtitle: 'Q-LINK',
-        body: 'Olhe para o pulso esquerdo (VR) ou aperte H (desktop) para abrir o Q-LINK: ANDAR, SANIDADE, ENERGIA, ZETA VISOR, distância da ENTIDADE e OBJETIVO.\n\nA sanidade cai com o tempo e perto da entidade. A energia alimenta o visor e o phase shift.',
+        body: 'Olhe para o pulso esquerdo (VR) ou aperte H (desktop) para abrir o Q-LINK: ANDAR, SANIDADE, ENERGIA, VISOR ZETA, distância da ENTIDADE e OBJETIVO.\n\nA sanidade cai com o tempo e perto da entidade. A energia alimenta o visor e o salto de fase.',
       },
       {
         x: rightWall, z: at(10.5), rotation: -90,
-        title: 'ALMOND WATER', subtitle: 'SUPRIMENTO',
+        title: 'ÁGUA DE AMÊNDOA', subtitle: 'SUPRIMENTO',
         body: 'Garrafas espalhadas pelos andares. Estenda a mão até a garrafa para pegar e leve à boca para beber. No desktop: E pega, E de novo bebe.\n\nRestaura SANIDADE e recarrega toda a ENERGIA. Experimente a garrafa ao lado: outra aparece a cada 10 s.',
       },
       {
         x: leftWall, z: at(12), rotation: 90,
-        title: 'QPS', subtitle: 'QUANTUM POSITIONING',
+        title: 'QPS', subtitle: 'POSICIONAMENTO QUÂNTICO',
         body: 'Cada andar esconde um QPS. Pegue com pinça ou encostando a mão (desktop: chegue perto e aperte Q ou clique nele).\n\nEle mede o estado quântico: o mapa colapsa, a PORTA de saída aparece e uma seta ciano aponta para ela. Este aqui é de treino e renasce a cada 10 s.',
       },
       {
         x: rightWall, z: at(14.5), rotation: -90,
         title: 'ENTIDADE', subtitle: 'PERIGO',
-        body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nZETA VISOR: pinça na testa (Z) revela paredes em superposição.\nPHASE SHIFT: palmas na parede (X) para atravessar.',
+        body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nVISOR ZETA: pinça na testa (Z) revela paredes em superposição.\nSALTO DE FASE: palmas na parede (X) para atravessar.',
       },
       {
         x: at(8.6), z: farWall, rotation: 180,
-        title: 'SAÍDA', subtitle: 'FLOOR 01',
-        body: 'A porta amarela leva ao FLOOR 01.\n\nQuando estiver pronto, atravesse. Boa sorte, agente.',
+        title: 'SAÍDA', subtitle: 'ANDAR 01',
+        body: 'A porta amarela leva ao ANDAR 01.\n\nQuando estiver pronto, atravesse. Boa sorte, agente.',
         height: 0.6,
       },
     ];
+
+    // TV de segurança com a entidade andando, embaixo da placa da ENTIDADE.
+    const tv = document.createElement('a-entity');
+    tv.setAttribute('position', `${rightWall - 0.345} 0.78 ${at(14.5)}`);
+    tv.setAttribute('rotation', '0 -90 0');
+    tv.setAttribute('entity-tv', '');
+    this.el.appendChild(tv);
 
     signs.forEach(({ x, z, rotation, title, subtitle, body, height = 0.9 }) => {
       const sign = document.createElement('a-entity');

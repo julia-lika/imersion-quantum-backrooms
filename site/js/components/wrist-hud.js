@@ -127,9 +127,9 @@ AFRAME.registerComponent('wrist-hud', {
     ctx.shadowBlur = 0;
     ctx.fillStyle = GREEN_DIM;
     ctx.font = `15px ${mono}`;
-    spacedText(ctx, 'AGENT TELEMETRY', pad + 6, pad + 34, 4);
+    spacedText(ctx, 'TELEMETRIA DO AGENTE', pad + 6, pad + 34, 4);
 
-    const floorLabel = Number(floor) === 0 ? 'LOBBY' : `FLOOR ${String(floor).padStart(2, '0')}`;
+    const floorLabel = Number(floor) === 0 ? 'LOBBY' : `ANDAR ${String(floor).padStart(2, '0')}`;
     ctx.font = `bold 20px ${mono}`;
     const tagWidth = ctx.measureText(floorLabel).width + 34;
     roundRect(ctx, width - pad - tagWidth, pad + 4, tagWidth, 36, 6);
@@ -168,8 +168,8 @@ AFRAME.registerComponent('wrist-hud', {
       }
     };
     const column = (width - pad * 2 - 30) / 2;
-    gauge('SANITY', sanity, pad, column);
-    gauge('ENERGY', energy, pad + column + 30, column);
+    gauge('SANIDADE', sanity, pad, column);
+    gauge('ENERGIA', energy, pad + column + 30, column);
 
     ctx.fillStyle = GREEN_FAINT;
     ctx.fillRect(pad, pad + 208, width - pad * 2, 2);
@@ -186,7 +186,7 @@ AFRAME.registerComponent('wrist-hud', {
       ctx.fillText(value, x, y + 22);
       ctx.shadowBlur = 0;
     };
-    chip('ZETA VISOR', visor ? '● ATIVO' : '○ OFF', visor, pad, pad + 224, '#c9a3ff');
+    chip('VISOR ZETA', visor ? '● ATIVO' : '○ DESLIG.', visor, pad, pad + 224, '#c9a3ff');
     const distance = Number.isFinite(ghost.distance) ? `${(ghost.distance * 1.05).toFixed(1)} M` : '--';
     const entity = Number(floor) === 0
       ? 'AUSENTE'
@@ -215,7 +215,7 @@ AFRAME.registerComponent('wrist-hud', {
     ctx.font = `13px ${mono}`;
     ctx.fillStyle = GREEN_DIM;
     const stamp = new Date().toTimeString().slice(0, 8);
-    spacedText(ctx, `LINK OK // ${stamp}`, pad, height - pad - 14, 2);
+    spacedText(ctx, `LINK ATIVO // ${stamp}`, pad, height - pad - 14, 2);
     const hint = '[H] FECHA NO DESKTOP';
     const hintWidth = ctx.measureText(hint).width + hint.length * 2;
     spacedText(ctx, hint, width - pad - hintWidth, height - pad - 14, 2);
