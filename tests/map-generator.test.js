@@ -5,6 +5,7 @@ import {
   generateQuantumMap,
   sampleQuantumBitstring,
 } from '../site/js/map-generator.js';
+import { MAZE_SIZE } from '../site/js/maze-physics.js';
 
 test('gera uma grade 4x4 com entrada e saída conectadas', () => {
   const map = generateQuantumMap('010110101100');
@@ -37,33 +38,58 @@ test('calcula índices quânticos simulados dentro da escala do HUD', () => {
   assert.equal(metrics.noise, 100 - metrics.coherence);
 });
 
-test('gera paredes internas de um labirinto ocupando a área do mapa', () => {
+test('gera o Level 0 ocupando toda a grade, com borda fechada', () => {
   const map = generateQuantumMap('010110101100');
+  const last = MAZE_SIZE - 1;
 
-  assert.equal(map.maze.length, 11);
-  assert.equal(map.maze[0].length, 11);
+  assert.equal(map.maze.length, MAZE_SIZE);
+  assert.equal(map.maze[0].length, MAZE_SIZE);
   assert.equal(map.maze[1][1], '.');
-  assert.equal(map.maze[9][9], '.');
+  assert.equal(map.maze[last - 1][last - 1], '.');
+  assert.ok(map.maze[0].every((cell) => cell === '#'));
+  assert.ok(map.maze.every((row) => row[0] === '#' && row[last] === '#'));
   assert.ok(map.maze.flat().includes('#'));
 });
 
-test('abre salas deformadas a partir dos bits do mapa', () => {
-  const map = generateQuantumMap('010110101100');
+const BITSTRINGS = ['010110101100', '000000000000', '111111111111', '101010101010', '111000111000'];
 
-  assert.deepEqual(map.roomCenters, [[7, 3], [7, 7]]);
-  assert.equal(map.maze[3][6], '.');
-  assert.equal(map.maze[8][7], '.');
+function reachableFrom(maze, start) {
+  const seen = new Set([`${start.x},${start.z}`]);
+  const queue = [start];
+  while (queue.length > 0) {
+    const { x, z } = queue.shift();
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dz]) => {
+      const key = `${x + dx},${z + dz}`;
+      if (maze[z + dz]?.[x + dx] === '.' && !seen.has(key)) {
+        seen.add(key);
+        queue.push({ x: x + dx, z: z + dz });
+      }
+    });
+  }
+  return seen;
+}
+
+test('toda célula livre é alcançável a partir da entrada', () => {
+  BITSTRINGS.forEach((bits) => {
+    const { maze } = generateQuantumMap(bits);
+    const floor = maze.flat().filter((cell) => cell === '.').length;
+    assert.equal(reachableFrom(maze, { x: 1, z: 1 }).size, floor, bits);
+  });
 });
 
-test('mantém uma área central ampla para deixar o jogador exposto', () => {
-  const map = generateQuantumMap('010110101100');
-  const floorCells = map.maze.flat().filter((cell) => cell === '.').length;
+test('tem salas grandes e é mais aberto que um labirinto de corredores', () => {
+  BITSTRINGS.forEach((bits) => {
+    const map = generateQuantumMap(bits);
+    const floorCells = map.maze.flat().filter((cell) => cell === '.').length;
 
-  assert.ok(floorCells > map.maze.length * map.maze[0].length * 0.6);
-  assert.equal(map.maze[5][2], '.');
-  assert.equal(map.maze[5][8], '.');
-  assert.equal(map.maze[2][5], '.');
-  assert.equal(map.maze[8][5], '.');
+    assert.ok(map.roomCenters.length >= 1, bits);
+    assert.ok(floorCells > MAZE_SIZE * MAZE_SIZE * 0.7, bits);
+  });
+});
+
+test('o mesmo bitstring gera sempre o mesmo andar', () => {
+  assert.deepEqual(generateQuantumMap('101010101010').maze, generateQuantumMap('101010101010').maze);
+  assert.notDeepEqual(generateQuantumMap('101010101010').maze, generateQuantumMap('010101010101').maze);
 });
 
 test('localiza as escadas em uma célula livre e diferente da entrada', () => {
@@ -72,4 +98,5 @@ test('localiza as escadas em uma célula livre e diferente da entrada', () => {
   assert.equal(map.maze[map.stairs.z][map.stairs.x], '.');
   assert.notDeepEqual(map.stairs, { x: 1, z: 1 });
   assert.equal(map.stairs.visible, false);
+  assert.ok(map.stairs.x + map.stairs.z - 2 >= Math.floor(MAZE_SIZE * 0.6));
 });

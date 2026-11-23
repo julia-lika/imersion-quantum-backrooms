@@ -19,6 +19,7 @@ import {
   tickSurvival,
   toggleVisor as toggleVisorState,
 } from './survival-state.js?v=20261118-1';
+import { startPosition } from './maze-physics.js';
 
 const initialBits = '010110101100';
 const savedGame = (() => {
@@ -41,7 +42,7 @@ let survival = createSurvivalState();
 let lastSave = 0;
 let lastWristUpdate = 0;
 
-const START_POSITION = { x: -4.2, z: -4.2 };
+const START_POSITION = startPosition();
 const SURVIVAL_TICK_MS = 100;
 
 // Estado compartilhado com os componentes A-Frame (fantasma, paredes superpostas).
