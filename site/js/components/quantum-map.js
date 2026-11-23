@@ -323,10 +323,10 @@ AFRAME.registerComponent('quantum-map', {
         body: 'Cada andar esconde um QPS. Pegue com pinça ou encostando a mão (desktop: chegue perto e aperte Q ou clique nele).\n\nEle mede o estado quântico: o mapa colapsa, a PORTA de saída aparece e uma seta ciano aponta para ela. Este aqui é de treino e renasce a cada 10 s.',
       },
       {
-        x: rightWall, z: at(12.5), rotation: -90,
+        x: rightWall, z: at(12.5), rotation: -90, y: 2.32,
         title: 'PAREDE DE TREINO', subtitle: 'SALTO + VISOR',
-        body: 'SALTO DE FASE: encoste as palmas nesta parede (ou olhe para ela e aperte X) para passar ao corredor de trás.\n\nVISOR ZETA (pinça na testa ou Z): mais adiante, uma parede roxa abre e fecha. Passe por ela quando abrir.',
-        height: 0.75,
+        body: 'SALTO DE FASE: olhe para a parede ciano e aperte X (VR: palmas na parede). Do outro lado há um corredor. VISOR ZETA (Z): a parede roxa mais adiante abre e fecha.',
+        height: 0.62,
       },
       {
         x: rightWall, z: at(14.5), rotation: -90,
@@ -348,9 +348,30 @@ AFRAME.registerComponent('quantum-map', {
     tv.setAttribute('entity-tv', '');
     this.el.appendChild(tv);
 
-    signs.forEach(({ x, z, rotation, title, subtitle, body, height = 0.9 }) => {
+    // Paredes de treino bem marcadas: ciano = salto de fase, roxo = visor zeta.
+    const trainingWalls = [
+      {
+        z: at(12.5), width: cellSize * 2 - 0.1, color: '#44ffcc',
+        title: 'ATRAVESSE AQUI', floorText: 'SALTO DE FASE — APERTE X',
+        hint: 'PAREDE DE TREINO — olhe para ela e aperte X (VR: palmas na parede) para atravessar',
+      },
+      {
+        z: at(16), width: cellSize - 0.1, color: '#b46bff',
+        title: 'VISOR ZETA', floorText: 'APERTE Z — ESPERE ABRIR',
+        hint: 'PAREDE EM SUPERPOSIÇÃO — ligue o visor (Z) e passe quando ela abrir',
+      },
+    ];
+    trainingWalls.forEach(({ z, ...config }) => {
+      const wall = document.createElement('a-entity');
+      wall.setAttribute('position', `${rightWall - 0.01} 0 ${z}`);
+      wall.setAttribute('rotation', '0 -90 0');
+      wall.setAttribute('training-wall', config);
+      this.el.appendChild(wall);
+    });
+
+    signs.forEach(({ x, z, rotation, title, subtitle, body, height = 0.9, y = 1.65 }) => {
       const sign = document.createElement('a-entity');
-      sign.setAttribute('position', `${x} 1.65 ${z}`);
+      sign.setAttribute('position', `${x} ${y} ${z}`);
       sign.setAttribute('rotation', `0 ${rotation} 0`);
       sign.setAttribute('terminal-panel', {
         title,

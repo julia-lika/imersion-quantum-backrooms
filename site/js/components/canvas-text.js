@@ -11,6 +11,8 @@ AFRAME.registerComponent('canvas-text', {
     align: { type: 'string', default: 'center' },
     color: { type: 'color', default: '#ffffff' },
     width: { type: 'number', default: 1 },
+    // true = sempre por cima (texto preso à câmera); false = respeita paredes.
+    overlay: { type: 'boolean', default: true },
   },
 
   init() {
@@ -20,12 +22,12 @@ AFRAME.registerComponent('canvas-text', {
     this.material = new THREE.MeshBasicMaterial({
       map: this.texture,
       transparent: true,
-      depthTest: false,
+      depthTest: this.data.overlay === false,
       depthWrite: false,
       fog: false,
     });
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.material);
-    this.mesh.renderOrder = 999;
+    this.mesh.renderOrder = this.data.overlay === false ? 0 : 999;
     this.el.setObject3D('canvas-text', this.mesh);
   },
 
