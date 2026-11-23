@@ -14,7 +14,7 @@ na documentação: https://julia-lika.github.io/imersion-quantum-backrooms/docs/
 
 - Semana 1, apresentação: https://julia-lika.github.io/imersion-quantum-backrooms/docs/semanas/semana-1/
 - Semana 1, ficha de projeto: https://julia-lika.github.io/imersion-quantum-backrooms/docs/semanas/semana-1/ficha-de-projeto/
-- Plano de 5 semanas, com checklist: https://julia-lika.github.io/imersion-quantum-backrooms/docs/semanas/plano/ (fonte em `docs/semanas/plano.md`)
+- Plano de 5 semanas: https://julia-lika.github.io/imersion-quantum-backrooms/docs/semanas/plano/ (as checklists ficam em `docs/semanas/`)
 
 O código da documentação fica em [`docs/`](docs/).
 
