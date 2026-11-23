@@ -30,6 +30,7 @@
   }
 
   startGame.addEventListener('click', hideStartScreen);
+  document.querySelector('#continue-game')?.addEventListener('click', hideStartScreen);
   // Entrar em VR sem clicar em ENTER também inicia o jogo.
   scene.addEventListener('enter-vr', hideStartScreen);
 

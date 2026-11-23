@@ -30,8 +30,10 @@ const savedGame = (() => {
     return null;
   }
 })();
-// Jogo novo começa no lobby de treinamento (fase 0).
+// O jogo começa no lobby de treinamento (fase 0). Um save de andar 1+ só é
+// retomado pelo botão CONTINUAR da tela inicial.
 const game = { current: savedGame || createGameState(initialBits, LOBBY_FLOOR) };
+const resumableFloor = savedGame && savedGame.floor !== LOBBY_FLOOR ? savedGame.floor : null;
 const state = {
   current: createPhaseState(game.current.currentBitstring),
 };
@@ -392,9 +394,17 @@ function bindGameEvents() {
   // O botão ENTER é HTML e não aparece no headset, e o botão de VR do A-Frame fica
   // acima da tela inicial. Entrar em VR também precisa iniciar o jogo, senão
   // `quantumPlayer.active` fica falso: a entidade não anda e o QPS não pode ser pego.
-  function beginGame() {
+  // ENTRAR (ou entrar em VR) = lobby; CONTINUAR = retoma o andar salvo.
+  function beginGame(mode = 'lobby') {
     if (started) return;
     started = true;
+    if (mode !== 'continue' && game.current.floor !== LOBBY_FLOOR) {
+      game.current = createGameState(initialBits, LOBBY_FLOOR);
+      state.current = createPhaseState(initialBits);
+      setVisor(createSurvivalState());
+      resetPlayerPosition();
+      persistProgress();
+    }
     window.quantumPlayer.active = isActive();
     elements['phase-telemetry'].hidden = false;
     if (game.current.floor === LOBBY_FLOOR) {
@@ -405,8 +415,14 @@ function bindGameEvents() {
     renderTelemetry();
   }
 
-  document.getElementById('start-game').addEventListener('click', beginGame);
-  scene.addEventListener('enter-vr', beginGame);
+  const continueButton = document.getElementById('continue-game');
+  if (continueButton && resumableFloor) {
+    continueButton.hidden = false;
+    continueButton.textContent = `CONTINUAR — ANDAR ${String(resumableFloor).padStart(2, '0')}`;
+    continueButton.addEventListener('click', () => beginGame('continue'));
+  }
+  document.getElementById('start-game').addEventListener('click', () => beginGame('lobby'));
+  scene.addEventListener('enter-vr', () => beginGame('lobby'));
 
   scene.addEventListener('visor-toggle-request', toggleVisor);
   scene.addEventListener('interaction-hint', ({ detail }) => {
