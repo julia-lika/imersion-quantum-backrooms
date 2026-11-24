@@ -95,9 +95,12 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 - **Inspirado na física:** o labirinto que só evolui longe do QPS segue a
   ideia do efeito Zeno quântico; o raio, os 18 s e os setores são regras de
   jogo.
-- **Mecânica de jogo:** entidade, sanidade, energia, a oscilação das paredes
-  em superposição e os índices de QPS, coerência e ruído do HUD
-  (`analyzeQuantumState`, heurísticas calculadas a partir dos bits).
+- **Mecânica de jogo:** entidade, sanidade, energia e a oscilação das paredes
+  em superposição.
+- **HUD do desktop:** à esquerda, a string medida do andar e de onde ela veio
+  (simulador exato, hardware ou sorteio clássico); à direita, o desenho do
+  circuito de 12 qubits, o estado da porta e quantos trechos evoluíram.
+  Sanidade, energia e objetivo ficam só no Q-LINK.
 - **Plano B:** se o banco não carrega, `sampleQuantumBitstring` gera bits
   clássicos que imitam a correlação entre vizinhos do CX. Não é medição.
 

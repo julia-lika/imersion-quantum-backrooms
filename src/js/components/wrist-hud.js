@@ -6,11 +6,12 @@ const PANEL_WIDTH = 0.22;
 const PANEL_HEIGHT = 0.15;
 const LOOK_ANGLE = THREE.MathUtils.degToRad(28);
 const LOOK_DISTANCE = 0.7;
-const GREEN = '#39ff88';
-const GREEN_DIM = 'rgba(57, 255, 136, 0.45)';
-const GREEN_FAINT = 'rgba(57, 255, 136, 0.14)';
+// Q-LINK em tons de laranja, como o relógio.
+const ORANGE = '#ff9a3c';
+const ORANGE_DIM = 'rgba(255, 154, 60, 0.45)';
+const ORANGE_FAINT = 'rgba(255, 154, 60, 0.14)';
 const RED = '#ff5a6e';
-const AMBER = '#ffb347';
+const AMBER = '#ffe14a';
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -103,14 +104,14 @@ AFRAME.registerComponent('wrist-hud', {
 
     // Corpo do aparelho.
     roundRect(ctx, 4, 4, width - 8, height - 8, 22);
-    ctx.fillStyle = 'rgba(4, 12, 7, 0.92)';
+    ctx.fillStyle = 'rgba(16, 8, 2, 0.92)';
     ctx.fill();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = GREEN_DIM;
+    ctx.strokeStyle = ORANGE_DIM;
     ctx.stroke();
     roundRect(ctx, 14, 14, width - 28, height - 28, 14);
     ctx.lineWidth = 1;
-    ctx.strokeStyle = GREEN_FAINT;
+    ctx.strokeStyle = ORANGE_FAINT;
     ctx.stroke();
 
     // Linhas de varredura.
@@ -122,15 +123,15 @@ AFRAME.registerComponent('wrist-hud', {
     ctx.restore();
 
     ctx.textBaseline = 'top';
-    ctx.shadowColor = GREEN;
+    ctx.shadowColor = ORANGE;
 
     // Cabeçalho: marca + andar em etiqueta.
-    ctx.fillStyle = GREEN;
+    ctx.fillStyle = ORANGE;
     ctx.shadowBlur = 8;
     ctx.font = `bold 26px ${mono}`;
     spacedText(ctx, 'Q-LINK', pad + 6, pad + 2, 6);
     ctx.shadowBlur = 0;
-    ctx.fillStyle = GREEN_DIM;
+    ctx.fillStyle = ORANGE_DIM;
     ctx.font = `15px ${mono}`;
     spacedText(ctx, 'TELEMETRIA DO AGENTE', pad + 6, pad + 34, 4);
 
@@ -138,20 +139,20 @@ AFRAME.registerComponent('wrist-hud', {
     ctx.font = `bold 20px ${mono}`;
     const tagWidth = ctx.measureText(floorLabel).width + 34;
     roundRect(ctx, width - pad - tagWidth, pad + 4, tagWidth, 36, 6);
-    ctx.strokeStyle = GREEN;
+    ctx.strokeStyle = ORANGE;
     ctx.lineWidth = 2;
     ctx.stroke();
-    ctx.fillStyle = GREEN;
+    ctx.fillStyle = ORANGE;
     ctx.fillText(floorLabel, width - pad - tagWidth + 17, pad + 13);
 
-    ctx.fillStyle = GREEN_FAINT;
+    ctx.fillStyle = ORANGE_FAINT;
     ctx.fillRect(pad, pad + 62, width - pad * 2, 2);
 
     // Duas leituras grandes com barras segmentadas.
     const gauge = (label, value, x, w) => {
       const level = Math.max(0, Math.min(100, value));
-      const color = level < 25 ? RED : (level < 50 ? AMBER : GREEN);
-      ctx.fillStyle = GREEN_DIM;
+      const color = level < 25 ? RED : (level < 50 ? AMBER : ORANGE);
+      ctx.fillStyle = ORANGE_DIM;
       ctx.font = `15px ${mono}`;
       spacedText(ctx, label, x, pad + 80, 4);
       ctx.fillStyle = color;
@@ -168,7 +169,7 @@ AFRAME.registerComponent('wrist-hud', {
       const gap = 4;
       const segmentWidth = (w - gap * (segments - 1)) / segments;
       for (let index = 0; index < segments; index += 1) {
-        ctx.fillStyle = index < Math.round((level / 100) * segments) ? color : GREEN_FAINT;
+        ctx.fillStyle = index < Math.round((level / 100) * segments) ? color : ORANGE_FAINT;
         ctx.fillRect(x + index * (segmentWidth + gap), pad + 172, segmentWidth, 16);
       }
     };
@@ -176,16 +177,16 @@ AFRAME.registerComponent('wrist-hud', {
     gauge('SANIDADE', sanity, pad, column);
     gauge('ENERGIA', energy, pad + column + 30, column);
 
-    ctx.fillStyle = GREEN_FAINT;
+    ctx.fillStyle = ORANGE_FAINT;
     ctx.fillRect(pad, pad + 208, width - pad * 2, 2);
 
     // Estado do visor e da entidade.
-    const chip = (label, value, active, x, y, color = GREEN) => {
+    const chip = (label, value, active, x, y, color = ORANGE) => {
       ctx.font = `15px ${mono}`;
-      ctx.fillStyle = GREEN_DIM;
+      ctx.fillStyle = ORANGE_DIM;
       spacedText(ctx, label, x, y, 3);
       ctx.font = `bold 20px ${mono}`;
-      ctx.fillStyle = active ? color : GREEN_DIM;
+      ctx.fillStyle = active ? color : ORANGE_DIM;
       ctx.shadowColor = color;
       ctx.shadowBlur = active ? 8 : 0;
       ctx.fillText(value, x, y + 22);
@@ -201,24 +202,24 @@ AFRAME.registerComponent('wrist-hud', {
     // Objetivo com marcador de alerta.
     const objectiveY = pad + 286;
     roundRect(ctx, pad, objectiveY, width - pad * 2, 64, 8);
-    ctx.fillStyle = 'rgba(57, 255, 136, 0.07)';
+    ctx.fillStyle = 'rgba(255, 154, 60, 0.07)';
     ctx.fill();
-    ctx.strokeStyle = GREEN_FAINT;
+    ctx.strokeStyle = ORANGE_FAINT;
     ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.fillStyle = GREEN;
+    ctx.fillStyle = ORANGE;
     ctx.font = `bold 30px ${mono}`;
     ctx.fillText('!', pad + 16, objectiveY + 16);
     ctx.font = `14px ${mono}`;
-    ctx.fillStyle = GREEN_DIM;
+    ctx.fillStyle = ORANGE_DIM;
     spacedText(ctx, 'OBJETIVO', pad + 48, objectiveY + 10, 3);
     ctx.font = `bold 19px ${mono}`;
-    ctx.fillStyle = GREEN;
+    ctx.fillStyle = ORANGE;
     ctx.fillText(String(objective || 'AGUARDANDO SINAL').toUpperCase().slice(0, 44), pad + 48, objectiveY + 32);
 
     // Rodapé.
     ctx.font = `13px ${mono}`;
-    ctx.fillStyle = GREEN_DIM;
+    ctx.fillStyle = ORANGE_DIM;
     const stamp = new Date().toTimeString().slice(0, 8);
     spacedText(ctx, `LINK ATIVO // ${stamp}`, pad, height - pad - 14, 2);
     const hint = '[H] FECHA NO DESKTOP';

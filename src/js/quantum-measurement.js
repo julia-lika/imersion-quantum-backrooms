@@ -6,22 +6,9 @@
   const startScreen = document.querySelector('#start-screen');
   const startGame = document.querySelector('#start-game');
   const hud = document.querySelector('#hud');
-  const hudState = document.querySelector('#hud-state');
-  const hudQpu = document.querySelector('#hud-qpu');
-  const hudQps = document.querySelector('#hud-qps');
-  const hudCoherence = document.querySelector('#hud-coherence');
-  const hudNoise = document.querySelector('#hud-noise');
   let measured = false;
   let measuring = false;
 
-  function updateQuantumHud(bitstring, result) {
-    const metrics = window.analyzeQuantumState(bitstring);
-    hudQps.textContent = `QPS: ${metrics.qps}/100`;
-    hudCoherence.textContent = `COERÊNCIA: ${metrics.coherence}%`;
-    hudNoise.textContent = `RUÍDO: ${metrics.noise}%`;
-    hudQpu.textContent = `QPU: ${result.source.toUpperCase()} // ${result.backend}`;
-    return metrics;
-  }
 
   function hideStartScreen() {
     startScreen.hidden = true;
@@ -43,8 +30,7 @@
 
   function commitMeasurement(result) {
     const bitstring = result.bitstring;
-    hudState.textContent = `ESTADO: MEDIDO // ${bitstring}`;
-    const metrics = updateQuantumHud(bitstring, result);
+    const metrics = window.analyzeQuantumState(bitstring);
     window.dispatchEvent(new CustomEvent('quantum-measured', {
       detail: { result, metrics },
     }));
