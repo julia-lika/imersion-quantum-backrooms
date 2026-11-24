@@ -286,6 +286,16 @@ AFRAME.registerComponent('qps-map', {
     if (stairs && (mapInfo.data.stairsVisible || mapInfo.mapInfo.lobby)) {
       ctx.fillStyle = '#e3cc4b';
       ctx.fillRect(left + stairs.x * cell - 2, top + stairs.z * cell - 2, cell + 3, cell + 3);
+    } else if (mapInfo?.mapInfo?.doorCandidates?.length) {
+      // Porta ainda em superposição: as posições possíveis piscam tracejadas.
+      ctx.save();
+      ctx.strokeStyle = `rgba(227, 204, 75, ${(0.45 + 0.35 * Math.sin(performance.now() / 300)).toFixed(2)})`;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      mapInfo.mapInfo.doorCandidates.forEach((door) => {
+        ctx.strokeRect(left + door.x * cell - 1, top + door.z * cell - 1, cell + 1, cell + 1);
+      });
+      ctx.restore();
     }
     const tracker = this.el.parentEl?.components['xr-hands'];
     if (tracker) {
@@ -310,6 +320,8 @@ AFRAME.registerComponent('qps-map', {
     ctx.fillStyle = MAP_DIM;
     ctx.fillText('CLARO: MEDINDO AGORA   APAGADO: ÚLTIMA LEITURA', pad, legendY);
     ctx.fillText(`? EVOLUIU SEM MEDIÇÃO   ${tracker?.inVr ? '' : '[M] FECHA'}`, pad, legendY + 24);
+    ctx.fillStyle = '#e3cc4b';
+    ctx.fillText('┆ PORTA POSSÍVEL', pad + 370, legendY + 24);
     ctx.fillStyle = 'rgb(64, 150, 255)';
     ctx.fillText('■ AZUL: SALTO DE FASE (X)', pad, legendY + 48);
     ctx.fillStyle = 'rgb(214, 92, 255)';

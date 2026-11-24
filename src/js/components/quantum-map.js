@@ -1,5 +1,5 @@
 import { buildLightPanels, buildWallGeometry } from './level-geometry.js';
-import { buildLobby } from './lobby/lobby-builder.js?v=20261124-8';
+import { buildLobby } from './lobby/lobby-builder.js?v=20261124-10';
 
 const LOBBY_RESPAWN_MS = 10000;
 
@@ -7,6 +7,8 @@ AFRAME.registerComponent('quantum-map', {
   schema: {
     bitstring: { type: 'string', default: '010110101100' },
     stairsVisible: { type: 'boolean', default: false },
+    // Posição medida da porta (índice em doorCandidates); -1 = ainda indefinida.
+    door: { type: 'number', default: -1 },
     floor: { type: 'number', default: 1 },
   },
 
@@ -62,18 +64,26 @@ AFRAME.registerComponent('quantum-map', {
     }
 
     const sameMap = oldData.floor === this.data.floor && oldData.bitstring === this.data.bitstring;
-    if (sameMap && oldData.stairsVisible !== this.data.stairsVisible && this.mapInfo) {
-      // Medir com o QPS só revela a porta: o labirinto (inclusive os trechos
-      // que já se reorganizaram) continua como está.
+    const doorChanged = oldData.stairsVisible !== this.data.stairsVisible || oldData.door !== this.data.door;
+    if (sameMap && doorChanged && this.mapInfo) {
+      // Medir com o QPS colapsa a porta numa das posições possíveis: o
+      // labirinto (inclusive os trechos que já se reorganizaram) continua igual.
+      this.mapInfo.stairs = this.doorCell(this.mapInfo.doorCandidates, this.mapInfo.stairs);
+      this.el.querySelector('#stairs')?.remove();
       this.rebuildWalls();
       if (this.data.stairsVisible && !this.el.querySelector('#stairs')) {
         this.addStairs(this.mapInfo.stairs, this.mapInfo.origin, this.mapInfo.cellSize);
       }
       return;
     }
-    if (!sameMap || oldData.stairsVisible !== this.data.stairsVisible) {
+    if (!sameMap || doorChanged) {
       this.renderMap();
     }
+  },
+
+  doorCell(candidates, fallback) {
+    const cell = candidates?.[this.data.door];
+    return cell ? { ...cell, visible: this.data.stairsVisible } : fallback;
   },
 
   renderMap() {
@@ -95,7 +105,10 @@ AFRAME.registerComponent('quantum-map', {
 
     window.quantumWorld = physics.createMazeWorld(map.maze, { cellSize, superposed });
 
-    this.mapInfo = { stairs: map.stairs, origin, cellSize, height, lobby, bitstring: map.bitstring };
+    if (!lobby) map.stairs = this.doorCell(map.doorCandidates, map.stairs);
+    this.mapInfo = {
+      stairs: map.stairs, doorCandidates: map.doorCandidates || [], origin, cellSize, height, lobby, bitstring: map.bitstring,
+    };
     this.superposedEls = new Map();
     this.rebuildWalls();
 

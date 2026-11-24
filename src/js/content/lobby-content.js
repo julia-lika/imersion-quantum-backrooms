@@ -63,7 +63,7 @@ export const LOBBY_SIGNS = [
   {
     wall: 'left', cellZ: 15.2, y: 1.85, height: 0.95,
     title: 'ESTAÇÃO 3: QPS', subtitle: 'O CHIP QUÂNTICO',
-    body: 'O chip é o QPS. Ele mede sem parar tudo num raio de ~4 m e desenha o mapa (pulso direito; desktop: M). O que é medido o tempo todo não muda: efeito Zeno.\n\nLonge de você ninguém mede e o labirinto evolui (no mapa: ?). A porta só se define quando entra no raio. Pegue o chip (desktop: Q).',
+    body: 'O chip é o QPS. Ele mede sem parar tudo num raio de ~4 m e desenha o mapa (pulso direito; desktop: M). O que é medido o tempo todo não muda: efeito Zeno.\n\nLonge de você ninguém mede e o labirinto evolui (no mapa: ?). A porta fica entre algumas posições possíveis; quando uma entra no raio, o QPS mede e sorteia onde ela aparece. Pegue o chip (desktop: Q).',
   },
   {
     wall: 'far', cellX: 8.6, height: 0.6,

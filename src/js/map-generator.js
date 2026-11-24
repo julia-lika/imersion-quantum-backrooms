@@ -165,7 +165,7 @@ function buildMaze(bitstring, size = MAZE_SIZE) {
 
 // A porta de saída fica embutida na parede externa do mapa (atrás dela só há
 // escuridão) e longe da entrada, para obrigar o jogador a cruzar as salas.
-export function findStairsCell(maze, bitstring) {
+function doorPool(maze) {
   const size = maze.length;
   const minDistance = Math.floor(size * 0.6);
   const floorCells = [];
@@ -185,9 +185,47 @@ export function findStairsCell(maze, bitstring) {
     });
   });
 
-  const pool = doorCells.length > 0 ? doorCells : floorCells;
+  return doorCells.length > 0 ? doorCells : floorCells;
+}
+
+export function findStairsCell(maze, bitstring) {
+  const size = maze.length;
+  const pool = doorPool(maze);
   const seed = Number.parseInt(normalizeBits(bitstring, 12), 2) || 1;
   return pool[seed % pool.length] || { x: size - 2, z: size - 2, wall: { dx: 1, dz: 0 } };
+}
+
+// A porta fica em superposição entre `count` posições possíveis, bem afastadas
+// umas das outras. A medição do QPS escolhe uma delas (pickDoorCandidate).
+export const DOOR_CANDIDATES = 4;
+export function findDoorCandidates(maze, bitstring, count = DOOR_CANDIDATES) {
+  const pool = doorPool(maze);
+  const first = findStairsCell(maze, bitstring);
+  const picked = [first];
+  const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.z - b.z);
+  while (picked.length < count) {
+    let best = null;
+    let bestDistance = 0;
+    pool.forEach((cell) => {
+      const nearest = Math.min(...picked.map((other) => distance(cell, other)));
+      if (nearest > bestDistance) {
+        best = cell;
+        bestDistance = nearest;
+      }
+    });
+    // Sem espaço para outra posição bem separada: fica com as que tem.
+    if (!best || bestDistance < 4) break;
+    picked.push(best);
+  }
+  return picked;
+}
+
+// Colapso: o bitstring medido (do banco, com a distribuição do circuito)
+// escolhe uma das posições possíveis.
+export function pickDoorCandidate(candidates, measuredBits) {
+  if (!candidates?.length) return null;
+  const value = Number.parseInt(normalizeBits(measuredBits, 12), 2) || 0;
+  return { index: value % candidates.length, cell: candidates[value % candidates.length] };
 }
 
 // Fase 0: lobby fixo de treinamento. Um salão de 11 x 17 células a partir da
@@ -254,13 +292,15 @@ export function generateLobbyMap(size = MAZE_SIZE) {
 export function generateQuantumMap(bitstring) {
   const bits = normalizeBits(bitstring, QUBITS);
   const mazeResult = buildMaze(bits);
-  const stairs = findStairsCell(mazeResult.maze, bits);
+  const doorCandidates = findDoorCandidates(mazeResult.maze, bits);
+  const stairs = doorCandidates[0];
 
   return {
     bitstring: bits,
     maze: mazeResult.maze,
     roomCenters: mazeResult.roomCenters,
     stairs: { ...stairs, visible: false },
+    doorCandidates,
     quantumMetrics: analyzeQuantumState(bits),
     state: 'level-0',
   };
@@ -314,6 +354,7 @@ export function analyzeQuantumState(bitstring) {
 if (typeof window !== 'undefined') {
   window.generateQuantumMap = generateQuantumMap;
   window.generateLobbyMap = generateLobbyMap;
+  window.pickDoorCandidate = pickDoorCandidate;
   window.LOBBY_LAYOUT = LOBBY;
   window.sampleQuantumBitstring = sampleQuantumBitstring;
   window.analyzeQuantumState = analyzeQuantumState;

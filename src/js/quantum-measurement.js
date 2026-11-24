@@ -93,10 +93,4 @@
 
   scene.addEventListener('door-measured', collapseQuantumState);
 
-  window.addEventListener('quantum-measured', () => {
-    hint.setAttribute(
-      'canvas-text',
-      'value: PORTA MEDIDA — ela se definiu e está no mapa do QPS (M ou pulso direito); align: center; color: #39ff88; width: 1.1; style: terminal'
-    );
-  });
 })();
