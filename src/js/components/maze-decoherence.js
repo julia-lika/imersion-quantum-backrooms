@@ -2,6 +2,7 @@
 // superposição e se reorganizam (ver js/decoherence.js). O que o jogador está
 // vendo nunca muda; a troca vem com um aviso sutil (luz que oscila e zumbido).
 import {
+  NEAR_CELLS,
   UNOBSERVED_MS,
   SHIFT_COOLDOWN_MS,
   listSectors,
@@ -32,7 +33,7 @@ AFRAME.registerComponent('maze-decoherence', {
       versions: () => ({ ...this.versions }),
       stats: () => ({ shifts: this.shifts, unseen: this.unseenSeconds() }),
       // Para testes: força a troca do setor mais esquecido, se puder.
-      forceShift: () => this.shiftOne(performance.now(), true),
+      forceShift: (id) => this.shiftOne(performance.now(), true, id),
     };
   },
 
@@ -79,12 +80,22 @@ AFRAME.registerComponent('maze-decoherence', {
     const viewer = this.viewer();
     if (!viewer) return;
     const now = performance.now();
-    const transparent = (x, z) => world.superposed.has(`${x},${z}`);
+    const options = this.observeOptions(world);
     this.sectors.forEach((sector) => {
-      if (isSectorObserved(world.maze, sector, viewer, { transparent })) this.lastSeen[sector.id] = now;
+      if (isSectorObserved(world.maze, sector, viewer, options)) this.lastSeen[sector.id] = now;
     });
     this.viewerCache = viewer;
     if (now - this.lastShift >= SHIFT_COOLDOWN_MS) this.shiftOne(now);
+  },
+
+  // Efeito Zeno: o QPS mede sem parar tudo no raio dele, então nada ali evolui.
+  // Os olhos também medem (campo de visão com linha de visão livre).
+  observeOptions(world) {
+    const player = window.quantumPlayer;
+    return {
+      transparent: (x, z) => world.superposed.has(`${x},${z}`),
+      near: player?.hasQps ? Math.max(NEAR_CELLS, player.qpsRadius ?? 4) : NEAR_CELLS,
+    };
   },
 
   protectedCells() {
@@ -103,17 +114,19 @@ AFRAME.registerComponent('maze-decoherence', {
     return cells;
   },
 
-  shiftOne(now, force = false) {
+  shiftOne(now, force = false, onlyId = null) {
     const world = window.quantumWorld;
     const mapComponent = this.el.components['quantum-map'];
     const viewer = this.viewerCache || this.viewer();
     if (!world || !mapComponent || !viewer) return null;
 
-    const transparent = (x, z) => world.superposed.has(`${x},${z}`);
+    const options = this.observeOptions(world);
     const candidates = this.sectors
+      .filter((sector) => !onlyId || sector.id === onlyId)
       .filter((sector) => force || now - this.lastSeen[sector.id] >= UNOBSERVED_MS)
-      // Confere de novo na hora da troca: nada muda diante dos olhos.
-      .filter((sector) => !isSectorObserved(world.maze, sector, viewer, { transparent }))
+      // Confere de novo na hora da troca: nada muda diante dos olhos nem
+      // dentro do raio do QPS.
+      .filter((sector) => !isSectorObserved(world.maze, sector, viewer, options))
       .sort((a, b) => this.lastSeen[a.id] - this.lastSeen[b.id]);
     const sector = candidates[0];
     if (!sector) return null;
@@ -145,7 +158,7 @@ AFRAME.registerComponent('maze-decoherence', {
     if (this.hints < HINT_LIMIT) {
       this.hints += 1;
       scene.emit('interaction-hint', {
-        text: 'ALGO MUDOU FORA DA SUA VISTA — o que ninguém observa volta à superposição e se reorganiza',
+        text: 'ALGO MUDOU LONGE DE VOCÊ — sem ninguém medindo, o labirinto evoluiu e se reorganizou',
       });
     }
   },

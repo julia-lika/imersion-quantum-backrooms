@@ -1,15 +1,15 @@
-// QPS como mapa. Pegar o QPS é medir: ele grava a planta do andar naquele
-// instante. Depois, os trechos que ninguém observa se reorganizam (decoerência)
-// e o mapa vai ficando desatualizado: esses setores aparecem chiando, como
-// estática, até uma nova leitura.
+// QPS: o mapa que mede. O agente pega o QPS na mesa do lobby e fica com ele.
+// O QPS mede sem parar tudo num raio de ~4 m (QPS_RADIUS em células) e desenha
+// o mapa. Pelo efeito Zeno quântico, o que está sendo medido o tempo todo não
+// evolui. Fora do raio ninguém mede: o mapa guarda a última leitura (apagada),
+// e os trechos que evoluíram e se reorganizaram desde então aparecem chiando
+// com "?". Basta voltar ao raio para medir de novo.
 //
-// VR: aparece ao olhar para o pulso direito; pinça com a mão esquerda perto
-// dele faz uma nova leitura. Desktop: M abre/fecha, R faz uma nova leitura.
+// VR: aparece ao olhar para o pulso direito. Desktop: M abre/fecha.
 const MAP_PANEL_WIDTH = 0.2;
 const MAP_PANEL_HEIGHT = 0.24;
 const MAP_LOOK_ANGLE = THREE.MathUtils.degToRad(28);
 const MAP_LOOK_DISTANCE = 0.7;
-const MAP_REREAD_REACH = 0.16;
 const MAP_REDRAW_MS = 180;
 const MAP_GREEN = '#39ff88';
 const MAP_DIM = 'rgba(57, 255, 136, 0.45)';
@@ -20,12 +20,11 @@ AFRAME.registerComponent('qps-map', {
   schema: {
     hand: { type: 'string', default: 'right' },
     toggleKey: { type: 'string', default: 'KeyM' },
-    rereadKey: { type: 'string', default: 'KeyR' },
   },
 
   init() {
-    this.snapshot = null;
-    this.hasQps = false;
+    this.memory = null;
+    this.lastMeasure = 0;
     this.opacity = 0;
     this.desktopOpen = false;
     this.lastDraw = 0;
@@ -46,50 +45,31 @@ AFRAME.registerComponent('qps-map', {
     this.el.setObject3D('mesh', this.panel);
     this.el.object3D.visible = false;
 
-    // Pegar o QPS (de treino ou de verdade) = primeira leitura.
     this.onQps = () => {
-      this.hasQps = true;
       this.desktopOpen = true;
-      this.takeReading();
+      this.measure();
     };
-    // Andar novo: o QPS fica para trás e o mapa some.
-    this.onWorld = ({ detail }) => {
-      const floor = window.quantumPlayer?.floor ?? 0;
-      if (floor !== this.floor) {
-        this.floor = floor;
-        this.hasQps = false;
-        this.snapshot = null;
-      }
-      if (detail?.lobby && this.snapshot) this.takeReading();
+    // Mapa novo (andar novo ou lobby refeito): a memória do QPS recomeça.
+    this.onWorld = () => {
+      this.memory = null;
+      this.measure();
     };
-    this.onGranted = () => this.takeReading();
     this.onKey = (event) => {
       if (event.repeat || !window.quantumPlayer?.active) return;
       if (event.code === this.data.toggleKey) {
         this.desktopOpen = !this.desktopOpen;
         if (this.desktopOpen) this.draw();
       }
-      if (event.code === this.data.rereadKey) this.requestReading();
-    };
-    this.onPinch = ({ detail }) => {
-      if (detail.hand === this.data.hand || this.opacity < 0.5) return;
-      const tracker = this.el.parentEl?.components['xr-hands'];
-      const other = tracker?.hands[detail.hand];
-      if (!other?.tracked) return;
-      this.el.object3D.getWorldPosition(this.target);
-      if (other.world.distanceTo(this.target) < MAP_REREAD_REACH) this.requestReading();
     };
 
     const scene = this.el.sceneEl;
     scene.addEventListener('qps-collected', this.onQps);
     scene.addEventListener('maze-world-updated', this.onWorld);
-    scene.addEventListener('qps-reading-granted', this.onGranted);
-    this.el.parentEl?.addEventListener('hand-pinchstart', this.onPinch);
     window.addEventListener('keydown', this.onKey);
     window.quantumQpsMap = {
       state: () => ({
-        hasQps: this.hasQps,
-        reading: Boolean(this.snapshot),
+        hasQps: Boolean(window.quantumPlayer?.hasQps),
+        measuredCells: this.memory ? this.memory.cells.flat().filter((cell) => cell !== null).length : 0,
         stale: this.staleSectors().map((sector) => sector.id),
         open: this.opacity > 0.5,
       }),
@@ -101,8 +81,6 @@ AFRAME.registerComponent('qps-map', {
     const scene = this.el.sceneEl;
     scene.removeEventListener('qps-collected', this.onQps);
     scene.removeEventListener('maze-world-updated', this.onWorld);
-    scene.removeEventListener('qps-reading-granted', this.onGranted);
-    this.el.parentEl?.removeEventListener('hand-pinchstart', this.onPinch);
     window.removeEventListener('keydown', this.onKey);
     this.el.removeObject3D('mesh');
     this.panel.geometry.dispose();
@@ -110,32 +88,65 @@ AFRAME.registerComponent('qps-map', {
     this.texture.dispose();
   },
 
-  // Nova leitura custa energia: quem decide é o estado do jogo (phase-zero).
-  requestReading() {
-    if (!this.hasQps) {
-      this.el.sceneEl.emit('interaction-hint', { text: 'SEM QPS — encontre o QPS do andar para ter um mapa' });
-      return;
-    }
-    this.el.sceneEl.emit('qps-reading-request');
-  },
-
-  takeReading() {
+  playerCell() {
+    const tracker = this.el.parentEl?.components['xr-hands'];
     const world = window.quantumWorld;
-    if (!world) return;
-    this.snapshot = {
-      maze: world.maze.map((row) => [...row]),
-      superposed: new Set(world.superposed.keys()),
-      versions: window.quantumDecoherence?.versions() || {},
-      time: Date.now(),
+    if (!tracker || !world) return null;
+    return {
+      x: (tracker.head.world.x - world.origin) / world.cellSize,
+      z: (tracker.head.world.z - world.origin) / world.cellSize,
     };
-    this.draw();
   },
 
+  sectorOf(x, z) {
+    return window.quantumDecoherence?.sectors()
+      .find((sector) => x >= sector.minX && x <= sector.maxX && z >= sector.minZ && z <= sector.maxZ) || null;
+  },
+
+  // Medição contínua: copia para a memória tudo o que está no raio do QPS,
+  // anotando a versão do setor naquele instante.
+  measure() {
+    const world = window.quantumWorld;
+    const player = this.playerCell();
+    if (!world || !player || !window.quantumPlayer?.hasQps) return;
+    if (!this.memory || this.memory.cells.length !== world.size) {
+      this.memory = {
+        cells: Array.from({ length: world.size }, () => Array(world.size).fill(null)),
+        versions: Array.from({ length: world.size }, () => Array(world.size).fill(0)),
+        superposed: new Set(),
+      };
+    }
+    const radius = window.quantumPlayer.qpsRadius ?? 4;
+    const versions = window.quantumDecoherence?.versions() || {};
+    for (let z = Math.max(0, Math.floor(player.z - radius)); z <= Math.min(world.size - 1, Math.ceil(player.z + radius)); z += 1) {
+      for (let x = Math.max(0, Math.floor(player.x - radius)); x <= Math.min(world.size - 1, Math.ceil(player.x + radius)); x += 1) {
+        if (Math.hypot(x - player.x, z - player.z) > radius) continue;
+        this.memory.cells[z][x] = world.maze[z][x];
+        this.memory.versions[z][x] = versions[this.sectorOf(x, z)?.id] ?? 0;
+        const key = `${x},${z}`;
+        if (world.superposed.has(key)) this.memory.superposed.add(key);
+        else this.memory.superposed.delete(key);
+      }
+    }
+  },
+
+  isStale(x, z, versions) {
+    const sector = this.sectorOf(x, z);
+    return Boolean(sector) && (versions[sector.id] ?? 0) !== this.memory.versions[z][x];
+  },
+
+  // Setores com alguma célula lembrada que evoluiu depois de medida.
   staleSectors() {
-    if (!this.snapshot || !window.quantumDecoherence) return [];
-    const now = window.quantumDecoherence.versions();
-    return window.quantumDecoherence.sectors()
-      .filter((sector) => (now[sector.id] ?? 0) !== (this.snapshot.versions[sector.id] ?? 0));
+    if (!this.memory || !window.quantumDecoherence) return [];
+    const versions = window.quantumDecoherence.versions();
+    return window.quantumDecoherence.sectors().filter((sector) => {
+      for (let z = sector.minZ; z <= sector.maxZ; z += 1) {
+        for (let x = sector.minX; x <= sector.maxX; x += 1) {
+          if (this.memory.cells[z][x] !== null && this.isStale(x, z, versions)) return true;
+        }
+      }
+      return false;
+    });
   },
 
   draw() {
@@ -157,62 +168,77 @@ AFRAME.registerComponent('qps-map', {
     ctx.fillStyle = MAP_DIM;
 
     const world = window.quantumWorld;
-    const snapshot = this.snapshot;
-    if (!snapshot || !world) {
-      ctx.fillText('PLANTA DO ANDAR NA HORA DA MEDIÇÃO', pad, pad + 36);
+    const memory = this.memory;
+    if (!window.quantumPlayer?.hasQps || !memory || !world) {
+      ctx.fillText('MEDIÇÃO CONTÍNUA AO SEU REDOR', pad, pad + 36);
       ctx.fillStyle = MAP_GREEN;
       ctx.font = `bold 24px ${MAP_MONO}`;
-      ctx.fillText('SEM LEITURA', pad, height / 2 - 40);
+      ctx.fillText('SEM QPS', pad, height / 2 - 40);
       ctx.font = `18px ${MAP_MONO}`;
       ctx.fillStyle = MAP_DIM;
-      ctx.fillText('Encontre o QPS do andar.', pad, height / 2);
-      ctx.fillText('Pegar o QPS = medir = mapa.', pad, height / 2 + 28);
+      ctx.fillText('Pegue o chip na mesa do lobby,', pad, height / 2);
+      ctx.fillText('à esquerda do telão.', pad, height / 2 + 28);
       this.texture.needsUpdate = true;
       return;
     }
 
     const stale = this.staleSectors();
-    const ageSeconds = Math.round((Date.now() - snapshot.time) / 1000);
+    const radius = window.quantumPlayer.qpsRadius ?? 4;
     ctx.fillStyle = stale.length ? '#ffb347' : MAP_GREEN;
-    ctx.fillText(`LEITURA HÁ ${ageSeconds}s // ${stale.length ? `${stale.length} TRECHO(S) MUDARAM` : 'ATUALIZADO'}`, pad, pad + 36);
+    ctx.fillText(`RAIO ${(radius * world.cellSize).toFixed(1)} M // ${stale.length ? `${stale.length} TRECHO(S) EVOLUÍRAM` : 'NADA MUDOU'}`, pad, pad + 36);
 
-    const size = snapshot.maze.length;
+    const size = memory.cells.length;
     const top = pad + 70;
     const cell = Math.floor((width - pad * 2) / size);
     const left = Math.round((width - cell * size) / 2);
-    snapshot.maze.forEach((row, z) => {
+    const player = this.playerCell();
+    const versions = window.quantumDecoherence?.versions() || {};
+    memory.cells.forEach((row, z) => {
       row.forEach((value, x) => {
         const px = left + x * cell;
         const pz = top + z * cell;
-        if (snapshot.superposed.has(`${x},${z}`)) {
-          ctx.fillStyle = 'rgba(167, 139, 250, 0.7)';
+        if (value === null) {
+          ctx.fillStyle = 'rgba(57, 255, 136, 0.03)';
+          ctx.fillRect(px, pz, cell - 1, cell - 1);
+          return;
+        }
+        const live = player && Math.hypot(x - player.x, z - player.z) <= radius;
+        if (!live && this.isStale(x, z, versions)) {
+          // Evoluiu depois da última medição: estática.
+          ctx.fillStyle = `rgba(57, 255, 136, ${(0.08 + Math.random() * 0.4).toFixed(2)})`;
+        } else if (memory.superposed.has(`${x},${z}`)) {
+          ctx.fillStyle = live ? 'rgba(167, 139, 250, 0.9)' : 'rgba(167, 139, 250, 0.4)';
         } else if (value === '#' || value === 'F') {
-          ctx.fillStyle = 'rgba(57, 255, 136, 0.8)';
+          ctx.fillStyle = live ? 'rgba(57, 255, 136, 0.95)' : 'rgba(57, 255, 136, 0.5)';
         } else {
-          ctx.fillStyle = 'rgba(57, 255, 136, 0.07)';
+          ctx.fillStyle = live ? 'rgba(57, 255, 136, 0.2)' : 'rgba(57, 255, 136, 0.1)';
         }
         ctx.fillRect(px, pz, cell - 1, cell - 1);
       });
     });
 
-    // Setores que mudaram depois da leitura: estática piscando por cima.
     stale.forEach((sector) => {
-      for (let z = sector.minZ; z <= sector.maxZ; z += 1) {
-        for (let x = sector.minX; x <= sector.maxX; x += 1) {
-          ctx.fillStyle = `rgba(57, 255, 136, ${(0.08 + Math.random() * 0.45).toFixed(2)})`;
-          ctx.fillRect(left + x * cell, top + z * cell, cell - 1, cell - 1);
-        }
-      }
-      ctx.fillStyle = 'rgba(4, 12, 7, 0.75)';
       const cx = left + ((sector.minX + sector.maxX + 1) / 2) * cell;
       const cz = top + ((sector.minZ + sector.maxZ + 1) / 2) * cell;
+      ctx.fillStyle = 'rgba(4, 12, 7, 0.75)';
       ctx.fillRect(cx - 18, cz - 18, 36, 36);
-      ctx.fillStyle = MAP_GREEN;
+      ctx.fillStyle = '#ffb347';
       ctx.font = `bold 30px ${MAP_MONO}`;
       ctx.textAlign = 'center';
       ctx.fillText('?', cx, cz - 15);
       ctx.textAlign = 'left';
     });
+
+    // Raio de medição em volta do jogador.
+    if (player) {
+      ctx.strokeStyle = 'rgba(57, 255, 136, 0.6)';
+      ctx.setLineDash([6, 6]);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(left + (player.x + 0.5) * cell, top + (player.z + 0.5) * cell, radius * cell, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
     // Porta (quando já revelada) e posição atual do jogador.
     const mapInfo = document.querySelector('#quantum-map')?.components['quantum-map'];
@@ -242,14 +268,18 @@ AFRAME.registerComponent('qps-map', {
     const legendY = top + cell * size + 14;
     ctx.font = `18px ${MAP_MONO}`;
     ctx.fillStyle = MAP_DIM;
-    ctx.fillText('■ PAREDE   ■ SUPERPOSIÇÃO   ■ PORTA   ? MUDOU', pad, legendY);
-    ctx.fillText(tracker?.inVr ? 'PINÇA AQUI COM A OUTRA MÃO: NOVA LEITURA' : '[R] NOVA LEITURA   [M] FECHA', pad, legendY + 24);
+    ctx.fillText('CLARO: MEDINDO AGORA   APAGADO: ÚLTIMA LEITURA', pad, legendY);
+    ctx.fillText(`? EVOLUIU SEM MEDIÇÃO   ${tracker?.inVr ? 'PULSO DIREITO' : '[M] FECHA'}`, pad, legendY + 24);
     this.texture.needsUpdate = true;
   },
 
   tick(time, delta) {
     const tracker = this.el.parentEl?.components['xr-hands'];
     if (!tracker) return;
+    if (time - this.lastMeasure > 200 && window.quantumPlayer?.active) {
+      this.lastMeasure = time;
+      this.measure();
+    }
     const head = tracker.head;
     const hand = tracker.hands[this.data.hand];
     let show = false;

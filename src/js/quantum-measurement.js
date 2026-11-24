@@ -50,21 +50,14 @@
     }));
   }
 
-  async function collapseQuantumState(event) {
-    // QPS de treino do lobby: só explica, não mede nem muda o mapa.
-    if (event?.detail?.training) {
-      hint.setAttribute(
-        'canvas-text',
-        'value: QPS DE TREINO COLETADO — ele é o seu mapa (M ou pulso direito). Nos andares, também revela a porta. Outro aparece em 10 s; align: center; color: #39ff88; width: 1.1; style: terminal'
-      );
-      scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
-      return;
-    }
+  // A porta entrou no raio do QPS (ou foi vista de perto): o estado do andar é
+  // medido, a porta se define e aparece. Usa o banco gravado (ou ?live).
+  async function collapseQuantumState() {
     if (measuring) return;
     measuring = true;
     hint.setAttribute(
       'canvas-text',
-      'value: MEDIÇÃO EM ANDAMENTO — o estado está sendo amostrado; align: center; color: #39ff88; width: 1.1; style: terminal'
+      'value: O QPS ESTÁ MEDINDO A PORTA — o estado está sendo amostrado; align: center; color: #39ff88; width: 1.1; style: terminal'
     );
 
     try {
@@ -98,13 +91,12 @@
     }
   }
 
-  // O QPS é coletado com uma pinça (VR) ou ao passar por ele (desktop).
-  scene.addEventListener('qps-collected', collapseQuantumState);
+  scene.addEventListener('door-measured', collapseQuantumState);
 
   window.addEventListener('quantum-measured', () => {
     hint.setAttribute(
       'canvas-text',
-      'value: QPS MEDIU O ANDAR — a porta está no mapa (M ou pulso direito); trechos não observados mudam com o tempo; align: center; color: #39ff88; width: 1.1; style: terminal'
+      'value: PORTA MEDIDA — ela se definiu e está no mapa do QPS (M ou pulso direito); align: center; color: #39ff88; width: 1.1; style: terminal'
     );
   });
 })();

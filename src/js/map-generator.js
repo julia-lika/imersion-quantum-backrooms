@@ -208,7 +208,8 @@ export const LOBBY = {
   ],
   items: {
     almondWater: { x: 9, z: 10 },
-    qps: { x: 3, z: 12 },
+    // QPS: o chip em cima da mesa dos equipamentos (canto do telão).
+    qps: { x: 1.55, z: 17.02, y: 0.76 },
   },
   // Sala de treino atrás da parede direita (x 13..15, z 12..16). A parede em
   // (12, 12..13) é sólida, para testar o salto de fase (tunelamento); a de
