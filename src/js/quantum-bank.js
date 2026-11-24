@@ -105,5 +105,12 @@ if (typeof window !== 'undefined') {
     console.warn('[quantum-backrooms] banco quântico indisponível, usando API/local', error);
     return null;
   });
-  window.quantumBank = { ready, measureFromBank, qubitMarginals, shannonEntropy };
+  window.quantumBank = { ready, measureFromBank, qubitMarginals, shannonEntropy, data: null };
+  ready.then((bank) => { window.quantumBank.data = bank; });
+  // Uma medição do andar: tirada do banco gravado; sem banco, o plano B clássico.
+  window.drawFloorBitstring = (floor) => {
+    const bank = window.quantumBank.data;
+    if (bank) return measureFromBank(bank, floor).bitstring;
+    return window.sampleQuantumBitstring?.() || null;
+  };
 }

@@ -1,5 +1,5 @@
 import { buildLightPanels, buildWallGeometry } from './level-geometry.js';
-import { buildLobby } from './lobby/lobby-builder.js';
+import { buildLobby } from './lobby/lobby-builder.js?v=20261124-1';
 
 const LOBBY_RESPAWN_MS = 10000;
 
@@ -61,11 +61,17 @@ AFRAME.registerComponent('quantum-map', {
       this.clearRespawnTimers();
     }
 
-    if (
-      oldData.floor !== this.data.floor ||
-      oldData.bitstring !== this.data.bitstring ||
-      oldData.stairsVisible !== this.data.stairsVisible
-    ) {
+    const sameMap = oldData.floor === this.data.floor && oldData.bitstring === this.data.bitstring;
+    if (sameMap && oldData.stairsVisible !== this.data.stairsVisible && this.mapInfo) {
+      // Medir com o QPS só revela a porta: o labirinto (inclusive os trechos
+      // que já se reorganizaram) continua como está.
+      this.rebuildWalls();
+      if (this.data.stairsVisible && !this.el.querySelector('#stairs')) {
+        this.addStairs(this.mapInfo.stairs, this.mapInfo.origin, this.mapInfo.cellSize);
+      }
+      return;
+    }
+    if (!sameMap || oldData.stairsVisible !== this.data.stairsVisible) {
       this.renderMap();
     }
   },
@@ -86,21 +92,12 @@ AFRAME.registerComponent('quantum-map', {
     const superposed = lobby
       ? window.LOBBY_LAYOUT.superposed.map((wall) => ({ ...wall }))
       : physics.findSuperposedWalls(map.maze, map.bitstring);
-    const superposedOffsets = new Map(superposed.map(({ x, z, offset }) => [`${x},${z}`, offset]));
 
     window.quantumWorld = physics.createMazeWorld(map.maze, { cellSize, superposed });
 
-    // Paredes fixas viram um único mesh (poucas draw calls no Quest).
-    const { walls, baseboards } = buildWallGeometry(map.maze, {
-      origin,
-      cellSize,
-      height,
-      tile: 0.8,
-      isStatic: (x, z) => !superposedOffsets.has(`${x},${z}`),
-      doorway: this.data.stairsVisible || lobby ? map.stairs : null,
-    });
-    this.addStaticMesh('walls', walls, this.materials.wall);
-    this.addStaticMesh('baseboards', baseboards, this.materials.baseboard);
+    this.mapInfo = { stairs: map.stairs, origin, cellSize, height, lobby, bitstring: map.bitstring };
+    this.superposedEls = new Map();
+    this.rebuildWalls();
 
     const { panels, fixtures } = buildLightPanels(map.maze, {
       origin,
@@ -113,16 +110,7 @@ AFRAME.registerComponent('quantum-map', {
     window.quantumLightFixtures = fixtures;
 
     // Paredes em superposição continuam separadas porque mudam de material.
-    superposed.forEach(({ x, z, offset }) => {
-      const wall = document.createElement('a-box');
-      wall.setAttribute('superposed-wall', { offset, x, z });
-      wall.setAttribute('width', cellSize + 0.01);
-      wall.setAttribute('height', height);
-      wall.setAttribute('depth', cellSize + 0.01);
-      wall.setAttribute('position', `${origin + x * cellSize} ${height / 2} ${origin + z * cellSize}`);
-      wall.setAttribute('backrooms-wall', 'repeat: 1 1; offset: 0 0; textureScale: 0.8');
-      this.el.appendChild(wall);
-    });
+    superposed.forEach((wall) => this.addSuperposedWall(wall));
 
     if (lobby) buildLobby(this.el, origin, cellSize);
 
@@ -141,6 +129,62 @@ AFRAME.registerComponent('quantum-map', {
       doorModel: Boolean(document.querySelector('#door-yellow-model')?.data),
     };
     this.el.sceneEl.emit('maze-world-updated', { stairs: map.stairs, items: this.itemCells, lobby });
+  },
+
+  // Paredes fixas viram um único mesh (poucas draw calls no Quest). Refeito
+  // quando um trecho fora da vista se reorganiza (decoerência) ou a porta abre.
+  rebuildWalls() {
+    const world = window.quantumWorld;
+    const info = this.mapInfo;
+    if (!world || !info) return;
+    ['walls', 'baseboards'].forEach((name) => {
+      const mesh = this.el.getObject3D(name);
+      if (!mesh) return;
+      mesh.geometry.dispose();
+      this.el.removeObject3D(name);
+      this.staticMeshes = (this.staticMeshes || []).filter((entry) => entry !== name);
+    });
+    const { walls, baseboards } = buildWallGeometry(world.maze, {
+      origin: info.origin,
+      cellSize: info.cellSize,
+      height: info.height,
+      tile: 0.8,
+      isStatic: (x, z) => !world.superposed.has(`${x},${z}`),
+      doorway: this.data.stairsVisible || info.lobby ? info.stairs : null,
+    });
+    this.addStaticMesh('walls', walls, this.materials.wall);
+    this.addStaticMesh('baseboards', baseboards, this.materials.baseboard);
+  },
+
+  addSuperposedWall({ x, z, offset }) {
+    const { origin, cellSize, height } = this.mapInfo;
+    const wall = document.createElement('a-box');
+    wall.setAttribute('superposed-wall', { offset, x, z });
+    wall.setAttribute('width', cellSize + 0.01);
+    wall.setAttribute('height', height);
+    wall.setAttribute('depth', cellSize + 0.01);
+    wall.setAttribute('position', `${origin + x * cellSize} ${height / 2} ${origin + z * cellSize}`);
+    wall.setAttribute('backrooms-wall', 'repeat: 1 1; offset: 0 0; textureScale: 0.8');
+    this.el.appendChild(wall);
+    this.superposedEls.set(`${x},${z}`, wall);
+    window.quantumWorld?.superposed.set(`${x},${z}`, offset);
+  },
+
+  // Chamado pela decoerência depois de reorganizar um setor (já mudado em
+  // quantumWorld.maze): troca as paredes em superposição do setor e refaz o mesh.
+  applySectorChange(sector, superposed = []) {
+    const world = window.quantumWorld;
+    if (!world || !this.mapInfo) return;
+    [...this.superposedEls.entries()].forEach(([key, el]) => {
+      const [x, z] = key.split(',').map(Number);
+      if (x < sector.minX || x > sector.maxX || z < sector.minZ || z > sector.maxZ) return;
+      el.parentNode?.removeChild(el);
+      this.superposedEls.delete(key);
+      world.superposed.delete(key);
+      world.collapsed.delete(key);
+    });
+    superposed.forEach((wall) => this.addSuperposedWall(wall));
+    this.rebuildWalls();
   },
 
   // Um QPS por andar (até ser coletado) e garrafas de Água de Amêndoa espalhadas.

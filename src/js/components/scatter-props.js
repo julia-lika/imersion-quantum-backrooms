@@ -44,13 +44,35 @@ AFRAME.registerComponent('scatter-props', {
       this.lobby = Boolean(detail?.lobby);
       this.scatter();
     };
+    // Trecho reorganizado fora da vista: os objetos dele somem junto (uma
+    // parede nova pode ter nascido em cima deles).
+    this.onShift = ({ detail }) => this.hideInSector(detail.sector);
     this.el.addEventListener('model-loaded', this.onModel);
     this.el.sceneEl.addEventListener('maze-world-updated', this.onWorld);
+    this.el.sceneEl.addEventListener('maze-region-shifted', this.onShift);
+  },
+
+  hideInSector(sector) {
+    const world = window.quantumWorld;
+    const physics = window.quantumPhysics;
+    if (!world || !physics || !sector) return;
+    const point = new THREE.Vector3();
+    const inside = (object) => {
+      object.getWorldPosition(point);
+      const { x, z } = physics.worldToCell(world, point.x, point.z);
+      return x >= sector.minX - 1 && x <= sector.maxX + 1 && z >= sector.minZ - 1 && z <= sector.maxZ + 1;
+    };
+    (this.el.getObject3D('mesh')?.children || []).forEach((object) => {
+      if (inside(object)) object.visible = false;
+    });
+    this.pieces.forEach(({ el }) => { if (inside(el.object3D)) el.object3D.visible = false; });
+    this.stains.forEach((mesh) => { if (inside(mesh)) mesh.visible = false; });
   },
 
   remove() {
     this.el.removeEventListener('model-loaded', this.onModel);
     this.el.sceneEl.removeEventListener('maze-world-updated', this.onWorld);
+    this.el.sceneEl.removeEventListener('maze-region-shifted', this.onShift);
     this.pieces.forEach(({ el }) => el.parentNode?.removeChild(el));
     this.stains.forEach((mesh) => {
       this.el.sceneEl.object3D.remove(mesh);

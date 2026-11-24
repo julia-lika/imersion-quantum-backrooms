@@ -1,9 +1,8 @@
-// Tela inicial, medição quântica ao pegar o QPS (banco gravado ou ?live),
-// piscar lento da transição e HUD de métricas. Carregado no fim do <body>.
+// Tela inicial, medição quântica ao pegar o QPS (banco gravado ou ?live)
+// e HUD de métricas. Carregado no fim do <body>.
 (function quantumMeasurement() {
   const scene = document.querySelector('#backrooms-scene');
   const hint = document.querySelector('#desktop-hint');
-  const quantumMap = document.querySelector('#quantum-map');
   const startScreen = document.querySelector('#start-screen');
   const startGame = document.querySelector('#start-game');
   const hud = document.querySelector('#hud');
@@ -34,38 +33,16 @@
   // Entrar em VR sem clicar em ENTER também inicia o jogo.
   scene.addEventListener('enter-vr', hideStartScreen);
 
-  const BLINK_MS = 2600;
-
-  // Piscar lento: o mapa só troca quando os olhos estão fechados.
-  function playCollapseBlink(onClosed) {
-    document.body.classList.remove('blink-transition');
-    void document.body.offsetWidth;
-    document.body.classList.add('blink-transition');
-    scene.emit('screen-effect', { type: 'blink', color: '#000000', duration: BLINK_MS });
-    window.setTimeout(onClosed, BLINK_MS * 0.46);
-    window.setTimeout(() => document.body.classList.remove('blink-transition'), BLINK_MS + 50);
-  }
-
+  // Pegar o QPS mede o estado: grava a planta do andar (o mapa do QPS) e
+  // revela a porta. O labirinto em si não muda nessa hora; ele muda sozinho,
+  // nos trechos que ninguém observa (decoerência, maze-decoherence.js).
   function applyMeasurement(result) {
     measured = true;
-    hint.setAttribute(
-      'canvas-text',
-      'value: O QPS MEDIU O ESTADO — a realidade está colapsando; align: center; color: #39ff88; width: 1.1; style: terminal'
-    );
-    playCollapseBlink(() => commitMeasurement(result));
+    commitMeasurement(result);
   }
 
   function commitMeasurement(result) {
     const bitstring = result.bitstring;
-
-    quantumMap.setAttribute(
-      'quantum-map',
-      `bitstring: ${bitstring}`
-    );
-    hint.setAttribute(
-      'canvas-text',
-      `value: MEDIÇÃO REGISTRADA — ${bitstring}; align: center; color: #39ff88; width: 1.1; style: terminal`
-    );
     hudState.textContent = `ESTADO: MEDIDO // ${bitstring}`;
     const metrics = updateQuantumHud(bitstring, result);
     window.dispatchEvent(new CustomEvent('quantum-measured', {
@@ -78,7 +55,7 @@
     if (event?.detail?.training) {
       hint.setAttribute(
         'canvas-text',
-        'value: QPS DE TREINO COLETADO — nos andares, isso mede o estado e revela a porta. Outro aparece em 10 s; align: center; color: #39ff88; width: 1.1; style: terminal'
+        'value: QPS DE TREINO COLETADO — ele é o seu mapa (M ou pulso direito). Nos andares, também revela a porta. Outro aparece em 10 s; align: center; color: #39ff88; width: 1.1; style: terminal'
       );
       scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
       return;
@@ -127,7 +104,7 @@
   window.addEventListener('quantum-measured', () => {
     hint.setAttribute(
       'canvas-text',
-      'value: QPS ENCONTRADO — localize a porta antes do próximo colapso; align: center; color: #39ff88; width: 1.1; style: terminal'
+      'value: QPS MEDIU O ANDAR — a porta está no mapa (M ou pulso direito); trechos não observados mudam com o tempo; align: center; color: #39ff88; width: 1.1; style: terminal'
     );
   });
 })();

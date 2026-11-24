@@ -23,6 +23,7 @@ import {
 import { startPosition } from './maze-physics.js';
 
 const initialBits = '010110101100';
+const QPS_READING_COST = 10;
 const savedGame = (() => {
   try {
     return loadGameState();
@@ -138,7 +139,7 @@ function isActive() {
 
 function objectiveText() {
   if (game.current.floor === LOBBY_FLOOR) return 'TUTORIAL: EXPLORE O LOBBY';
-  return game.current.measured ? 'DESÇA: A PORTA FOI REVELADA' : 'ENCONTRE O QPS';
+  return game.current.measured ? 'DESÇA: A PORTA ESTÁ NO MAPA DO QPS' : 'ENCONTRE O QPS (É O SEU MAPA)';
 }
 
 function syncHud() {
@@ -290,7 +291,8 @@ function transitionToNextFloor() {
   elements['backrooms-scene'].emit('screen-effect', { type: 'fade', color: '#000000', duration: 900 });
 
   window.setTimeout(() => {
-    const nextBits = window.sampleQuantumBitstring?.() || initialBits;
+    // O andar novo nasce de uma medição tirada do banco gravado.
+    const nextBits = window.drawFloorBitstring?.(game.current.floor + 1) || initialBits;
     game.current = advanceFloor(game.current, nextBits);
     state.current = createPhaseState(nextBits);
     resetPlayerPosition();
@@ -318,7 +320,7 @@ function loseSanity() {
   elements['backrooms-scene'].emit('screen-effect', { type: 'fade', color: '#000000', duration: 2400 });
 
   window.setTimeout(() => {
-    const nextBits = window.sampleQuantumBitstring?.() || initialBits;
+    const nextBits = window.drawFloorBitstring?.(1) || initialBits;
     game.current = createGameState(nextBits);
     state.current = createPhaseState(nextBits);
     setVisor(createSurvivalState());
@@ -460,6 +462,19 @@ function bindGameEvents() {
   });
   scene.addEventListener('enter-vr', () => beginGame('lobby'));
 
+  // Nova leitura do mapa do QPS: custa energia (medir não é de graça).
+  scene.addEventListener('qps-reading-request', () => {
+    if (!isActive()) return;
+    if (survival.energy < QPS_READING_COST) {
+      setHint('ENERGIA INSUFICIENTE PARA NOVA LEITURA — beba Água de Amêndoa');
+      return;
+    }
+    survival = { ...survival, energy: survival.energy - QPS_READING_COST };
+    scene.emit('qps-reading-granted');
+    scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 350, peak: 0.2 });
+    setHint(`NOVA LEITURA DO QPS — mapa atualizado (-${QPS_READING_COST} de energia)`);
+    renderTelemetry();
+  });
   scene.addEventListener('visor-toggle-request', toggleVisor);
   scene.addEventListener('interaction-hint', ({ detail }) => {
     if (isActive()) setHint(detail.text);
@@ -491,9 +506,12 @@ function bindGameEvents() {
       detail.metrics
     );
 
-    const map = window.generateQuantumMap(detail.result.bitstring);
+    // A medição do QPS não refaz o labirinto: ela grava a planta (o mapa do
+    // QPS) e revela a porta. O andar continua sendo o mesmo bitstring.
+    const floorBits = game.current.currentBitstring;
+    const map = window.generateQuantumMap(floorBits);
     game.current = recordMeasurement(game.current, {
-      bitstring: detail.result.bitstring,
+      bitstring: floorBits,
       qps: detail.metrics.qps,
       stairs: map.stairs,
     });
@@ -504,7 +522,6 @@ function bindGameEvents() {
       source: `${detail.result.source} // ${detail.result.backend}`,
       stairs: map.stairs,
     };
-    // Sinal visível em VR de que o estado colapsou e o mapa vai mudar.
     elements['backrooms-scene'].emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.35 });
     syncMap();
     persistProgress();

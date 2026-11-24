@@ -1,0 +1,182 @@
+// Labirinto em tempo real: trechos que ninguém observa há algum tempo voltam à
+// superposição e se reorganizam (ver js/decoherence.js). O que o jogador está
+// vendo nunca muda; a troca vem com um aviso sutil (luz que oscila e zumbido).
+import {
+  UNOBSERVED_MS,
+  SHIFT_COOLDOWN_MS,
+  listSectors,
+  isSectorObserved,
+  reshuffleSector,
+  pickSectorSuperposed,
+} from '../decoherence.js';
+
+const CHECK_MS = 200;
+const HINT_LIMIT = 2;
+
+AFRAME.registerComponent('maze-decoherence', {
+  schema: {
+    rig: { type: 'selector', default: '#player' },
+    enabled: { type: 'boolean', default: true },
+  },
+
+  init() {
+    this.lastCheck = 0;
+    this.lastShift = 0;
+    this.shifts = 0;
+    this.hints = 0;
+    this.reset();
+    this.onWorld = () => this.reset();
+    this.el.sceneEl.addEventListener('maze-world-updated', this.onWorld);
+    window.quantumDecoherence = {
+      sectors: () => this.sectors,
+      versions: () => ({ ...this.versions }),
+      stats: () => ({ shifts: this.shifts, unseen: this.unseenSeconds() }),
+      // Para testes: força a troca do setor mais esquecido, se puder.
+      forceShift: () => this.shiftOne(performance.now(), true),
+    };
+  },
+
+  remove() {
+    this.el.sceneEl.removeEventListener('maze-world-updated', this.onWorld);
+  },
+
+  // Mapa novo (andar novo ou lobby): todos os setores começam "vistos agora".
+  reset() {
+    const world = window.quantumWorld;
+    const now = performance.now();
+    this.sectors = world ? listSectors(world.size) : [];
+    this.lastSeen = Object.fromEntries(this.sectors.map((sector) => [sector.id, now]));
+    this.versions = Object.fromEntries(this.sectors.map((sector) => [sector.id, 0]));
+    this.lastShift = now;
+  },
+
+  unseenSeconds() {
+    const now = performance.now();
+    return Object.fromEntries(Object.entries(this.lastSeen).map(([id, t]) => [id, Math.round((now - t) / 1000)]));
+  },
+
+  viewer() {
+    const tracker = this.data.rig?.components['xr-hands'];
+    const world = window.quantumWorld;
+    if (!tracker || !world) return null;
+    const { world: head, forward } = tracker.head;
+    return {
+      x: (head.x - world.origin) / world.cellSize,
+      z: (head.z - world.origin) / world.cellSize,
+      dirX: forward.x,
+      dirZ: forward.z,
+    };
+  },
+
+  tick(time) {
+    if (!this.data.enabled || time - this.lastCheck < CHECK_MS) return;
+    this.lastCheck = time;
+    const world = window.quantumWorld;
+    const player = window.quantumPlayer;
+    // Lobby é fixo; pausa, menu e transição também congelam o labirinto.
+    if (!world || !player?.active || !player.floor) return;
+
+    const viewer = this.viewer();
+    if (!viewer) return;
+    const now = performance.now();
+    const transparent = (x, z) => world.superposed.has(`${x},${z}`);
+    this.sectors.forEach((sector) => {
+      if (isSectorObserved(world.maze, sector, viewer, { transparent })) this.lastSeen[sector.id] = now;
+    });
+    this.viewerCache = viewer;
+    if (now - this.lastShift >= SHIFT_COOLDOWN_MS) this.shiftOne(now);
+  },
+
+  protectedCells() {
+    const world = window.quantumWorld;
+    const mapEl = this.el.components['quantum-map'];
+    const cells = [];
+    const stairs = mapEl?.mapInfo?.stairs;
+    if (stairs) cells.push({ x: stairs.x, z: stairs.z });
+    (mapEl?.itemCells || []).forEach((cell) => cell && cells.push(cell));
+    const ghost = document.querySelector('[quantum-ghost]');
+    if (ghost && world) {
+      const position = ghost.object3D.position;
+      cells.push(window.quantumPhysics.worldToCell(world, position.x, position.z));
+    }
+    if (this.viewerCache) cells.push({ x: Math.round(this.viewerCache.x), z: Math.round(this.viewerCache.z) });
+    return cells;
+  },
+
+  shiftOne(now, force = false) {
+    const world = window.quantumWorld;
+    const mapComponent = this.el.components['quantum-map'];
+    const viewer = this.viewerCache || this.viewer();
+    if (!world || !mapComponent || !viewer) return null;
+
+    const transparent = (x, z) => world.superposed.has(`${x},${z}`);
+    const candidates = this.sectors
+      .filter((sector) => force || now - this.lastSeen[sector.id] >= UNOBSERVED_MS)
+      // Confere de novo na hora da troca: nada muda diante dos olhos.
+      .filter((sector) => !isSectorObserved(world.maze, sector, viewer, { transparent }))
+      .sort((a, b) => this.lastSeen[a.id] - this.lastSeen[b.id]);
+    const sector = candidates[0];
+    if (!sector) return null;
+
+    const floor = window.quantumPlayer?.floor ?? 1;
+    const bitstring = window.drawFloorBitstring?.(floor) || '010110101100';
+    const changed = reshuffleSector(world.maze, sector, bitstring, {
+      protectedCells: this.protectedCells(),
+      salt: this.shifts + 1,
+    });
+    this.lastShift = now;
+    this.lastSeen[sector.id] = now;
+    if (changed.length === 0) return null;
+
+    const superposed = pickSectorSuperposed(world.maze, sector, bitstring, 1);
+    mapComponent.applySectorChange(sector, superposed);
+    this.shifts += 1;
+    this.versions[sector.id] += 1;
+    this.el.sceneEl.emit('maze-region-shifted', { sector, bitstring, changed: changed.length });
+    this.signal();
+    return { sector, bitstring, changed: changed.length };
+  },
+
+  // Aviso sutil: as luzes oscilam de leve e um zumbido grave passa.
+  signal() {
+    const scene = this.el.sceneEl;
+    scene.emit('screen-effect', { type: 'flash', color: '#000000', duration: 650, peak: 0.28 });
+    this.hum();
+    if (this.hints < HINT_LIMIT) {
+      this.hints += 1;
+      scene.emit('interaction-hint', {
+        text: 'ALGO MUDOU FORA DA SUA VISTA — o que ninguém observa volta à superposição e se reorganiza',
+      });
+    }
+  },
+
+  hum() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      this.audio = this.audio || new AudioContext();
+      const ctx = this.audio;
+      if (ctx.state === 'suspended') ctx.resume();
+      const start = ctx.currentTime;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.12, start + 0.35);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 1.8);
+      gain.connect(ctx.destination);
+      [55, 82.5, 110.6].forEach((frequency, index) => {
+        const oscillator = ctx.createOscillator();
+        oscillator.type = index === 0 ? 'sawtooth' : 'sine';
+        oscillator.frequency.setValueAtTime(frequency, start);
+        oscillator.frequency.linearRampToValueAtTime(frequency * 0.94, start + 1.8);
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 320;
+        oscillator.connect(filter).connect(gain);
+        oscillator.start(start);
+        oscillator.stop(start + 1.9);
+      });
+    } catch {
+      // Sem áudio (navegador bloqueou): o aviso visual basta.
+    }
+  },
+});
