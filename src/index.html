@@ -159,6 +159,11 @@
         margin: 2px 0 4px;
       }
 
+      #phase-telemetry #qubit-board {
+        width: 72%;
+        margin: 2px auto 4px;
+      }
+
       #phase-telemetry .phase-caption {
         color: #a99a6c;
         font-size: 0.52rem;
@@ -302,7 +307,7 @@
     <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.7.x/dist/aframe-extras.min.js"></script>
     <script type="module" src="js/maze-physics.js?v=20261124-12"></script>
-    <script type="module" src="js/map-generator.js?v=20261124-12"></script>
+    <script type="module" src="js/map-generator.js?v=20261124-13"></script>
     <script type="module" src="js/quantum-bank.js?v=20261124-13"></script>
     <script type="module" src="js/components/backrooms-wall.js"></script>
     <script type="module" src="js/phase-zero.js?v=20261124-12"></script>
@@ -317,7 +322,7 @@
     <script src="js/components/lobby/lobby-furniture.js?v=20261124-4"></script>
     <script src="js/components/lobby/lobby-computer.js"></script>
     <script src="js/components/lobby/training-wall.js"></script>
-    <script type="module" src="js/components/lobby/quantum-slides.js?v=20261124-13"></script>
+    <script type="module" src="js/components/lobby/quantum-slides.js?v=20261124-14"></script>
     <script src="js/creepy-gait.js?v=20261124-1"></script>
     <script src="js/components/entity-tv.js?v=20261124-13"></script>
     <script src="js/components/vr-effects.js?v=20261123-1"></script>
@@ -327,8 +332,9 @@
     <script src="js/components/light-flicker.js"></script>
     <script src="js/components/fixture-lights.js?v=20261123-1"></script>
     <script src="js/components/floor-transition.js"></script>
-    <script type="module" src="js/components/quantum-map.js?v=20261124-12"></script>
-    <script type="module" src="js/components/maze-decoherence.js?v=20261124-10"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261124-13"></script>
+    <script type="module" src="js/components/maze-decoherence.js?v=20261124-11"></script>
+    <script src="js/qubit-board.js?v=20261124-1"></script>
     <script src="js/components/scatter-props.js?v=20261124-1"></script>
   </head>
   <body>
@@ -365,6 +371,12 @@
       <div class="phase-heading">CIRCUITO // 12 QUBITS</div>
       <canvas id="circuit-canvas" width="560" height="250"></canvas>
       <div class="phase-caption">gira (RY) → amarra em fila (CX) → gira → anel de fase (CZ) → gira → mede</div>
+      <div id="qubit-board-wrap" hidden>
+        <div class="phase-heading">QUBIT → REGIÃO DO ANDAR</div>
+        <canvas id="qubit-board" width="460" height="460"></canvas>
+        <div class="phase-caption">1 = sala aberta // 0 = corredores // bits vizinhos iguais: a parede entre eles some</div>
+        <div id="qubit-board-here" class="phase-value">--</div>
+      </div>
       <div id="phase-door" class="phase-value">PORTA: --</div>
       <div id="phase-shifts">TRECHOS QUE EVOLUÍRAM: 0</div>
     </div>
