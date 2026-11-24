@@ -192,10 +192,7 @@ AFRAME.registerComponent('qps-map', {
     ctx.strokeRect(4, 4, width - 8, height - 8);
 
     ctx.textBaseline = 'top';
-    // Título com o brilho iridescente do chip.
-    const shine = ctx.createLinearGradient(pad, 0, pad + 200, 0);
-    ['#2de2c0', '#8cff5a', '#ffd84a', '#ff8a3c', '#ff5a8a'].forEach((color, index) => shine.addColorStop(index / 4, color));
-    ctx.fillStyle = shine;
+    ctx.fillStyle = MAP_GREEN;
     ctx.font = `bold 28px ${MAP_MONO}`;
     ctx.fillText('QPS // MAPA', pad, pad);
     ctx.font = `20px ${MAP_MONO}`;
@@ -228,38 +225,37 @@ AFRAME.registerComponent('qps-map', {
     const player = this.playerCell();
     const versions = window.quantumDecoherence?.versions() || {};
     const visor = Boolean(window.quantumPlayer?.visor);
-    // Cores bem diferentes do verde das paredes comuns: azul = Salto de Fase,
-    // roxo = superposição (fica mais forte com o Visor Zeta ligado).
+    // Paredes comuns em tom neutro. Cor só para destacar: ciano = Salto de
+    // Fase, lilás = superposição (cor do Visor Zeta), azul = objetos da sala,
+    // amarelo = porta.
     const phase = new Set(this.phaseWalls(memory).map(({ x, z }) => `${x},${z}`));
-    // Paleta do chip QPS: as paredes comuns mudam de cor pelo mapa, do verde-água
-    // ao vermelho (sem azul nem roxo, que são do salto de fase e da superposição).
-    // Faixas diagonais que se repetem a cada 10 células: verde-água, verde,
-    // amarelo, laranja e vermelho, como o brilho iridescente do chip.
-    const hueAt = (x, z) => Math.round(165 - (((x + z) % 10) / 9) * 165);
-    const tint = (x, z, alpha, light = 58) => `hsla(${hueAt(x, z)}, 85%, ${light}%, ${alpha})`;
+    const neutral = (alpha) => `rgba(205, 200, 180, ${alpha})`;
     memory.cells.forEach((row, z) => {
       row.forEach((value, x) => {
         const px = left + x * cell;
         const pz = top + z * cell;
         if (value === null) {
-          ctx.fillStyle = tint(x, z, 0.04);
+          ctx.fillStyle = neutral(0.03);
           ctx.fillRect(px, pz, cell - 1, cell - 1);
           return;
         }
         const live = player && Math.hypot(x - player.x, z - player.z) <= radius;
         if (!live && this.isStale(x, z, versions)) {
           // Evoluiu depois da última medição: estática.
-          ctx.fillStyle = `hsla(${Math.floor(Math.random() * 360)}, 80%, 60%, ${(0.08 + Math.random() * 0.4).toFixed(2)})`;
+          ctx.fillStyle = neutral((0.08 + Math.random() * 0.4).toFixed(2));
         } else if (memory.superposed.has(`${x},${z}`)) {
           // Com o Visor Zeta ligado o roxo fica mais forte.
           const alpha = (visor ? 1 : 0.65) * (live ? 1 : 0.55);
-          ctx.fillStyle = `rgba(214, 92, 255, ${alpha.toFixed(2)})`;
+          ctx.fillStyle = `rgba(201, 163, 255, ${alpha.toFixed(2)})`;
         } else if (phase.has(`${x},${z}`)) {
-          ctx.fillStyle = live ? 'rgba(64, 150, 255, 0.95)' : 'rgba(64, 150, 255, 0.5)';
-        } else if (value === '#' || value === 'F') {
-          ctx.fillStyle = tint(x, z, live ? 0.95 : 0.5);
+          ctx.fillStyle = live ? 'rgba(68, 255, 220, 0.95)' : 'rgba(68, 255, 220, 0.5)';
+        } else if (value === 'F') {
+          // Móveis do lobby.
+          ctx.fillStyle = live ? 'rgba(70, 130, 255, 0.95)' : 'rgba(70, 130, 255, 0.5)';
+        } else if (value === '#') {
+          ctx.fillStyle = neutral(live ? 0.85 : 0.4);
         } else {
-          ctx.fillStyle = tint(x, z, live ? 0.2 : 0.1, 50);
+          ctx.fillStyle = neutral(live ? 0.14 : 0.06);
         }
         ctx.fillRect(px, pz, cell - 1, cell - 1);
       });
@@ -287,6 +283,19 @@ AFRAME.registerComponent('qps-map', {
       ctx.stroke();
       ctx.setLineDash([]);
     }
+
+    // Objetos da sala (garrafas e equipamentos) que o QPS já leu, em azul.
+    document.querySelectorAll('#quantum-map [data-item], #quantum-map [data-gear]').forEach((item) => {
+      if (!item.object3D.visible) return;
+      const position = item.object3D.position;
+      const ix = Math.round((position.x - world.origin) / world.cellSize);
+      const iz = Math.round((position.z - world.origin) / world.cellSize);
+      if (memory.cells[iz]?.[ix] == null) return;
+      ctx.fillStyle = 'rgb(70, 130, 255)';
+      ctx.beginPath();
+      ctx.arc(left + (ix + 0.5) * cell, top + (iz + 0.5) * cell, cell * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+    });
 
     // Porta (quando já revelada) e posição atual do jogador.
     const mapInfo = document.querySelector('#quantum-map')?.components['quantum-map'];
@@ -326,17 +335,19 @@ AFRAME.registerComponent('qps-map', {
       ctx.restore();
     }
 
-    const legendY = top + cell * size + 14;
-    ctx.font = `18px ${MAP_MONO}`;
+    const legendY = top + cell * size + 12;
+    ctx.font = `17px ${MAP_MONO}`;
     ctx.fillStyle = MAP_DIM;
     ctx.fillText('CLARO: MEDINDO AGORA   APAGADO: ÚLTIMA LEITURA', pad, legendY);
-    ctx.fillText(`? EVOLUIU SEM MEDIÇÃO   ${tracker?.inVr ? '' : '[M] FECHA'}`, pad, legendY + 24);
+    ctx.fillText(`? EVOLUIU SEM MEDIÇÃO   ${tracker?.inVr ? '' : '[M] FECHA'}`, pad, legendY + 20);
+    ctx.fillStyle = 'rgb(68, 255, 220)';
+    ctx.fillText('■ CIANO: SALTO DE FASE (X)', pad, legendY + 40);
+    ctx.fillStyle = 'rgb(201, 163, 255)';
+    ctx.fillText('■ LILÁS: SUPERPOSIÇÃO (Z)', pad + 290, legendY + 40);
+    ctx.fillStyle = 'rgb(70, 130, 255)';
+    ctx.fillText('● AZUL: OBJETOS', pad, legendY + 60);
     ctx.fillStyle = '#e3cc4b';
-    ctx.fillText('┆ PORTA POSSÍVEL', pad + 370, legendY + 24);
-    ctx.fillStyle = 'rgb(64, 150, 255)';
-    ctx.fillText('■ AZUL: SALTO DE FASE (X)', pad, legendY + 48);
-    ctx.fillStyle = 'rgb(214, 92, 255)';
-    ctx.fillText('■ ROXO: SUPERPOSIÇÃO (Z)', pad + 290, legendY + 48);
+    ctx.fillText('■ AMARELO: PORTA  ┆ POSSÍVEL', pad + 200, legendY + 60);
     this.texture.needsUpdate = true;
   },
 
