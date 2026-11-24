@@ -8,7 +8,7 @@ import {
   LOBBY_SLIDES,
   LOBBY_TRAINING_WALLS,
   LOBBY_TV,
-} from '../../content/lobby-content.js?v=20261124-2';
+} from '../../content/lobby-content.js?v=20261124-3';
 
 // Rotação de uma peça presa a cada parede, com a frente virada para o salão.
 const WALL_ROTATION = { left: 90, right: -90, far: 180 };
@@ -110,20 +110,24 @@ function addSigns(parent, frame) {
 function addGear(parent, frame) {
   LOBBY_GEAR.items.forEach((item) => {
     const { x, z } = place(frame, { wall: LOBBY_GEAR.wall, cellX: item.cellX, inset: LOBBY_GEAR.inset });
-    const holder = append(parent, {
-      position: `${x} ${LOBBY_GEAR.y + item.lift} ${z}`,
-      animation: 'property: rotation; to: 0 360 0; loop: true; dur: 16000; easing: linear',
-    });
-    const model = document.createElement('a-entity');
-    model.setAttribute('gltf-model', item.model);
-    model.setAttribute('scale', `${item.scale} ${item.scale} ${item.scale}`);
-    holder.appendChild(model);
+    if (!item.labelOnly) addGearModel(parent, item, x, z);
     append(parent, {
       position: `${x} ${LOBBY_GEAR.y + 0.3} ${z}`,
       rotation: '0 180 0',
       'canvas-text': { value: item.label, color: '#39ff88', width: 0.32, overlay: false, style: 'terminal' },
     });
   });
+}
+
+function addGearModel(parent, item, x, z) {
+  const holder = append(parent, {
+    position: `${x} ${LOBBY_GEAR.y + item.lift} ${z}`,
+    animation: 'property: rotation; to: 0 360 0; loop: true; dur: 16000; easing: linear',
+  });
+  const model = document.createElement('a-entity');
+  model.setAttribute('gltf-model', item.model);
+  model.setAttribute('scale', `${item.scale} ${item.scale} ${item.scale}`);
+  holder.appendChild(model);
 }
 
 export function buildLobby(parent, origin, cellSize) {

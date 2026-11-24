@@ -22,39 +22,43 @@ flowchart LR
   F --> E
 ```
 
-## Labirinto em tempo real (decoerência)
+## Labirinto em tempo real (efeito Zeno)
 
-O labirinto muda sozinho enquanto você joga, mas só onde ninguém está olhando.
+O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 
-- O mapa é dividido em setores de 7 x 7 células (`listSectors`).
-- A cada 0,2 s o jogo marca como **observado** todo setor que está a até 2,5
-  células do jogador ou que tem alguma célula no campo de visão (até 75° do
-  centro e 16 células) com linha de visão livre (`isSectorObserved`).
-- Um setor que fica **18 s sem ser observado** volta à superposição: o jogo
-  tira uma nova medição do banco do andar e usa esse bitstring para montar o
-  setor de novo (`reshuffleSector`): sala aberta, paredes com vãos ou pilares.
-  No máximo uma troca a cada 9 s.
-- Antes de trocar, o jogo confere de novo que o setor não está à vista. O que
-  você está vendo nunca muda: observar é medir.
+- **Efeito Zeno quântico:** um sistema medido muitas vezes seguidas quase não
+  muda, porque cada medição o devolve ao estado medido. Quando as medições
+  param, ele volta a evoluir para uma superposição, e a próxima medição pode
+  dar outro resultado. É isso que o jogo encena.
+- **Quem mede:** o QPS, num raio de 4 células (~4,2 m) ao redor do jogador, e
+  os olhos (setor com alguma célula no campo de visão, até 75° do centro e
+  16 células, com linha de visão livre). Sem QPS, o raio cai para 2,5 células.
+- O mapa é dividido em setores de 7 x 7 células (`listSectors`). Um setor que
+  fica **18 s sem ser medido** recebe uma nova medição do banco do andar e é
+  montado de novo com esse bitstring (`reshuffleSector`): sala aberta, paredes
+  com vãos ou pilares. No máximo uma troca a cada 9 s.
+- Antes de trocar, o jogo confere de novo que o setor não está sendo medido.
 - A troca é local e segura: só as células do setor mudam, porta, itens,
   jogador e entidade ficam livres, e o labirinto inteiro continua conectado
   (se não der, o setor vira uma sala aberta).
 - O aviso é sutil: a tela escurece de leve, um zumbido grave passa e, nas duas
   primeiras vezes, aparece uma dica.
-- O lobby (fase 0) não muda.
+- O raio, os 18 s e os setores são regras de jogo; a física real não tem um
+  "relógio" de 18 s. O lobby (fase 0) não muda.
 
-## QPS: o mapa do andar
+## QPS: o mapa que mede
 
-Pegar o QPS é a medição do andar. Ele não refaz mais o labirinto: grava a
-planta daquele instante e revela a porta.
-
-- **Ver o mapa:** pulso direito (VR) ou M (desktop). Mostra paredes, paredes em
-  superposição (roxo), a porta (amarelo) e você (seta branca).
-- **Mapa desatualizado:** os setores que se reorganizaram depois da leitura
-  aparecem chiando, com um "?".
-- **Nova leitura:** pinça com a mão esquerda perto do mapa (VR) ou R (desktop).
-  Custa 10 de energia.
-- No lobby, o QPS de treino também vira mapa (do lobby, que não muda).
+- O QPS é o chip na mesa do canto do lobby (à esquerda do telão). O jogador
+  pega uma vez (Q, clique ou pinça) e fica com ele em todos os andares. Sem
+  ele, a porta do lobby não abre. Jogo novo devolve o chip à mesa.
+- **Medição contínua:** a cada 0,2 s o QPS copia para o mapa tudo o que está
+  no raio. Não existe mais QPS espalhado pelos andares nem "nova leitura".
+- **Mapa** (pulso direito no VR, M no desktop): claro = medindo agora;
+  apagado = última leitura; chiando com "?" = o setor evoluiu depois da
+  última leitura. O círculo tracejado é o raio de medição.
+- **Porta:** cada andar começa com a porta indefinida. Quando ela entra no
+  raio do QPS (2 células sem QPS), o estado do andar é medido
+  (`measureFromBank`) e a porta se define e aparece.
 
 ## Conceito por conceito
 
@@ -63,8 +67,8 @@ planta daquele instante e revela a porta.
 | Superposição | `RY(θ)` em cada qubit define a chance de dar 1 | Cada andar é um estado de 12 qubits até ser medido |
 | Emaranhamento | `CX(i, i+1)` em cadeia correlaciona vizinhos | Os bits medidos vêm correlacionados, não independentes |
 | Interferência e fase | Segunda camada de `RY` e anel de `CZ` | Alguns bitstrings (mapas) são bem mais prováveis |
-| Medição e colapso | Sorteio de 1 resultado entre os shots gravados (`measureFromBank`) | Cada andar nasce de uma medição; pegar o QPS grava a planta (mapa) e revela a porta |
-| Decoerência | Metáfora: sem observação, a medição "se perde" | Setores não observados por 18 s são medidos de novo e se reorganizam |
+| Medição e colapso | Sorteio de 1 resultado entre os shots gravados (`measureFromBank`) | Cada andar nasce de uma medição; a porta se define quando entra no raio do QPS |
+| Efeito Zeno | Medir sem parar impede a evolução do estado | O raio do QPS congela o labirinto; fora dele, setores sem medição por 18 s evoluem e são medidos de novo |
 | Entropia | Shannon dos `counts` (`shannonEntropy`), 0 a 12 bits | Andares gravados ficam entre ~7 e 8 bits |
 | Tunelamento | Metáfora | Salto de fase: atravessa até 2 células de parede, 92% de sucesso, custa 25 de energia e 3 de sanidade |
 | Superposição de parede | Metáfora (`isSuperposedOpen` oscila no tempo) | Visor Zeta mostra o estado; entrar na parede aberta a mede e ela fica aberta até você sair (`observeSuperposedWalls`) |
@@ -78,9 +82,9 @@ planta daquele instante e revela a porta.
   BSP: o quântico escolhe *qual* dos 4096 mapas aparece, e o mesmo bitstring
   sempre gera o mesmo mapa. A reorganização dos setores também é clássica, com
   um bitstring novo do banco como semente.
-- **Metáfora:** a decoerência do labirinto. Na física, decoerência é o
-  ambiente apagando a superposição; aqui usamos a ideia ao contrário, como
-  regra de jogo: o que ninguém observa "esquece" a medição e muda.
+- **Inspirado na física:** o labirinto que só evolui longe do QPS segue a
+  ideia do efeito Zeno quântico; o raio, os 18 s e os setores são regras de
+  jogo.
 - **Mecânica de jogo:** entidade, sanidade, energia, a oscilação das paredes
   em superposição e os índices de QPS, coerência e ruído do HUD
   (`analyzeQuantumState`, heurísticas calculadas a partir dos bits).
@@ -96,8 +100,8 @@ planta daquele instante e revela a porta.
 | `src/js/quantum-bank.js` | Leitura do banco, amostragem, entropia |
 | `src/js/quantum-measurement.js` | Medição ao pegar o QPS e HUD |
 | `src/js/decoherence.js` | Setores, observação, reorganização de um setor (testado em `tests/decoherence.test.js`) |
-| `src/js/components/maze-decoherence.js` | Troca em tempo real, aviso (luz e zumbido) |
-| `src/js/components/qps-map.js` | Mapa do QPS no pulso direito / tecla M |
+| `src/js/components/maze-decoherence.js` | Troca em tempo real fora do raio do QPS, aviso (luz e zumbido) |
+| `src/js/components/qps-map.js` | Medição contínua do QPS e mapa no pulso direito / tecla M |
 | `src/js/content/` | Textos do lobby e dos slides |
 | `src/js/components/lobby/` | Montagem do lobby, móveis, computador, paredes de treino, slides |
 | `src/js/components/` | Demais componentes A-Frame (mapa, entidade, mãos, HUD) |

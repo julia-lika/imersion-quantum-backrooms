@@ -185,7 +185,7 @@ export const QUANTUM_SLIDES = [
       ['Mil caixas iguais', '1024 shots do circuito, gravados no jogo'],
       ['Abrir a caixa', 'Entrar num andar: o jogo sorteia um desses resultados'],
       ['O resultado', 'Um código de 12 bits, que vira a semente do mapa'],
-      ['Foto da caixa aberta', 'O QPS: grava a planta do andar naquele instante'],
+      ['Olhar a caixa sem parar', 'O QPS: mede tudo a ~4 m de você, o tempo todo'],
       ['Caixa fechada', 'Paredes em superposição (metáfora visual)'],
     ],
   },
@@ -202,24 +202,35 @@ export const QUANTUM_SLIDES = [
   },
   {
     theme: 'dark',
-    title: 'O labirinto muda quando ninguém olha',
+    title: 'O labirinto evolui quando ninguém mede',
     flow: true,
     cards: [
-      { label: 'OBSERVADO', heading: 'Você está vendo', text: 'Observar é medir: o que está diante dos seus olhos fica fixo.' },
-      { label: '18 S SEM OLHAR', heading: 'A medição se perde', text: 'Um trecho esquecido volta à superposição, como a moeda voltando a girar.' },
-      { label: 'MEDIDO DE NOVO', heading: 'Ele se reorganiza', text: 'O jogo tira um novo código de 12 bits e monta aquele trecho de outro jeito.' },
+      { label: 'MEDIDO', heading: 'Perto de você', text: 'O QPS (raio de ~4 m) e os seus olhos medem sem parar: ali nada muda.' },
+      { label: '18 S SEM MEDIR', heading: 'Ele evolui', text: 'Sem medição, o estado daquele trecho segue evoluindo para uma nova superposição.' },
+      { label: 'MEDIDO DE NOVO', heading: 'Outro resultado', text: 'O jogo tira um novo código de 12 bits e o trecho aparece reorganizado.' },
     ],
-    note: 'Você percebe pelo aviso: a luz oscila e passa um zumbido. O labirinto continua sempre conectado. (Na física, decoerência é o ambiente apagando a superposição; aqui é uma metáfora de jogo.)',
+    note: 'Você percebe pelo aviso: a luz oscila e passa um zumbido. O labirinto continua sempre conectado. Os números (raio, 18 s) são regra de jogo; a ideia vem do efeito Zeno, no próximo slide.',
   },
   {
     theme: 'cream',
-    title: 'O QPS é o seu mapa',
+    title: 'Efeito Zeno: medir sem parar congela',
     cards: [
       {
-        heading: 'Uma foto da caixa aberta',
-        text: 'Pegar o QPS é medir o andar: ele grava a planta naquele instante e mostra onde está a porta. Veja no pulso direito (desktop: M).\n\nComo os trechos esquecidos mudam, o mapa envelhece: as partes que mudaram aparecem chiando. Uma nova leitura (pinça perto do mapa, ou R) atualiza tudo e custa 10 de energia.',
+        heading: 'A panela vigiada',
+        text: 'Um sistema quântico medido muitas e muitas vezes quase não consegue mudar: cada medição o devolve ao estado medido. Isso é o efeito Zeno quântico, já visto em laboratório com átomos.\n\nQuando as medições param, ele volta a evoluir para uma superposição. Na próxima medição, pode dar outro resultado.',
       },
-      { diagram: 'qpsMap', caption: 'Mapa com um trecho desatualizado (?).' },
+      { image: 'spinning', caption: 'Sem medição ela gira; medida sem parar, fica parada.' },
+    ],
+  },
+  {
+    theme: 'dark',
+    title: 'O QPS é o seu mapa (e mede sem parar)',
+    cards: [
+      {
+        heading: 'Pegue no lobby, leve sempre',
+        text: 'O QPS é o chip na mesa do canto. Ele mede o tempo todo tudo num raio de ~4 m e desenha o mapa (pulso direito ou M).\n\nClaro = medindo agora. Apagado = última leitura. Chiando com ? = evoluiu desde então. A porta só se define quando entra no raio.',
+      },
+      { diagram: 'qpsMap', caption: 'Mapa do QPS com um trecho que evoluiu (?).' },
     ],
   },
   {

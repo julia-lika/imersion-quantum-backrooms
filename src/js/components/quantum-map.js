@@ -1,5 +1,5 @@
 import { buildLightPanels, buildWallGeometry } from './level-geometry.js';
-import { buildLobby } from './lobby/lobby-builder.js?v=20261124-2';
+import { buildLobby } from './lobby/lobby-builder.js?v=20261124-3';
 
 const LOBBY_RESPAWN_MS = 10000;
 
@@ -45,7 +45,7 @@ AFRAME.registerComponent('quantum-map', {
   // No lobby, os itens de treino voltam LOBBY_RESPAWN_MS depois de usados.
   scheduleLobbyRespawn(id) {
     const def = this.lobbyItems?.find((item) => item.id === id);
-    if (this.data.floor !== 0 || !def || this.respawnTimers.has(id)) return;
+    if (this.data.floor !== 0 || !def || def.persistent || this.respawnTimers.has(id)) return;
 
     this.respawnTimers.set(id, window.setTimeout(() => {
       this.respawnTimers.delete(id);
@@ -194,17 +194,17 @@ AFRAME.registerComponent('quantum-map', {
       { x: map.stairs.x, z: map.stairs.z },
     ];
     const cells = window.quantumPhysics.pickFloorCells(map.maze, map.bitstring, 3, exclude);
-    // Os props evitam estas células para não esconder o QPS nem as garrafas.
-    this.itemCells = cells;
+    // Os props evitam estas células para não esconder as garrafas. O QPS não
+    // fica mais nos andares: o jogador pega no lobby e leva consigo.
+    this.itemCells = cells.slice(1);
     const items = [
-      { type: 'qps', cell: cells[0], skip: this.data.stairsVisible },
       { type: 'almond-water', cell: cells[1] },
       { type: 'almond-water', cell: cells[2] },
     ];
 
-    items.forEach(({ type, cell, skip }, index) => {
-      const id = `${this.data.floor}-${type}-${index}`;
-      if (!cell || skip || this.consumed.has(id)) return;
+    items.forEach(({ type, cell }, index) => {
+      const id = `${this.data.floor}-${type}-${index + 1}`;
+      if (!cell || this.consumed.has(id)) return;
 
       const item = type === 'qps' ? this.createQps() : this.createAlmondWater();
       item.setAttribute('position', `${origin + cell.x * cellSize} 1.05 ${origin + cell.z * cellSize}`);
@@ -214,47 +214,45 @@ AFRAME.registerComponent('quantum-map', {
     });
   },
 
-  // Lobby: QPS de treino (não mede nada) e uma Água de Amêndoa de verdade.
+  // Lobby: o QPS (chip na mesa dos equipamentos, fica com o jogador o jogo
+  // todo) e uma Água de Amêndoa de treino.
   addLobbyItems(origin, cellSize) {
     const { almondWater, qps } = window.LOBBY_LAYOUT.items;
-    this.itemCells = [almondWater, qps];
+    this.itemCells = [almondWater];
     this.lobbyItems = [
-      { type: 'qps', cell: qps, id: '0-qps-training', origin, cellSize },
       { type: 'almond-water', cell: almondWater, id: '0-almond-water-0', origin, cellSize },
     ];
+    if (!window.quantumPlayer?.hasQps) {
+      this.lobbyItems.push({ type: 'qps', cell: qps, id: '0-qps', origin, cellSize, persistent: true });
+    }
     this.lobbyItems.forEach((def) => {
       if (!this.consumed.has(def.id)) this.spawnLobbyItem(def);
     });
   },
 
-  spawnLobbyItem({ type, cell, id, origin, cellSize }) {
+  spawnLobbyItem({ type, cell, id, origin, cellSize, persistent }) {
     const item = type === 'qps' ? this.createQps() : this.createAlmondWater();
-    item.setAttribute('position', `${origin + cell.x * cellSize} 1.05 ${origin + cell.z * cellSize}`);
+    const y = cell.y ?? 1.05;
+    item.setAttribute('position', `${origin + cell.x * cellSize} ${y} ${origin + cell.z * cellSize}`);
     item.dataset.item = type;
     item.dataset.itemId = id;
-    item.dataset.training = 'true';
+    // O QPS do lobby é o de verdade (persistente); a garrafa é de treino.
+    item.dataset.training = persistent ? 'false' : 'true';
     this.el.appendChild(item);
   },
 
+  // O QPS é o chip quântico (modelo chip-qps.glb), ampliado e brilhando.
   createQps() {
     const qps = document.createElement('a-entity');
-    const device = document.createElement('a-box');
-    device.setAttribute('width', '0.16');
-    device.setAttribute('height', '0.05');
-    device.setAttribute('depth', '0.1');
-    device.setAttribute('material', 'color: #1b2a2a; emissive: #44ffcc; emissiveIntensity: 0.35');
-    const screen = document.createElement('a-plane');
-    screen.setAttribute('width', '0.12');
-    screen.setAttribute('height', '0.07');
-    screen.setAttribute('rotation', '-90 0 0');
-    screen.setAttribute('position', '0 0.027 0');
-    screen.setAttribute('material', 'color: #44ffcc; shader: flat');
-    screen.setAttribute('animation', 'property: material.opacity; from: 0.35; to: 1; dir: alternate; loop: true; dur: 600');
+    const model = document.createElement('a-entity');
+    model.setAttribute('gltf-model', '#chip-qps-model');
+    model.setAttribute('scale', '4 4 4');
     const glow = document.createElement('a-entity');
-    glow.setAttribute('light', 'type: point; color: #44ffcc; intensity: 0.6; distance: 2.5');
-    qps.append(device, screen, glow);
+    glow.setAttribute('light', 'type: point; color: #44ffcc; intensity: 0.5; distance: 1.6');
+    glow.setAttribute('position', '0 0.12 0');
+    qps.append(model, glow);
     qps.classList.add('clickable');
-    qps.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear');
+    qps.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 16000; easing: linear');
     return qps;
   },
 

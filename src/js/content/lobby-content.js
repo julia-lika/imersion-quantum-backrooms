@@ -24,7 +24,8 @@ export const LOBBY_GEAR = {
   items: [
     { model: '#relogio-qlink-model', label: 'Q-LINK', cellX: 2.85, scale: 2.8, lift: 0.08, tilt: 0 },
     { model: '#oculos-zeta-model', label: 'VISOR ZETA', cellX: 2.2, scale: 1.6, lift: 0.03, tilt: 0 },
-    { model: '#chip-qps-model', label: 'QPS', cellX: 1.55, scale: 4, lift: 0.02, tilt: 0 },
+    // O chip é o QPS de verdade: é um item (quantum-map), não um enfeite.
+    { label: 'QPS', cellX: 1.55, labelOnly: true },
   ],
 };
 
@@ -55,8 +56,8 @@ export const LOBBY_SIGNS = [
   },
   {
     wall: 'left', cellZ: 12,
-    title: 'QPS', subtitle: 'O SEU MAPA',
-    body: 'Cada andar esconde um QPS. Pegue com pinça ou encostando a mão (desktop: Q ou clique).\n\nPegar o QPS MEDE o andar: ele grava a planta naquele instante e revela a PORTA. Veja no pulso direito (desktop: M).\n\nO labirinto muda onde ninguém olha, e o mapa fica velho (trechos chiando). Nova leitura: pinça perto do mapa (desktop: R), 10 de energia.',
+    title: 'QPS', subtitle: 'EFEITO ZENO',
+    body: 'Pegue o QPS (o chip na mesa do canto, à esquerda do telão). Ele fica com você o jogo todo.\n\nO QPS mede sem parar tudo num raio de ~4 m e desenha o mapa (pulso direito ou M). O que é medido o tempo todo não muda: é o efeito Zeno.\n\nLonge de você ninguém mede, e o labirinto evolui. No mapa, esses trechos chiam com ?. A porta só se define quando entra no raio.',
   },
   {
     wall: 'right', cellZ: 12.5, y: 2.32, height: 0.62,
@@ -71,7 +72,7 @@ export const LOBBY_SIGNS = [
   {
     wall: 'far', cellX: 2.2, y: 1.8, height: 0.95,
     title: 'EQUIPAMENTO', subtitle: 'DO AGENTE',
-    body: 'RELÓGIO = Q-LINK: painel do pulso esquerdo (H). Andar, sanidade, energia e entidade.\n\nÓCULOS = VISOR ZETA: pinça na testa (Z). Mostra as paredes em superposição; gasta energia.\n\nCHIP QUÂNTICO = QPS: pegue no andar (Q). Mede o andar, vira o seu mapa (pulso direito ou M) e revela a porta.',
+    body: 'RELÓGIO = Q-LINK: painel do pulso esquerdo (H). Andar, sanidade, energia e entidade.\n\nÓCULOS = VISOR ZETA: pinça na testa (Z). Mostra as paredes em superposição; gasta energia.\n\nCHIP QUÂNTICO = QPS: pegue aqui (Q ou pinça) e leve com você. Mede tudo num raio de ~4 m, desenha o mapa (pulso direito ou M) e define a porta.',
   },
   {
     wall: 'far', cellX: 8.6, height: 0.6,

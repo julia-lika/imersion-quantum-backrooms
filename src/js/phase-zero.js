@@ -23,7 +23,11 @@ import {
 import { startPosition } from './maze-physics.js';
 
 const initialBits = '010110101100';
-const QPS_READING_COST = 10;
+const QPS_STORAGE_KEY = 'quantum-backrooms-qps-v1';
+// Raio de medição contínua do QPS, em células (~4,2 m). Sem QPS, só o que o
+// jogador vê de perto define a porta.
+const QPS_RADIUS_CELLS = 4;
+const BARE_RADIUS_CELLS = 2;
 const savedGame = (() => {
   try {
     return loadGameState();
@@ -56,6 +60,14 @@ const FOG_BASE_DENSITY = 0.085;
 // Estado compartilhado com os componentes A-Frame (fantasma, paredes superpostas).
 window.quantumPlayer = {
   active: false,
+  hasQps: (() => {
+    try {
+      return localStorage.getItem(QPS_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  })(),
+  qpsRadius: QPS_RADIUS_CELLS,
   visor: false,
   eyesCovered: false,
   ghost: { distance: Infinity, inView: false, hunting: false },
@@ -115,6 +127,35 @@ function persistProgress() {
   }
 }
 
+function setHasQps(value) {
+  window.quantumPlayer.hasQps = value;
+  try {
+    localStorage.setItem(QPS_STORAGE_KEY, value ? '1' : '0');
+  } catch {
+    // Sem armazenamento: vale só para esta sessão.
+  }
+}
+
+// Medição contínua: quando a porta do andar entra no raio do QPS, o estado
+// do andar é medido e a porta se define (aparece).
+let doorMeasuring = false;
+let doorCache = { bits: null, stairs: null };
+function checkDoorMeasurement() {
+  if (game.current.floor === LOBBY_FLOOR || game.current.measured || doorMeasuring) return;
+  const world = window.quantumWorld;
+  const head = document.getElementById('player-head')?.object3D.position;
+  if (!world || !head || typeof window.generateQuantumMap !== 'function') return;
+  if (doorCache.bits !== game.current.currentBitstring) {
+    doorCache = { bits: game.current.currentBitstring, stairs: window.generateQuantumMap(game.current.currentBitstring).stairs };
+  }
+  const x = (head.x - world.origin) / world.cellSize;
+  const z = (head.z - world.origin) / world.cellSize;
+  const radius = window.quantumPlayer.hasQps ? QPS_RADIUS_CELLS : BARE_RADIUS_CELLS;
+  if (Math.hypot(x - doorCache.stairs.x, z - doorCache.stairs.z) > radius) return;
+  doorMeasuring = true;
+  elements['backrooms-scene'].emit('door-measured');
+}
+
 function setHint(message) {
   // Objeto (não string): o texto pode conter ";" sem quebrar o atributo.
   elements['desktop-hint'].setAttribute('canvas-text', {
@@ -138,8 +179,10 @@ function isActive() {
 }
 
 function objectiveText() {
-  if (game.current.floor === LOBBY_FLOOR) return 'TUTORIAL: EXPLORE O LOBBY';
-  return game.current.measured ? 'DESÇA: A PORTA ESTÁ NO MAPA DO QPS' : 'ENCONTRE O QPS (É O SEU MAPA)';
+  if (game.current.floor === LOBBY_FLOOR) {
+    return window.quantumPlayer.hasQps ? 'TUTORIAL: A PORTA LEVA AO ANDAR 01' : 'PEGUE O QPS NA MESA DO CANTO';
+  }
+  return game.current.measured ? 'DESÇA: A PORTA FOI MEDIDA' : 'ACHE A PORTA: O QPS MEDE AO REDOR';
 }
 
 function syncHud() {
@@ -281,6 +324,11 @@ function bindControls() {
 function transitionToNextFloor() {
   // No lobby a porta já está aberta; nos andares, só depois de medir o QPS.
   if (transitioning || (!game.current.measured && game.current.floor !== LOBBY_FLOOR)) return;
+  if (game.current.floor === LOBBY_FLOOR && !window.quantumPlayer.hasQps) {
+    setHint('PEGUE O QPS ANTES — o chip na mesa do canto, à esquerda do telão');
+    window.setTimeout(() => document.querySelector('[floor-transition]')?.components['floor-transition']?.reset(), 2500);
+    return;
+  }
 
   transitioning = true;
   window.quantumPlayer.active = false;
@@ -299,7 +347,7 @@ function transitionToNextFloor() {
     syncMap();
     persistProgress();
     document.body.classList.remove('floor-transition');
-    setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — encontre o QPS para localizar a porta`);
+    setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — explore: a porta se define quando entra no raio do QPS`);
     transitioning = false;
     window.quantumPlayer.active = isActive();
     renderTelemetry();
@@ -343,6 +391,7 @@ function updateSurvival() {
     return;
   }
 
+  checkDoorMeasurement();
   const ghost = window.quantumPlayer.ghost;
   const result = tickSurvival(survival, game.current.sanity, {
     dt: SURVIVAL_TICK_MS / 1000,
@@ -416,6 +465,11 @@ function bindGameEvents() {
       resetPlayerPosition();
       persistProgress();
     }
+    // Jogo novo: o QPS volta para a mesa do lobby.
+    if (mode !== 'continue' && window.quantumPlayer.hasQps) {
+      setHasQps(false);
+      elements['quantum-map'].components['quantum-map']?.renderMap();
+    }
     playedThisSession = true;
     window.quantumPlayer.active = isActive();
     elements['phase-telemetry'].hidden = false;
@@ -462,17 +516,11 @@ function bindGameEvents() {
   });
   scene.addEventListener('enter-vr', () => beginGame('lobby'));
 
-  // Nova leitura do mapa do QPS: custa energia (medir não é de graça).
-  scene.addEventListener('qps-reading-request', () => {
-    if (!isActive()) return;
-    if (survival.energy < QPS_READING_COST) {
-      setHint('ENERGIA INSUFICIENTE PARA NOVA LEITURA — beba Água de Amêndoa');
-      return;
-    }
-    survival = { ...survival, energy: survival.energy - QPS_READING_COST };
-    scene.emit('qps-reading-granted');
-    scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 350, peak: 0.2 });
-    setHint(`NOVA LEITURA DO QPS — mapa atualizado (-${QPS_READING_COST} de energia)`);
+  // Pegar o QPS na mesa do lobby: ele fica com o agente o jogo todo.
+  scene.addEventListener('qps-collected', () => {
+    setHasQps(true);
+    scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
+    setHint('QPS NA MÃO — ele mede tudo num raio de ~4 m e desenha o mapa (pulso direito ou M)');
     renderTelemetry();
   });
   scene.addEventListener('visor-toggle-request', toggleVisor);
@@ -506,8 +554,9 @@ function bindGameEvents() {
       detail.metrics
     );
 
-    // A medição do QPS não refaz o labirinto: ela grava a planta (o mapa do
-    // QPS) e revela a porta. O andar continua sendo o mesmo bitstring.
+    // A medição não refaz o labirinto: só define a porta. O andar continua
+    // sendo o mesmo bitstring.
+    doorMeasuring = false;
     const floorBits = game.current.currentBitstring;
     const map = window.generateQuantumMap(floorBits);
     game.current = recordMeasurement(game.current, {
