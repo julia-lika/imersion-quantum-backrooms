@@ -274,7 +274,13 @@ AFRAME.registerComponent('player-locomotion', {
       this.sceneTime
     );
 
-    this.el.sceneEl.emit(target ? 'phase-shift-attempt' : 'phase-shift-blocked', { target });
+    const reason = target ? null : physics.phaseBlocker?.(
+      world,
+      { x: head.x, z: head.z },
+      { x: this.forward.x, z: this.forward.z },
+      this.sceneTime
+    );
+    this.el.sceneEl.emit(target ? 'phase-shift-attempt' : 'phase-shift-blocked', { target, reason });
   },
 
   teleportHead(x, z) {

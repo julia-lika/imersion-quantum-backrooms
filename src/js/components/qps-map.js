@@ -148,11 +148,10 @@ AFRAME.registerComponent('qps-map', {
           for (let length = 1; length <= 2; length += 1) {
             const run = Array.from({ length }, (_, i) => ({ x: x + dx * (i + 1), z: z + dz * (i + 1) }));
             if (!run.every((c) => solid(c.x, c.z))) break;
+            // Superposição barra o salto de fase (só passa quando abre).
+            if (run.some((c) => memory.superposed.has(`${c.x},${c.z}`))) break;
             if (free(x + dx * (length + 1), z + dz * (length + 1))) {
-              run.forEach((c) => {
-                if (memory.superposed.has(`${c.x},${c.z}`)) return;
-                marked.set(`${c.x},${c.z}`, c);
-              });
+              run.forEach((c) => marked.set(`${c.x},${c.z}`, c));
               break;
             }
           }

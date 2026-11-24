@@ -239,7 +239,7 @@ export const QUANTUM_SLIDES = [
     cards: [
       {
         heading: 'Parede ou passagem?',
-        text: 'Algumas paredes estão "parede e passagem" ao mesmo tempo e ficam piscando, como a moeda girando. O Visor Zeta (Z ou pinça na testa) mostra quais são: no mapa, elas aparecem em roxo.\n\nSe você entra quando ela abre, você a mede: ela vira passagem e só volta a piscar quando você sai.',
+        text: 'Algumas paredes estão "parede e passagem" ao mesmo tempo e ficam piscando, como a moeda girando. O Visor Zeta (Z ou pinça na testa) mostra quais são: no mapa, elas aparecem em roxo.\n\nEla só deixa passar quando abre. Entrou nessa hora? Você a mediu: ela vira passagem e só volta a piscar quando você sai. O salto de fase não funciona nela.',
       },
       { diagram: 'superposedWall', caption: 'Teste na parede roxa de treino, no fundo do salão à direita.' },
     ],
@@ -250,7 +250,7 @@ export const QUANTUM_SLIDES = [
     cards: [
       {
         heading: 'Atravessar a parede',
-        text: 'No mundo quântico, uma partícula às vezes passa por uma barreira que, pelas regras do dia a dia, ela nunca conseguiria. Isso é tunelamento, e depende de sorte.\n\nNo jogo: palmas na parede (ou X) para atravessar até 2 blocos. Gasta 25 de energia e 3 de sanidade, e dá certo 92% das vezes. No mapa, essas paredes aparecem em azul.',
+        text: 'No mundo quântico, uma partícula às vezes passa por uma barreira que, pelas regras do dia a dia, ela nunca conseguiria. Isso é tunelamento, e depende de sorte.\n\nNo jogo: palmas na parede (ou X) para atravessar até 2 blocos. Gasta 25 de energia e 3 de sanidade, e dá certo 92% das vezes. Só vale para paredes comuns (azuis no mapa), não para as roxas.',
       },
       { diagram: 'tunneling', caption: 'A onda bate na barreira e um pedacinho passa.' },
     ],

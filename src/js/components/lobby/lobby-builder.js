@@ -7,7 +7,7 @@ import {
   LOBBY_SLIDES,
   LOBBY_TRAINING_WALLS,
   LOBBY_TV,
-} from '../../content/lobby-content.js?v=20261124-10';
+} from '../../content/lobby-content.js?v=20261124-12';
 
 // Rotação de uma peça presa a cada parede, com a frente virada para o salão.
 const WALL_ROTATION = { left: 90, right: -90, far: 180 };

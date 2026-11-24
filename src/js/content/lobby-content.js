@@ -48,7 +48,7 @@ export const LOBBY_SIGNS = [
   {
     wall: 'left', cellZ: 11.2, y: 1.85,
     title: 'ESTAÇÃO 2: VISOR ZETA', subtitle: 'OS ÓCULOS',
-    body: 'Os óculos são o Visor Zeta. Com ele ligado, você enxerga as paredes em SUPERPOSIÇÃO (roxas), que abrem e fecham. Entre quando abrir: você a mede e ela fica aberta.\n\nPegue os óculos na mesa (desktop: Q). Ligar e desligar: pinça na testa (desktop: Z). Gasta energia.',
+    body: 'Os óculos são o Visor Zeta. Com ele ligado, você enxerga as paredes em SUPERPOSIÇÃO (roxas), que abrem e fecham. Entre quando abrir: você a mede e ela fica aberta. O salto de fase (X) não passa por ela.\n\nPegue os óculos na mesa (desktop: Q). Ligar e desligar: pinça na testa (desktop: Z). Gasta energia.',
   },
   {
     wall: 'right', cellZ: 12.5, y: 2.32, height: 0.62,
