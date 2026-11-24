@@ -193,7 +193,10 @@ AFRAME.registerComponent('qps-map', {
     ctx.strokeRect(4, 4, width - 8, height - 8);
 
     ctx.textBaseline = 'top';
-    ctx.fillStyle = MAP_GREEN;
+    // Título com o brilho iridescente do chip.
+    const shine = ctx.createLinearGradient(pad, 0, pad + 200, 0);
+    ['#2de2c0', '#8cff5a', '#ffd84a', '#ff8a3c', '#ff5a8a'].forEach((color, index) => shine.addColorStop(index / 4, color));
+    ctx.fillStyle = shine;
     ctx.font = `bold 28px ${MAP_MONO}`;
     ctx.fillText('QPS // MAPA', pad, pad);
     ctx.font = `20px ${MAP_MONO}`;
@@ -208,8 +211,8 @@ AFRAME.registerComponent('qps-map', {
       ctx.fillText('SEM QPS', pad, height / 2 - 40);
       ctx.font = `18px ${MAP_MONO}`;
       ctx.fillStyle = MAP_DIM;
-      ctx.fillText('Pegue o chip na mesa do lobby,', pad, height / 2);
-      ctx.fillText('à esquerda do telão.', pad, height / 2 + 28);
+      ctx.fillText('Pegue o chip na ESTAÇÃO 3', pad, height / 2);
+      ctx.fillText('do lobby (parede esquerda).', pad, height / 2 + 28);
       this.texture.needsUpdate = true;
       return;
     }
@@ -229,19 +232,25 @@ AFRAME.registerComponent('qps-map', {
     // Cores bem diferentes do verde das paredes comuns: azul = Salto de Fase,
     // roxo = superposição (fica mais forte com o Visor Zeta ligado).
     const phase = new Set(this.phaseWalls(memory).map(({ x, z }) => `${x},${z}`));
+    // Paleta do chip QPS: as paredes comuns mudam de cor pelo mapa, do verde-água
+    // ao vermelho (sem azul nem roxo, que são do salto de fase e da superposição).
+    // Faixas diagonais que se repetem a cada 10 células: verde-água, verde,
+    // amarelo, laranja e vermelho, como o brilho iridescente do chip.
+    const hueAt = (x, z) => Math.round(165 - (((x + z) % 10) / 9) * 165);
+    const tint = (x, z, alpha, light = 58) => `hsla(${hueAt(x, z)}, 85%, ${light}%, ${alpha})`;
     memory.cells.forEach((row, z) => {
       row.forEach((value, x) => {
         const px = left + x * cell;
         const pz = top + z * cell;
         if (value === null) {
-          ctx.fillStyle = 'rgba(57, 255, 136, 0.03)';
+          ctx.fillStyle = tint(x, z, 0.04);
           ctx.fillRect(px, pz, cell - 1, cell - 1);
           return;
         }
         const live = player && Math.hypot(x - player.x, z - player.z) <= radius;
         if (!live && this.isStale(x, z, versions)) {
           // Evoluiu depois da última medição: estática.
-          ctx.fillStyle = `rgba(57, 255, 136, ${(0.08 + Math.random() * 0.4).toFixed(2)})`;
+          ctx.fillStyle = `hsla(${Math.floor(Math.random() * 360)}, 80%, 60%, ${(0.08 + Math.random() * 0.4).toFixed(2)})`;
         } else if (memory.superposed.has(`${x},${z}`)) {
           // Com o Visor Zeta ligado o roxo fica mais forte.
           const alpha = (visor ? 1 : 0.65) * (live ? 1 : 0.55);
@@ -249,9 +258,9 @@ AFRAME.registerComponent('qps-map', {
         } else if (phase.has(`${x},${z}`)) {
           ctx.fillStyle = live ? 'rgba(64, 150, 255, 0.95)' : 'rgba(64, 150, 255, 0.5)';
         } else if (value === '#' || value === 'F') {
-          ctx.fillStyle = live ? 'rgba(57, 255, 136, 0.95)' : 'rgba(57, 255, 136, 0.5)';
+          ctx.fillStyle = tint(x, z, live ? 0.95 : 0.5);
         } else {
-          ctx.fillStyle = live ? 'rgba(57, 255, 136, 0.2)' : 'rgba(57, 255, 136, 0.1)';
+          ctx.fillStyle = tint(x, z, live ? 0.2 : 0.1, 50);
         }
         ctx.fillRect(px, pz, cell - 1, cell - 1);
       });
@@ -286,6 +295,9 @@ AFRAME.registerComponent('qps-map', {
     if (stairs && (mapInfo.data.stairsVisible || mapInfo.mapInfo.lobby)) {
       ctx.fillStyle = '#e3cc4b';
       ctx.fillRect(left + stairs.x * cell - 2, top + stairs.z * cell - 2, cell + 3, cell + 3);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(left + stairs.x * cell - 2, top + stairs.z * cell - 2, cell + 3, cell + 3);
     } else if (mapInfo?.mapInfo?.doorCandidates?.length) {
       // Porta ainda em superposição: as posições possíveis piscam tracejadas.
       ctx.save();

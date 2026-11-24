@@ -3,7 +3,7 @@
 // ilustrações de moedas e gatos). O conteúdo está em js/content/quantum-slides.js.
 // Desktop: clique nos botões (ou na metade esquerda/direita da tela) ou use [ e ].
 // VR: toque os botões com a mão.
-import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../../content/quantum-slides.js?v=20261124-10';
+import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../../content/quantum-slides.js?v=20261124-11';
 
 const CANVAS = { width: 1600, height: 900 };
 const PAD = 72;

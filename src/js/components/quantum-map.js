@@ -260,7 +260,7 @@ AFRAME.registerComponent('quantum-map', {
   createGear(type) {
     const config = {
       qps: { model: '#chip-qps-model', scale: 4, color: '#44ffcc' },
-      qlink: { model: '#relogio-qlink-model', scale: 1.6, color: '#39ff88' },
+      qlink: { model: '#relogio-qlink-model', scale: 1.6, color: '#ff9a3c' },
       visor: { model: '#oculos-zeta-model', scale: 1.6, color: '#b46bff' },
     }[type];
     const gear = document.createElement('a-entity');

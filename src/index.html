@@ -152,9 +152,25 @@
         color: #f4dda1;
       }
 
-      #phase-telemetry .phase-candidates {
-        color: #a9e7d2;
-        white-space: nowrap;
+      #phase-telemetry canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        margin: 2px 0 4px;
+      }
+
+      #phase-telemetry .phase-caption {
+        color: #a99a6c;
+        font-size: 0.52rem;
+        margin-bottom: 6px;
+      }
+
+      #hud .hud-heading {
+        color: #ffe69b;
+      }
+
+      #hud .hud-value {
+        color: #f4dda1;
       }
 
       #phase-telemetry.zeta-visor {
@@ -287,21 +303,21 @@
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.7.x/dist/aframe-extras.min.js"></script>
     <script type="module" src="js/maze-physics.js"></script>
     <script type="module" src="js/map-generator.js?v=20261124-10"></script>
-    <script type="module" src="js/quantum-bank.js?v=20261124-1"></script>
+    <script type="module" src="js/quantum-bank.js?v=20261124-11"></script>
     <script type="module" src="js/components/backrooms-wall.js"></script>
-    <script type="module" src="js/phase-zero.js?v=20261124-10"></script>
+    <script type="module" src="js/phase-zero.js?v=20261124-11"></script>
     <script src="js/components/xr-hands.js"></script>
     <script src="js/components/hand-gestures.js?v=20261124-4"></script>
     <script src="js/components/player-locomotion.js?v=20261124-8"></script>
     <script src="js/components/canvas-text.js?v=20261124-6"></script>
     <script src="js/components/terminal-panel.js"></script>
-    <script src="js/components/wrist-hud.js?v=20261124-4"></script>
-    <script src="js/components/qps-map.js?v=20261124-10"></script>
+    <script src="js/components/wrist-hud.js?v=20261124-11"></script>
+    <script src="js/components/qps-map.js?v=20261124-13"></script>
     <script src="js/components/door-proximity.js"></script>
     <script src="js/components/lobby/lobby-furniture.js?v=20261124-4"></script>
     <script src="js/components/lobby/lobby-computer.js"></script>
     <script src="js/components/lobby/training-wall.js"></script>
-    <script type="module" src="js/components/lobby/quantum-slides.js?v=20261124-10"></script>
+    <script type="module" src="js/components/lobby/quantum-slides.js?v=20261124-11"></script>
     <script src="js/components/entity-tv.js?v=20261123-2"></script>
     <script src="js/components/vr-effects.js?v=20261123-1"></script>
     <script src="js/components/stairs-compass.js?v=20261123-1"></script>
@@ -310,7 +326,7 @@
     <script src="js/components/light-flicker.js"></script>
     <script src="js/components/fixture-lights.js?v=20261123-1"></script>
     <script src="js/components/floor-transition.js"></script>
-    <script type="module" src="js/components/quantum-map.js?v=20261124-10"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261124-11"></script>
     <script type="module" src="js/components/maze-decoherence.js?v=20261124-10"></script>
     <script src="js/components/scatter-props.js?v=20261124-1"></script>
   </head>
@@ -337,28 +353,19 @@
     <div id="eyelid-bottom" class="eyelid"></div>
 
     <div id="hud" hidden>
-      <div>NÍVEL 0 // QUANTUM BACKROOMS</div>
-      <div id="hud-state">ESTADO: NÃO MEDIDO</div>
-      <div id="hud-qpu">QPU: CONECTANDO // 12 QUBITS</div>
-      <div id="hud-qps">QPS: --</div>
-      <div id="hud-coherence">COERÊNCIA: --</div>
-      <div id="hud-noise">RUÍDO: --</div>
-      <div id="hud-sanity">SANIDADE: 100%</div>
-      <div id="hud-energy">ENERGIA: 100%</div>
-      <div id="hud-measurements">MEDIÇÕES: 0</div>
+      <div id="hud-floor" class="hud-heading">QUANTUM BACKROOMS // LOBBY</div>
+      <div>STRING MEDIDA: <span id="hud-bits" class="hud-value">--</span></div>
+      <div id="hud-origin">ORIGEM: --</div>
     </div>
 
+    <!-- Painel quântico simplificado: o circuito usado e o estado do andar.
+         Sanidade, energia e objetivo ficam no Q-LINK (pulso esquerdo). -->
     <div id="phase-telemetry" hidden>
-      <div class="phase-heading">TELEMETRIA QUÂNTICA // FASE 0</div>
-      <div id="phase-status" class="phase-value">REALIDADE: COLAPSADA</div>
-      <div><span id="phase-floor">ANDAR 01</span> // <span id="phase-qps">BUSCANDO QPS</span> // <span id="phase-tick">CICLO 0</span></div>
-      <div>OBJETIVO: ACHE A PORTA (O QPS MEDE AO SEU REDOR)</div>
-      <div>ANDAR ATUAL: <span id="phase-current" class="phase-value"></span></div>
-      <div class="phase-candidates" id="phase-candidates"></div>
-      <div>ENTROPIA DA GRADE // SOBREPOSTAS <span id="phase-superposed">0</span> COLAPSADAS <span id="phase-collapsed">84</span> TOTAL <span id="phase-total">84</span></div>
-      <div>ENTIDADE // SENTINELA <span id="phase-sentinel" class="phase-value">LIVRE</span> // FANTASMA <span id="phase-ghost" class="phase-value">ADORMECIDA</span></div>
-      <div>TEMPO OLHANDO <span id="phase-look-time">0.0s / 10s</span></div>
-      <div id="phase-visor" class="phase-value">VISOR ZETA DESLIGADO</div>
+      <div class="phase-heading">CIRCUITO // 12 QUBITS</div>
+      <canvas id="circuit-canvas" width="560" height="250"></canvas>
+      <div class="phase-caption">gira (RY) → amarra em fila (CX) → gira → anel de fase (CZ) → gira → mede</div>
+      <div id="phase-door" class="phase-value">PORTA: --</div>
+      <div id="phase-shifts">TRECHOS QUE EVOLUÍRAM: 0</div>
     </div>
 
     <a-scene
@@ -458,6 +465,6 @@
       <a-sky color="#0a0805"></a-sky>
     </a-scene>
 
-    <script src="js/quantum-measurement.js?v=20261124-10"></script>
+    <script src="js/quantum-measurement.js?v=20261124-11"></script>
   </body>
 </html>

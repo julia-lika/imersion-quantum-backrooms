@@ -98,26 +98,16 @@ function createPhaseState(bitstring) {
 function cacheElements() {
   [
     'phase-telemetry',
-    'phase-floor',
-    'phase-qps',
-    'phase-tick',
-    'phase-current',
-    'phase-candidates',
-    'phase-superposed',
-    'phase-collapsed',
-    'phase-total',
-    'phase-sentinel',
-    'phase-ghost',
-    'phase-look-time',
-    'phase-visor',
-    'phase-status',
+    'phase-door',
+    'phase-shifts',
+    'circuit-canvas',
+    'hud-floor',
+    'hud-bits',
+    'hud-origin',
     'quantum-map',
     'desktop-hint',
     'player',
     'backrooms-scene',
-    'hud-sanity',
-    'hud-energy',
-    'hud-measurements',
   ].forEach((id) => {
     elements[id] = document.getElementById(id);
   });
@@ -232,11 +222,6 @@ function objectiveText() {
   return game.current.measured ? 'DESÇA: A PORTA FOI MEDIDA' : 'ACHE A PORTA: O QPS MEDE AO REDOR';
 }
 
-function syncHud() {
-  elements['hud-sanity'].textContent = `SANIDADE: ${Math.round(game.current.sanity)}%`;
-  elements['hud-energy'].textContent = `ENERGIA: ${Math.round(survival.energy)}%`;
-  elements['hud-measurements'].textContent = `MEDIÇÕES: ${game.current.measurements ?? 0}`;
-}
 
 // Sanidade baixa engrossa a névoa e escurece o andar.
 function syncAtmosphere() {
@@ -258,40 +243,113 @@ function syncMap() {
   elements['backrooms-scene'].setAttribute('data-floor', game.current.floor);
 }
 
-function renderTelemetry() {
-  const current = state.current;
-  const candidates = current.candidates.length > 1
-    ? current.candidates.map((bits, index) => (
-      `${index === 0 ? '>' : '|'} |${formatBits(bits)}⟩ p=50%`
-    )).join('<br>')
-    : `> |${formatBits(current.bitstring)}⟩ p=100%`;
+// Painéis do desktop: a string medida do andar, de onde ela veio e o circuito
+// que a produziu. O resto (sanidade, energia, objetivo) fica no Q-LINK.
+function floorOrigin() {
+  if (game.current.floor === LOBBY_FLOOR) return 'ORIGEM: STRING FIXA DE TREINO (LOBBY)';
+  if (new URLSearchParams(location.search).has('live')) return 'ORIGEM: API QUÂNTICA (?live)';
+  const bank = window.quantumBank?.data;
+  if (!bank) return 'ORIGEM: SORTEIO CLÁSSICO (BANCO INDISPONÍVEL)';
+  const entry = window.quantumBank.pickEntry(bank, game.current.floor);
+  const where = entry.source === 'local-sim' ? 'SIMULADOR EXATO' : `HARDWARE ${String(entry.backend).toUpperCase()}`;
+  return `ORIGEM: ${where} // ${entry.shots} SHOTS GRAVADOS`;
+}
 
-  elements['phase-floor'].textContent = game.current.floor === LOBBY_FLOOR
-    ? 'LOBBY // FASE 0'
-    : `ANDAR ${String(game.current.floor).padStart(2, '0')}`;
-  elements['phase-qps'].textContent = game.current.qps > 0
-    ? `QPS ${game.current.qps}`
-    : 'BUSCANDO QPS';
-  elements['phase-tick'].textContent = `CICLO ${current.tick}`;
-  elements['phase-current'].textContent = formatBits(current.bitstring);
-  elements['phase-candidates'].innerHTML = candidates;
-  elements['phase-superposed'].textContent = current.superposedCells;
-  elements['phase-collapsed'].textContent = current.collapsedCells;
-  elements['phase-total'].textContent = current.totalCells;
-  const ghost = window.quantumPlayer.ghost;
-  elements['phase-sentinel'].textContent = current.superposedCells > 16 ? 'ATIVA' : 'LIVRE';
-  elements['phase-ghost'].textContent = ghost.hunting
-    ? (survival.visor ? 'CAÇANDO // VISÍVEL' : 'CAÇANDO')
-    : (survival.visor ? 'VISÍVEL' : 'ADORMECIDA');
-  elements['phase-look-time'].textContent = `${survival.exposure.toFixed(1)}s / ${SURVIVAL.exposureTime}s${survival.eyesCovered ? ' // OLHOS COBERTOS' : ''}`;
-  elements['phase-visor'].textContent = survival.visor
-    ? `VISOR ZETA LIGADO // ${Math.round(survival.energy)}%`
-    : 'VISOR ZETA DESLIGADO';
-  elements['phase-status'].textContent = current.superposedCells > 0
-    ? 'REALIDADE: SOBREPOSTA'
-    : 'REALIDADE: COLAPSADA';
+// Desenho do circuito real (backend/quantum_circuit.py), em miniatura:
+// RY em todos, CX em fila, RY, CZ em anel, RY e medição.
+let circuitDrawn = false;
+function drawCircuit() {
+  const canvas = elements['circuit-canvas'];
+  if (!canvas || circuitDrawn) return;
+  circuitDrawn = true;
+  const ctx = canvas.getContext('2d');
+  const { width, height } = canvas;
+  const qubits = 12;
+  const top = 12;
+  const gap = (height - top * 2) / (qubits - 1);
+  const y = (q) => top + q * gap;
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = 'rgba(216, 188, 117, 0.45)';
+  ctx.lineWidth = 1.5;
+  for (let q = 0; q < qubits; q += 1) {
+    ctx.beginPath();
+    ctx.moveTo(28, y(q));
+    ctx.lineTo(width - 10, y(q));
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#a99a6c';
+  ctx.font = '12px "Courier New", monospace';
+  ctx.textBaseline = 'middle';
+  for (let q = 0; q < qubits; q += 1) ctx.fillText(`q${q}`, 0, y(q));
+  const box = (x, q, color) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x - 9, y(q) - 7, 18, 14);
+  };
+  const dot = (x, q, color) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y(q), 3.2, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  const link = (x, a, b, color) => {
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y(a));
+    ctx.lineTo(x, y(b));
+    ctx.stroke();
+  };
+  const ry = '#e3cc4b';
+  const cx = '#44ffcc';
+  const cz = '#c45cff';
+  for (let q = 0; q < qubits; q += 1) box(52, q, ry);
+  // CX em fila (escada): q -> q+1.
+  for (let q = 0; q < qubits - 1; q += 1) {
+    const x = 80 + q * 16;
+    link(x, q, q + 1, cx);
+    dot(x, q, cx);
+    ctx.strokeStyle = cx;
+    ctx.beginPath();
+    ctx.arc(x, y(q + 1), 5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  for (let q = 0; q < qubits; q += 1) box(272, q, ry);
+  // CZ em anel: q com q+1, e o último com o primeiro.
+  for (let q = 0; q < qubits; q += 1) {
+    const x = 300 + q * 14;
+    const other = (q + 1) % qubits;
+    link(x, q, other, cz);
+    dot(x, q, cz);
+    dot(x, other, cz);
+  }
+  for (let q = 0; q < qubits; q += 1) box(486, q, ry);
+  for (let q = 0; q < qubits; q += 1) {
+    ctx.strokeStyle = '#f4dda1';
+    ctx.strokeRect(514 - 9, y(q) - 7, 18, 14);
+    ctx.beginPath();
+    ctx.arc(514, y(q) + 4, 6, Math.PI, 0);
+    ctx.stroke();
+  }
+}
+
+function renderTelemetry() {
+  const lobby = game.current.floor === LOBBY_FLOOR;
+  elements['hud-floor'].textContent = lobby
+    ? 'QUANTUM BACKROOMS // LOBBY'
+    : `QUANTUM BACKROOMS // ANDAR ${String(game.current.floor).padStart(2, '0')}`;
+  elements['hud-bits'].textContent = formatBits(game.current.currentBitstring);
+  elements['hud-origin'].textContent = floorOrigin();
+  drawCircuit();
+  const positions = doorCandidates().length;
+  elements['phase-door'].textContent = lobby
+    ? 'PORTA: FIXA (LOBBY DE TREINO)'
+    : (game.current.measured
+      ? `PORTA: MEDIDA // ${window.quantumMeasureStats?.door ? `POSIÇÃO ${window.quantumMeasureStats.door}` : 'DEFINIDA'}`
+      : `PORTA: EM SUPERPOSIÇÃO ENTRE ${positions} POSIÇÕES`);
+  const shifts = window.quantumDecoherence?.stats().shifts ?? 0;
+  elements['phase-shifts'].textContent = lobby
+    ? 'TRECHOS QUE EVOLUÍRAM: — (O LOBBY NÃO MUDA)'
+    : `TRECHOS QUE EVOLUÍRAM: ${shifts}`;
   elements['phase-telemetry'].classList.toggle('zeta-visor', survival.visor);
-  syncHud();
 }
 
 function advanceStream() {

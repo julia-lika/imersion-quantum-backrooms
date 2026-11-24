@@ -105,7 +105,7 @@ if (typeof window !== 'undefined') {
     console.warn('[quantum-backrooms] banco quântico indisponível, usando API/local', error);
     return null;
   });
-  window.quantumBank = { ready, measureFromBank, qubitMarginals, shannonEntropy, data: null };
+  window.quantumBank = { ready, measureFromBank, qubitMarginals, shannonEntropy, pickEntry, data: null };
   ready.then((bank) => { window.quantumBank.data = bank; });
   // Uma medição do andar: tirada do banco gravado; sem banco, o plano B clássico.
   window.drawFloorBitstring = (floor) => {
