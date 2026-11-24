@@ -79,14 +79,31 @@ export function qubitMarginals(counts) {
   return marginals;
 }
 
+// De onde veio o andar, em texto curto para o HUD.
+// Hardware real: "QPU IBM_TORINO // JOB D4F9A1C2 // 24/11/2026"; simulador: "SIMULADOR EXATO".
+export function describeOrigin(entry) {
+  if (!entry || entry.source === 'local-sim') return 'SIMULADOR EXATO';
+  const parts = [`QPU ${String(entry.backend).toUpperCase()}`];
+  if (entry.job_id) parts.push(`JOB ${String(entry.job_id).slice(0, 8).toUpperCase()}`);
+  const date = entry.executed_at ? new Date(entry.executed_at) : null;
+  if (date && !Number.isNaN(date.getTime())) {
+    const dd = String(date.getUTCDate()).padStart(2, '0');
+    const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+    parts.push(`${dd}/${mm}/${date.getUTCFullYear()}`);
+  }
+  return parts.join(' // ');
+}
+
 export function measureFromBank(bank, floor, random = Math.random) {
   const entry = pickEntry(bank, floor);
+  const label = entry.source === 'local-sim' ? entry.backend : describeOrigin(entry).replace(/^QPU /, '');
 
   return {
     bitstring: sampleFromCounts(entry.counts, random),
     source: entry.source,
-    backend: `${entry.backend} (gravado)`,
+    backend: `${label} (gravado)`,
     job_id: entry.job_id ?? null,
+    executed_at: entry.executed_at ?? null,
     shots: entry.shots,
     floor,
     entropy_bits: entry.entropy_bits ?? shannonEntropy(entry.counts),
@@ -105,7 +122,7 @@ if (typeof window !== 'undefined') {
     console.warn('[quantum-backrooms] banco quântico indisponível, usando API/local', error);
     return null;
   });
-  window.quantumBank = { ready, measureFromBank, qubitMarginals, shannonEntropy, pickEntry, data: null };
+  window.quantumBank = { ready, measureFromBank, describeOrigin, qubitMarginals, shannonEntropy, pickEntry, data: null };
   ready.then((bank) => { window.quantumBank.data = bank; });
   // Uma medição do andar: tirada do banco gravado; sem banco, o plano B clássico.
   window.drawFloorBitstring = (floor) => {
