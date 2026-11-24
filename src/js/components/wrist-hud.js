@@ -70,6 +70,11 @@ AFRAME.registerComponent('wrist-hud', {
     };
     this.onKey = (event) => {
       if (event.code !== this.data.key || event.repeat) return;
+      if (!window.quantumPlayer?.gear?.qlink) {
+        this.desktopOpen = false;
+        this.el.sceneEl.emit('interaction-hint', { text: 'SEM Q-LINK — pegue o relógio na ESTAÇÃO 1 do lobby' });
+        return;
+      }
       this.desktopOpen = !this.desktopOpen;
       if (this.desktopOpen) this.draw();
     };
@@ -229,8 +234,12 @@ AFRAME.registerComponent('wrist-hud', {
     const head = tracker.head;
     const hand = tracker.hands[this.data.hand];
     let show = false;
+    // Só funciona depois de pegar o relógio na estação do Q-LINK.
+    const enabled = Boolean(window.quantumPlayer?.gear?.qlink);
 
-    if (tracker.inVr) {
+    if (!enabled) {
+      show = false;
+    } else if (tracker.inVr) {
       if (hand?.tracked) {
         // Visível só quando o pulso está no centro do olhar e perto do rosto.
         this.el.object3D.position.copy(hand.position).add({ x: 0, y: 0.08, z: 0 });

@@ -204,12 +204,16 @@ export const LOBBY = {
     [5, 4], [6, 4], // mesa com o computador
     [11, 7], [11, 8], // mesa de metal com o terminal
     [3, 5], // poltrona
-    [1, 17], [2, 17], [3, 17], // mesa dos equipamentos (canto do telão)
+    [1, 8], [1, 9], // estação do Q-LINK
+    [1, 11], [1, 12], // estação do Visor Zeta
+    [2, 17], [3, 17], // estação do QPS (canto do telão)
   ],
   items: {
     almondWater: { x: 9, z: 10 },
-    // QPS: o chip em cima da mesa dos equipamentos (canto do telão).
-    qps: { x: 1.55, z: 17.02, y: 0.76 },
+    // Equipamentos, cada um na mesa da sua estação, perto da borda de quem pega.
+    qlink: { x: 1.09, z: 8.2, y: 0.8 },
+    visor: { x: 1.09, z: 11.2, y: 0.76 },
+    qps: { x: 2.2, z: 16.91, y: 0.76 },
   },
   // Sala de treino atrás da parede direita (x 13..15, z 12..16). A parede em
   // (12, 12..13) é sólida, para testar o salto de fase (tunelamento); a de

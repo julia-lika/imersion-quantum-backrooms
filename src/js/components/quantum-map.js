@@ -1,5 +1,5 @@
 import { buildLightPanels, buildWallGeometry } from './level-geometry.js';
-import { buildLobby } from './lobby/lobby-builder.js?v=20261124-3';
+import { buildLobby } from './lobby/lobby-builder.js?v=20261124-4';
 
 const LOBBY_RESPAWN_MS = 10000;
 
@@ -214,24 +214,25 @@ AFRAME.registerComponent('quantum-map', {
     });
   },
 
-  // Lobby: o QPS (chip na mesa dos equipamentos, fica com o jogador o jogo
-  // todo) e uma Água de Amêndoa de treino.
+  // Lobby: os três equipamentos (cada um na mesa da sua estação; ficam com o
+  // jogador o jogo todo) e uma Água de Amêndoa de treino.
   addLobbyItems(origin, cellSize) {
-    const { almondWater, qps } = window.LOBBY_LAYOUT.items;
+    const { almondWater, qps, qlink, visor } = window.LOBBY_LAYOUT.items;
     this.itemCells = [almondWater];
     this.lobbyItems = [
       { type: 'almond-water', cell: almondWater, id: '0-almond-water-0', origin, cellSize },
     ];
-    if (!window.quantumPlayer?.hasQps) {
-      this.lobbyItems.push({ type: 'qps', cell: qps, id: '0-qps', origin, cellSize, persistent: true });
-    }
+    const gear = window.quantumPlayer?.gear || {};
+    [['qlink', qlink], ['visor', visor], ['qps', qps]].forEach(([type, cell]) => {
+      if (!gear[type]) this.lobbyItems.push({ type, cell, id: `0-${type}`, origin, cellSize, persistent: true });
+    });
     this.lobbyItems.forEach((def) => {
       if (!this.consumed.has(def.id)) this.spawnLobbyItem(def);
     });
   },
 
   spawnLobbyItem({ type, cell, id, origin, cellSize, persistent }) {
-    const item = type === 'qps' ? this.createQps() : this.createAlmondWater();
+    const item = type === 'almond-water' ? this.createAlmondWater() : this.createGear(type);
     const y = cell.y ?? 1.05;
     item.setAttribute('position', `${origin + cell.x * cellSize} ${y} ${origin + cell.z * cellSize}`);
     item.dataset.item = type;
@@ -241,19 +242,26 @@ AFRAME.registerComponent('quantum-map', {
     this.el.appendChild(item);
   },
 
-  // O QPS é o chip quântico (modelo chip-qps.glb), ampliado e brilhando.
-  createQps() {
-    const qps = document.createElement('a-entity');
+  // Equipamentos: relógio (Q-LINK), óculos (Visor Zeta) e chip (QPS). Os
+  // modelos são pequenos de verdade (o chip tem 4 cm), então vêm ampliados.
+  createGear(type) {
+    const config = {
+      qps: { model: '#chip-qps-model', scale: 4, color: '#44ffcc' },
+      qlink: { model: '#relogio-qlink-model', scale: 2.8, color: '#39ff88' },
+      visor: { model: '#oculos-zeta-model', scale: 1.6, color: '#b46bff' },
+    }[type];
+    const gear = document.createElement('a-entity');
     const model = document.createElement('a-entity');
-    model.setAttribute('gltf-model', '#chip-qps-model');
-    model.setAttribute('scale', '4 4 4');
+    model.setAttribute('gltf-model', config.model);
+    model.setAttribute('scale', `${config.scale} ${config.scale} ${config.scale}`);
     const glow = document.createElement('a-entity');
-    glow.setAttribute('light', 'type: point; color: #44ffcc; intensity: 0.5; distance: 1.6');
-    glow.setAttribute('position', '0 0.12 0');
-    qps.append(model, glow);
-    qps.classList.add('clickable');
-    qps.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 16000; easing: linear');
-    return qps;
+    glow.setAttribute('light', `type: point; color: ${config.color}; intensity: 0.5; distance: 1.6`);
+    glow.setAttribute('position', '0 0.15 0');
+    gear.append(model, glow);
+    gear.classList.add('clickable');
+    gear.dataset.gear = type;
+    gear.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 16000; easing: linear');
+    return gear;
   },
 
   createAlmondWater() {

@@ -286,19 +286,19 @@
     <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.7.x/dist/aframe-extras.min.js"></script>
     <script type="module" src="js/maze-physics.js"></script>
-    <script type="module" src="js/map-generator.js?v=20261124-3"></script>
+    <script type="module" src="js/map-generator.js?v=20261124-4"></script>
     <script type="module" src="js/quantum-bank.js?v=20261124-1"></script>
     <script type="module" src="js/components/backrooms-wall.js"></script>
-    <script type="module" src="js/phase-zero.js?v=20261124-3"></script>
+    <script type="module" src="js/phase-zero.js?v=20261124-4"></script>
     <script src="js/components/xr-hands.js"></script>
-    <script src="js/components/hand-gestures.js?v=20261123-5"></script>
+    <script src="js/components/hand-gestures.js?v=20261124-4"></script>
     <script src="js/components/player-locomotion.js?v=20261123-30"></script>
     <script src="js/components/canvas-text.js?v=20261124-1"></script>
     <script src="js/components/terminal-panel.js"></script>
-    <script src="js/components/wrist-hud.js?v=20261123-4"></script>
+    <script src="js/components/wrist-hud.js?v=20261124-4"></script>
     <script src="js/components/qps-map.js?v=20261124-3"></script>
     <script src="js/components/door-proximity.js"></script>
-    <script src="js/components/lobby/lobby-furniture.js"></script>
+    <script src="js/components/lobby/lobby-furniture.js?v=20261124-4"></script>
     <script src="js/components/lobby/lobby-computer.js"></script>
     <script src="js/components/lobby/training-wall.js"></script>
     <script type="module" src="js/components/lobby/quantum-slides.js?v=20261124-3"></script>
@@ -310,7 +310,7 @@
     <script src="js/components/light-flicker.js"></script>
     <script src="js/components/fixture-lights.js?v=20261123-1"></script>
     <script src="js/components/floor-transition.js"></script>
-    <script type="module" src="js/components/quantum-map.js?v=20261124-3"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261124-4"></script>
     <script type="module" src="js/components/maze-decoherence.js?v=20261124-3"></script>
     <script src="js/components/scatter-props.js?v=20261124-1"></script>
   </head>
@@ -326,9 +326,9 @@
           VR: BALANCE OS BRAÇOS PARA ANDAR // PINÇA NA TESTA LIGA/DESLIGA O VISOR ZETA<br />
           PALMAS NA PAREDE = SALTO DE FASE // MÃOS NOS OLHOS = SE PROTEGER<br />
           PULSO ESQUERDO = PAINEL Q-LINK // PULSO DIREITO = MAPA DO QPS<br />
-          PINÇA PARA PEGAR O QPS NA MESA // LEVE A ÁGUA DE AMÊNDOA À BOCA
+          ENCOSTE A MÃO PARA PEGAR O EQUIPAMENTO NAS ESTAÇÕES // LEVE A ÁGUA DE AMÊNDOA À BOCA
         </p>
-        <div class="start-note">DESKTOP: WASD // H PAINEL // Q PEGAR O QPS (MESA DO LOBBY) // E PEGAR E BEBER ÁGUA DE AMÊNDOA // M MAPA DO QPS // Z LIGA/DESLIGA O VISOR ZETA // X SALTO DE FASE // P PAUSA // ESC MENU // MOUSE OLHAR</div>
+        <div class="start-note">DESKTOP: WASD // H PAINEL // Q PEGAR EQUIPAMENTO (ESTAÇÕES DO LOBBY) // E PEGAR E BEBER ÁGUA DE AMÊNDOA // M MAPA DO QPS // Z LIGA/DESLIGA O VISOR ZETA // X SALTO DE FASE // P PAUSA // ESC MENU // MOUSE OLHAR</div>
         <div class="start-note">MELHOR NO META QUEST COM RASTREAMENTO DE MÃOS</div>
       </div>
     </section>
@@ -401,7 +401,7 @@
           <a-entity
             id="desktop-hint"
             position="0 -0.34 -1.1"
-            canvas-text="value: WASD ou setas: andar | arraste o mouse: olhar e girar\nPegue o QPS na mesa do canto, à esquerda do telão; align: center; color: #39ff88; width: 1.1; style: terminal"
+            canvas-text="value: WASD ou setas: andar | arraste o mouse: olhar e girar\nPegue o equipamento nas 3 estações da parede esquerda; align: center; color: #39ff88; width: 1.1; style: terminal"
           ></a-entity>
         </a-entity>
         <a-entity hand-tracking-controls="hand: left; modelColor: #d8bc75"></a-entity>

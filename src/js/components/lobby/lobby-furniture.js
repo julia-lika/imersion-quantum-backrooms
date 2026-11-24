@@ -60,10 +60,12 @@ AFRAME.registerComponent('lobby-furniture', {
     if (!root || this.built) return;
     this.built = true;
 
-    layout.forEach(({ piece, x, z, y = 0, rotation = 0 }) => {
+    layout.forEach(({ piece, x, z, y = 0, rotation = 0, scale }) => {
       const indices = FURNITURE_GROUPS[piece];
       if (!indices) return;
       const group = this.buildGroup(root, indices);
+      // Escala extra por eixo (ex.: mesas menores das estações de equipamento).
+      if (scale) group.scale.multiply(new THREE.Vector3(...scale));
       group.position.set(x, y, z);
       group.rotation.y = THREE.MathUtils.degToRad(rotation);
       this.el.object3D.add(group);

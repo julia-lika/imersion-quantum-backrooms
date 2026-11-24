@@ -23,7 +23,8 @@ import {
 import { startPosition } from './maze-physics.js';
 
 const initialBits = '010110101100';
-const QPS_STORAGE_KEY = 'quantum-backrooms-qps-v1';
+const GEAR_STORAGE_KEY = 'quantum-backrooms-gear-v1';
+const GEAR_LABELS = { qlink: 'Q-LINK (relógio)', visor: 'VISOR ZETA (óculos)', qps: 'QPS (chip)' };
 // Raio de medição contínua do QPS, em células (~4,2 m). Sem QPS, só o que o
 // jogador vê de perto define a porta.
 const QPS_RADIUS_CELLS = 4;
@@ -60,13 +61,16 @@ const FOG_BASE_DENSITY = 0.085;
 // Estado compartilhado com os componentes A-Frame (fantasma, paredes superpostas).
 window.quantumPlayer = {
   active: false,
-  hasQps: (() => {
+  // Equipamentos pegos nas estações do lobby (salvos entre sessões).
+  gear: (() => {
     try {
-      return localStorage.getItem(QPS_STORAGE_KEY) === '1';
+      const saved = JSON.parse(localStorage.getItem(GEAR_STORAGE_KEY) || '{}');
+      return { qlink: Boolean(saved.qlink), visor: Boolean(saved.visor), qps: Boolean(saved.qps) };
     } catch {
-      return false;
+      return { qlink: false, visor: false, qps: false };
     }
   })(),
+  hasQps: false,
   qpsRadius: QPS_RADIUS_CELLS,
   visor: false,
   eyesCovered: false,
@@ -127,13 +131,20 @@ function persistProgress() {
   }
 }
 
-function setHasQps(value) {
-  window.quantumPlayer.hasQps = value;
+window.quantumPlayer.hasQps = window.quantumPlayer.gear.qps;
+
+function setGear(gear) {
+  window.quantumPlayer.gear = { ...gear };
+  window.quantumPlayer.hasQps = Boolean(gear.qps);
   try {
-    localStorage.setItem(QPS_STORAGE_KEY, value ? '1' : '0');
+    localStorage.setItem(GEAR_STORAGE_KEY, JSON.stringify(window.quantumPlayer.gear));
   } catch {
     // Sem armazenamento: vale só para esta sessão.
   }
+}
+
+function missingGear() {
+  return Object.keys(GEAR_LABELS).filter((key) => !window.quantumPlayer.gear[key]);
 }
 
 // Medição contínua: quando a porta do andar entra no raio do QPS, o estado
@@ -180,7 +191,7 @@ function isActive() {
 
 function objectiveText() {
   if (game.current.floor === LOBBY_FLOOR) {
-    return window.quantumPlayer.hasQps ? 'TUTORIAL: A PORTA LEVA AO ANDAR 01' : 'PEGUE O QPS NA MESA DO CANTO';
+    return missingGear().length ? 'PEGUE O EQUIPAMENTO NAS 3 ESTAÇÕES' : 'TUTORIAL: A PORTA LEVA AO ANDAR 01';
   }
   return game.current.measured ? 'DESÇA: A PORTA FOI MEDIDA' : 'ACHE A PORTA: O QPS MEDE AO REDOR';
 }
@@ -260,6 +271,10 @@ function setVisor(next) {
 
 function toggleVisor() {
   if (!isActive()) return;
+  if (!window.quantumPlayer.gear.visor) {
+    setHint('SEM VISOR ZETA — pegue os óculos na ESTAÇÃO 2 do lobby');
+    return;
+  }
   // A pinça do rastreamento de mãos pode tremer (solta e fecha de novo em poucos
   // quadros); sem esse intervalo o visor liga e desliga no mesmo gesto.
   const now = performance.now();
@@ -324,8 +339,8 @@ function bindControls() {
 function transitionToNextFloor() {
   // No lobby a porta já está aberta; nos andares, só depois de medir o QPS.
   if (transitioning || (!game.current.measured && game.current.floor !== LOBBY_FLOOR)) return;
-  if (game.current.floor === LOBBY_FLOOR && !window.quantumPlayer.hasQps) {
-    setHint('PEGUE O QPS ANTES — o chip na mesa do canto, à esquerda do telão');
+  if (game.current.floor === LOBBY_FLOOR && missingGear().length) {
+    setHint(`PEGUE O EQUIPAMENTO ANTES — falta: ${missingGear().map((key) => GEAR_LABELS[key]).join(', ')}`);
     window.setTimeout(() => document.querySelector('[floor-transition]')?.components['floor-transition']?.reset(), 2500);
     return;
   }
@@ -465,16 +480,19 @@ function bindGameEvents() {
       resetPlayerPosition();
       persistProgress();
     }
-    // Jogo novo: o QPS volta para a mesa do lobby.
-    if (mode !== 'continue' && window.quantumPlayer.hasQps) {
-      setHasQps(false);
+    // Jogo novo: os equipamentos voltam para as mesas do lobby.
+    if (mode !== 'continue' && Object.values(window.quantumPlayer.gear).some(Boolean)) {
+      setGear({ qlink: false, visor: false, qps: false });
+      setVisor({ ...survival, visor: false });
       elements['quantum-map'].components['quantum-map']?.renderMap();
     }
     playedThisSession = true;
     window.quantumPlayer.active = isActive();
     elements['phase-telemetry'].hidden = false;
     if (game.current.floor === LOBBY_FLOOR) {
-      setHint('LOBBY DE TREINAMENTO — leia as estações e abra o computador na mesa');
+      setHint(missingGear().length
+        ? 'LOBBY DE TREINAMENTO — pegue o equipamento nas 3 estações da parede esquerda (Q-LINK, Visor Zeta e QPS)'
+        : 'LOBBY DE TREINAMENTO — leia as estações e abra o computador na mesa');
     } else if (mode === 'continue') {
       setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — jogo retomado`);
     }
@@ -516,11 +534,19 @@ function bindGameEvents() {
   });
   scene.addEventListener('enter-vr', () => beginGame('lobby'));
 
-  // Pegar o QPS na mesa do lobby: ele fica com o agente o jogo todo.
-  scene.addEventListener('qps-collected', () => {
-    setHasQps(true);
+  // Cada estação do lobby habilita um equipamento, que fica com o agente.
+  scene.addEventListener('gear-collected', ({ detail }) => {
+    const gear = detail?.gear;
+    if (!GEAR_LABELS[gear]) return;
+    setGear({ ...window.quantumPlayer.gear, [gear]: true });
     scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
-    setHint('QPS NA MÃO — ele mede tudo num raio de ~4 m e desenha o mapa (pulso direito ou M)');
+    const next = {
+      qlink: 'Q-LINK HABILITADO — olhe para o pulso esquerdo (desktop: H)',
+      visor: 'VISOR ZETA HABILITADO — pinça na testa (desktop: Z) liga e desliga',
+      qps: 'QPS HABILITADO — mede tudo num raio de ~4 m e desenha o mapa (pulso direito ou M)',
+    }[gear];
+    const missing = missingGear();
+    setHint(missing.length ? `${next}. Falta: ${missing.map((key) => GEAR_LABELS[key]).join(', ')}` : `${next}. Equipamento completo!`);
     renderTelemetry();
   });
   scene.addEventListener('visor-toggle-request', toggleVisor);

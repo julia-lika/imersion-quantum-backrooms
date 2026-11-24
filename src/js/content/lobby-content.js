@@ -12,22 +12,11 @@ export const LOBBY_FURNITURE = [
   { piece: 'metalTable', wall: 'right', inset: 0.6, cellZ: 7.5, rotation: 90 },
   { piece: 'terminal', wall: 'right', inset: 0.6, cellZ: 7.5, y: 0.75, rotation: 90 },
   { piece: 'blueChair', cellX: 10, cellZ: 7.5, rotation: -90 },
-  // Mesa dos equipamentos, no canto à esquerda do telão de slides. Da esquerda
-  // para a direita de quem olha: relógio, óculos e chip, na ordem da placa.
-  { piece: 'desk', wall: 'far', cellX: 2.2, inset: 0.55, rotation: 180 },
+  // Estações de equipamento: uma mesa menor (o mesmo modelo) para cada item.
+  { piece: 'desk', wall: 'left', inset: 0.42, cellZ: 8.2, rotation: 90, scale: [0.6, 1, 0.75] },
+  { piece: 'desk', wall: 'left', inset: 0.42, cellZ: 11.2, rotation: 90, scale: [0.6, 1, 0.75] },
+  { piece: 'desk', wall: 'far', inset: 0.42, cellX: 2.2, rotation: 180, scale: [0.6, 1, 0.75] },
 ];
-
-// Equipamentos do agente expostos na mesa do canto. Os modelos são pequenos de
-// verdade (o chip tem 4 cm), então ficam ampliados na vitrine.
-export const LOBBY_GEAR = {
-  wall: 'far', inset: 0.5, y: 0.74,
-  items: [
-    { model: '#relogio-qlink-model', label: 'Q-LINK', cellX: 2.85, scale: 2.8, lift: 0.08, tilt: 0 },
-    { model: '#oculos-zeta-model', label: 'VISOR ZETA', cellX: 2.2, scale: 1.6, lift: 0.03, tilt: 0 },
-    // O chip é o QPS de verdade: é um item (quantum-map), não um enfeite.
-    { label: 'QPS', cellX: 1.55, labelOnly: true },
-  ],
-};
 
 // Notebook do briefing perto da borda da mesa, do lado em que o jogador fica.
 export const LOBBY_COMPUTER = { cellX: 5.5, cellZ: 4, edgeOffset: 0.32, y: 0.76, rotation: -10 };
@@ -45,9 +34,9 @@ export const LOBBY_SIGNS = [
     body: 'Bem-vindo, agente. Este é o lobby de treinamento.\n\nANDAR: balance os braços (VR) ou WASD/setas, olhando com o mouse.\n\nLeia as estações ao longo do salão e abra o COMPUTADOR na mesa: toque com a mão (VR), clique ou aperte E. No fundo, à esquerda, o telão explica a física do jogo.',
   },
   {
-    wall: 'left', cellZ: 8,
-    title: 'PAINEL DO PULSO', subtitle: 'Q-LINK',
-    body: 'Olhe para o pulso esquerdo (VR) ou aperte H (desktop) para abrir o Q-LINK: ANDAR, SANIDADE, ENERGIA, VISOR ZETA, distância da ENTIDADE e OBJETIVO.\n\nA sanidade cai com o tempo e perto da entidade. A energia alimenta o visor e o salto de fase.',
+    wall: 'left', cellZ: 8.2, y: 1.85,
+    title: 'ESTAÇÃO 1: Q-LINK', subtitle: 'O RELÓGIO',
+    body: 'O relógio é o Q-LINK, o painel do pulso esquerdo. Mostra ANDAR, SANIDADE, ENERGIA, VISOR ZETA, a distância da ENTIDADE e o OBJETIVO.\n\nPegue o relógio na mesa (encoste a mão; desktop: Q). Depois, olhe para o pulso esquerdo (desktop: H).',
   },
   {
     wall: 'right', cellZ: 10.5,
@@ -55,9 +44,9 @@ export const LOBBY_SIGNS = [
     body: 'Garrafas espalhadas pelos andares. Estenda a mão até a garrafa para pegar e leve à boca para beber. No desktop: E pega, E de novo bebe.\n\nRestaura SANIDADE e recarrega toda a ENERGIA. Experimente a garrafa ao lado: outra aparece a cada 10 s.',
   },
   {
-    wall: 'left', cellZ: 12,
-    title: 'QPS', subtitle: 'EFEITO ZENO',
-    body: 'Pegue o QPS (o chip na mesa do canto, à esquerda do telão). Ele fica com você o jogo todo.\n\nO QPS mede sem parar tudo num raio de ~4 m e desenha o mapa (pulso direito ou M). O que é medido o tempo todo não muda: é o efeito Zeno.\n\nLonge de você ninguém mede, e o labirinto evolui. No mapa, esses trechos chiam com ?. A porta só se define quando entra no raio.',
+    wall: 'left', cellZ: 11.2, y: 1.85,
+    title: 'ESTAÇÃO 2: VISOR ZETA', subtitle: 'OS ÓCULOS',
+    body: 'Os óculos são o Visor Zeta. Com ele ligado, você enxerga as paredes em SUPERPOSIÇÃO (roxas), que abrem e fecham. Entre quando abrir: você a mede e ela fica aberta.\n\nPegue os óculos na mesa (desktop: Q). Ligar e desligar: pinça na testa (desktop: Z). Gasta energia.',
   },
   {
     wall: 'right', cellZ: 12.5, y: 2.32, height: 0.62,
@@ -70,9 +59,9 @@ export const LOBBY_SIGNS = [
     body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nVISOR ZETA: pinça na testa (Z) revela paredes em superposição.\nSALTO DE FASE: palmas na parede (X) para atravessar.\nTeste os dois na parede de treino ao lado.',
   },
   {
-    wall: 'far', cellX: 2.2, y: 1.8, height: 0.95,
-    title: 'EQUIPAMENTO', subtitle: 'DO AGENTE',
-    body: 'RELÓGIO = Q-LINK: painel do pulso esquerdo (H). Andar, sanidade, energia e entidade.\n\nÓCULOS = VISOR ZETA: pinça na testa (Z). Mostra as paredes em superposição; gasta energia.\n\nCHIP QUÂNTICO = QPS: pegue aqui (Q ou pinça) e leve com você. Mede tudo num raio de ~4 m, desenha o mapa (pulso direito ou M) e define a porta.',
+    wall: 'far', cellX: 2.2, y: 1.85, height: 0.95,
+    title: 'ESTAÇÃO 3: QPS', subtitle: 'O CHIP QUÂNTICO',
+    body: 'O chip é o QPS. Ele mede sem parar tudo num raio de ~4 m e desenha o mapa (pulso direito; desktop: M). O que é medido o tempo todo não muda: efeito Zeno.\n\nLonge de você ninguém mede e o labirinto evolui (no mapa: ?). A porta só se define quando entra no raio. Pegue o chip (desktop: Q).',
   },
   {
     wall: 'far', cellX: 8.6, height: 0.6,
