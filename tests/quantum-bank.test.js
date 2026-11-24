@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   QuantumBankError,
+  describeOrigin,
   measureFromBank,
   parseBank,
   pickEntry,
@@ -84,4 +85,20 @@ test('a medição declara a origem como gravada e devolve um bitstring de 12 bit
   assert.equal(result.recorded, true);
   assert.equal(result.floor, 2);
   assert.ok(result.entropy_bits > 0);
+});
+
+test('medições de hardware real mostram backend, job e data no HUD', () => {
+  const entry = {
+    floor: 1, shots: 4, source: 'ibm-qpu', backend: 'ibm_torino',
+    job_id: 'd4f9a1c2e3b5', executed_at: '2026-11-24T15:02:00+00:00',
+    counts: { '000000000000': 3, '111111111111': 1 },
+  };
+  assert.equal(describeOrigin(entry), 'QPU IBM_TORINO // JOB D4F9A1C2 // 24/11/2026');
+  assert.equal(describeOrigin({ source: 'local-sim', backend: 'python-statevector' }), 'SIMULADOR EXATO');
+
+  const hw = parseBank({ version: 1, qubits: 12, bit_order: 'qubit0-first', entries: [entry] });
+  const result = measureFromBank(hw, 1, () => 0.1);
+  assert.equal(result.source, 'ibm-qpu');
+  assert.equal(result.backend, 'IBM_TORINO // JOB D4F9A1C2 // 24/11/2026 (gravado)');
+  assert.equal(result.executed_at, '2026-11-24T15:02:00+00:00');
 });
