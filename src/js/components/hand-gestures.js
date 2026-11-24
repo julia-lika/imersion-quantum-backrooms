@@ -16,6 +16,9 @@ const PHASE_COOLDOWN_SECONDS = 2;
 const GRAB_RADIUS = 0.3;
 const TOUCH_RADIUS = 0.2;
 const DESKTOP_GRAB_RADIUS = 1.3;
+// Equipamentos que se pegam uma vez e ficam com o jogador.
+const GEAR_TYPES = new Set(['qps', 'qlink', 'visor']);
+const GEAR_NAMES = { qps: 'QPS (chip quântico)', qlink: 'Q-LINK (relógio)', visor: 'VISOR ZETA (óculos)' };
 const DESKTOP_DRINK_MS = 700;
 
 AFRAME.registerComponent('hand-gestures', {
@@ -86,7 +89,7 @@ AFRAME.registerComponent('hand-gestures', {
     if (!item) return;
 
     this.grab(side, item, 'pinch');
-    if (item.dataset.item === 'qps') this.consume(item, 'qps-collected', 1200);
+    if (GEAR_TYPES.has(item.dataset.item)) this.collectGear(item, 1200);
   },
 
   grab(side, item, mode) {
@@ -133,10 +136,20 @@ AFRAME.registerComponent('hand-gestures', {
     return nearest;
   },
 
+  // Pegar um equipamento: avisa o jogo (gear-collected) e, no caso do QPS,
+  // também quem escuta qps-collected (mapa).
+  collectGear(item, removeAfter = 0) {
+    if (item.dataset.consumed) return;
+    const gear = item.dataset.item;
+    if (gear === 'qps') this.consume(item, 'qps-collected', removeAfter);
+    else this.consume(item, 'gear-collected', removeAfter);
+    if (gear === 'qps') this.el.sceneEl.emit('gear-collected', { gear });
+  },
+
   consume(item, eventName, removeAfter = 0) {
     item.dataset.consumed = 'true';
     // Itens de treino (lobby) avisam quem escuta para não disparar a medição real.
-    this.el.sceneEl.emit(eventName, { id: item.dataset.itemId, training: item.dataset.training === 'true' });
+    this.el.sceneEl.emit(eventName, { id: item.dataset.itemId, training: item.dataset.training === 'true', gear: item.dataset.item });
     window.setTimeout(() => item.parentNode?.removeChild(item), removeAfter);
   },
 
@@ -177,7 +190,7 @@ AFRAME.registerComponent('hand-gestures', {
       if (!hand.tracked) return;
 
       const item = this.findNearestItem(hand.world, TOUCH_RADIUS);
-      if (item?.dataset.item === 'qps') this.consume(item, 'qps-collected', 600);
+      if (GEAR_TYPES.has(item?.dataset.item)) this.collectGear(item, 600);
       // Encostar a mão na Água de Amêndoa a segura; levar à boca bebe, pinçar e soltar larga.
       const recentlyDropped = performance.now() - Number(item?.dataset.droppedAt || 0) < 1500;
       if (item?.dataset.item === 'almond-water' && !this.held[side] && !this.isHeld(item) && !recentlyDropped) {
@@ -252,10 +265,10 @@ AFRAME.registerComponent('hand-gestures', {
   updateDesktopPickup(headWorld) {
     if (!headWorld || !window.quantumPlayer?.active) return;
 
-    const nearest = { qps: null, 'almond-water': null };
-    const best = { qps: DESKTOP_GRAB_RADIUS, 'almond-water': DESKTOP_GRAB_RADIUS };
+    const nearest = { gear: null, 'almond-water': null };
+    const best = { gear: DESKTOP_GRAB_RADIUS, 'almond-water': DESKTOP_GRAB_RADIUS };
     this.el.sceneEl.querySelectorAll('[data-item]').forEach((item) => {
-      const type = item.dataset.item;
+      const type = GEAR_TYPES.has(item.dataset.item) ? 'gear' : item.dataset.item;
       if (item.dataset.consumed || item === this.desktopHeld || !(type in nearest)) return;
       item.object3D.getWorldPosition(this.itemWorld);
       const distance = Math.hypot(this.itemWorld.x - headWorld.x, this.itemWorld.z - headWorld.z);
@@ -265,9 +278,11 @@ AFRAME.registerComponent('hand-gestures', {
       }
     });
 
-    if (nearest.qps !== this.desktopNearbyQps) {
-      this.desktopNearbyQps = nearest.qps;
-      if (nearest.qps) this.el.sceneEl.emit('interaction-hint', { text: 'QPS — aperte Q ou clique nele para pegar' });
+    if (nearest.gear !== this.desktopNearbyQps) {
+      this.desktopNearbyQps = nearest.gear;
+      if (nearest.gear) {
+        this.el.sceneEl.emit('interaction-hint', { text: `${GEAR_NAMES[nearest.gear.dataset.item]} — aperte Q ou clique para pegar` });
+      }
     }
     if (nearest['almond-water'] !== this.desktopNearby) {
       this.desktopNearby = nearest['almond-water'];
@@ -281,14 +296,14 @@ AFRAME.registerComponent('hand-gestures', {
   },
 
   collectDesktopQps(item = this.desktopNearbyQps) {
-    if (!item?.isConnected || item.dataset.consumed || item.dataset.item !== 'qps') return;
+    if (!item?.isConnected || item.dataset.consumed || !GEAR_TYPES.has(item.dataset.item)) return;
     this.desktopNearbyQps = null;
-    this.consume(item, 'qps-collected');
+    this.collectGear(item);
   },
 
   onDesktopClick(event) {
     if (this.tracker?.inVr || !window.quantumPlayer?.active) return;
-    const item = event.target?.closest?.('[data-item="qps"]');
+    const item = event.target?.closest?.('[data-gear]');
     if (item && item === this.desktopNearbyQps) this.collectDesktopQps(item);
   },
 

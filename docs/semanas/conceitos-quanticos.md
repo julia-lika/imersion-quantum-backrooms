@@ -48,9 +48,12 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 
 ## QPS: o mapa que mede
 
-- O QPS é o chip na mesa do canto do lobby (à esquerda do telão). O jogador
-  pega uma vez (Q, clique ou pinça) e fica com ele em todos os andares. Sem
-  ele, a porta do lobby não abre. Jogo novo devolve o chip à mesa.
+- O lobby tem três estações de equipamento, cada uma com sua mesa e painel:
+  **1. Q-LINK** (relógio, painel do pulso esquerdo / H), **2. Visor Zeta**
+  (óculos, pinça na testa / Z) e **3. QPS** (chip, no canto à esquerda do
+  telão). Cada item só funciona depois de pego na sua estação (encostar a mão,
+  pinça, Q ou clique) e fica com o jogador em todos os andares. Sem os três, a
+  porta do lobby não abre. Jogo novo devolve os itens às mesas.
 - **Medição contínua:** a cada 0,2 s o QPS copia para o mapa tudo o que está
   no raio. Não existe mais QPS espalhado pelos andares nem "nova leitura".
 - **Mapa** (pulso direito no VR, M no desktop): claro = medindo agora;
