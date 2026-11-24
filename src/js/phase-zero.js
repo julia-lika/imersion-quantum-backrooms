@@ -251,7 +251,7 @@ function floorOrigin() {
   const bank = window.quantumBank?.data;
   if (!bank) return 'ORIGEM: SORTEIO CLÁSSICO (BANCO INDISPONÍVEL)';
   const entry = window.quantumBank.pickEntry(bank, game.current.floor);
-  const where = entry.source === 'local-sim' ? 'SIMULADOR EXATO' : `HARDWARE ${String(entry.backend).toUpperCase()}`;
+  const where = window.quantumBank.describeOrigin(entry);
   return `ORIGEM: ${where} // ${entry.shots} SHOTS GRAVADOS`;
 }
 
