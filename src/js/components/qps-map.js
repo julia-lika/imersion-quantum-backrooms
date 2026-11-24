@@ -130,6 +130,38 @@ AFRAME.registerComponent('qps-map', {
     }
   },
 
+  // Mesma regra de findPhaseTarget (maze-physics): andando reto, 1 ou 2
+  // blocos de parede e depois chão livre que não seja a borda do mapa.
+  phaseWalls(memory, visor) {
+    const cells = memory.cells;
+    const size = cells.length;
+    const solid = (x, z) => {
+      const value = cells[z]?.[x];
+      return value === '#' || value === 'F';
+    };
+    const free = (x, z) => cells[z]?.[x] === '.' && x > 0 && z > 0 && x < size - 1 && z < size - 1;
+    const marked = new Map();
+    for (let z = 1; z < size - 1; z += 1) {
+      for (let x = 1; x < size - 1; x += 1) {
+        if (!free(x, z)) continue;
+        [[1, 0], [0, 1]].forEach(([dx, dz]) => {
+          for (let length = 1; length <= 2; length += 1) {
+            const run = Array.from({ length }, (_, i) => ({ x: x + dx * (i + 1), z: z + dz * (i + 1) }));
+            if (!run.every((c) => solid(c.x, c.z))) break;
+            if (free(x + dx * (length + 1), z + dz * (length + 1))) {
+              run.forEach((c) => {
+                if (visor && memory.superposed.has(`${c.x},${c.z}`)) return;
+                marked.set(`${c.x},${c.z}`, c);
+              });
+              break;
+            }
+          }
+        });
+      }
+    }
+    return [...marked.values()];
+  },
+
   isStale(x, z, versions) {
     const sector = this.sectorOf(x, z);
     return Boolean(sector) && (versions[sector.id] ?? 0) !== this.memory.versions[z][x];
@@ -193,6 +225,7 @@ AFRAME.registerComponent('qps-map', {
     const left = Math.round((width - cell * size) / 2);
     const player = this.playerCell();
     const versions = window.quantumDecoherence?.versions() || {};
+    const visor = Boolean(window.quantumPlayer?.visor);
     memory.cells.forEach((row, z) => {
       row.forEach((value, x) => {
         const px = left + x * cell;
@@ -206,7 +239,8 @@ AFRAME.registerComponent('qps-map', {
         if (!live && this.isStale(x, z, versions)) {
           // Evoluiu depois da última medição: estática.
           ctx.fillStyle = `rgba(57, 255, 136, ${(0.08 + Math.random() * 0.4).toFixed(2)})`;
-        } else if (memory.superposed.has(`${x},${z}`)) {
+        } else if (visor && memory.superposed.has(`${x},${z}`)) {
+          // Superposição só aparece com o Visor Zeta ligado (sem ele, é parede).
           ctx.fillStyle = live ? 'rgba(167, 139, 250, 0.9)' : 'rgba(167, 139, 250, 0.4)';
         } else if (value === '#' || value === 'F') {
           ctx.fillStyle = live ? 'rgba(57, 255, 136, 0.95)' : 'rgba(57, 255, 136, 0.5)';
@@ -215,6 +249,14 @@ AFRAME.registerComponent('qps-map', {
         }
         ctx.fillRect(px, pz, cell - 1, cell - 1);
       });
+    });
+
+    // Borda ciano: paredes que o Salto de Fase atravessa (até 2 blocos, com
+    // chão livre dos dois lados), pela última leitura do QPS.
+    ctx.strokeStyle = 'rgba(68, 255, 204, 0.95)';
+    ctx.lineWidth = 2;
+    this.phaseWalls(memory, visor).forEach(({ x, z }) => {
+      ctx.strokeRect(left + x * cell + 1.5, top + z * cell + 1.5, cell - 4, cell - 4);
     });
 
     stale.forEach((sector) => {
@@ -269,7 +311,8 @@ AFRAME.registerComponent('qps-map', {
     ctx.font = `18px ${MAP_MONO}`;
     ctx.fillStyle = MAP_DIM;
     ctx.fillText('CLARO: MEDINDO AGORA   APAGADO: ÚLTIMA LEITURA', pad, legendY);
-    ctx.fillText(`? EVOLUIU SEM MEDIÇÃO   ${tracker?.inVr ? 'PULSO DIREITO' : '[M] FECHA'}`, pad, legendY + 24);
+    ctx.fillText('? EVOLUIU SEM MEDIÇÃO   □ CIANO: SALTO DE FASE', pad, legendY + 24);
+    ctx.fillText(`■ ROXO: SUPERPOSIÇÃO (SÓ COM O VISOR)   ${tracker?.inVr ? '' : '[M] FECHA'}`, pad, legendY + 48);
     this.texture.needsUpdate = true;
   },
 

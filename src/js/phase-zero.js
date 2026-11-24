@@ -167,11 +167,17 @@ function checkDoorMeasurement() {
   elements['backrooms-scene'].emit('door-measured');
 }
 
-function setHint(message) {
+// Único texto fixo do canto inferior (no lobby). As outras dicas somem em 20 s
+// e, no lobby, este texto volta no lugar delas.
+const LOBBY_HINT = 'LOBBY DE TREINAMENTO — pegue os 3 instrumentos nas estações (Q-LINK, Visor Zeta e QPS) e leia a missão no computador da mesa';
+
+function setHint(message, persistent = false) {
   // Objeto (não string): o texto pode conter ";" sem quebrar o atributo.
   elements['desktop-hint'].setAttribute('canvas-text', {
     value: message, align: 'center', color: '#39ff88', width: 1.1, style: 'terminal',
   });
+  // Mesmo texto repetido não dispara componentchanged: reinicia os 20 s aqui.
+  elements['desktop-hint'].components['auto-hide']?.restart(persistent);
 }
 
 function flash(className, duration = 420) {
@@ -490,9 +496,7 @@ function bindGameEvents() {
     window.quantumPlayer.active = isActive();
     elements['phase-telemetry'].hidden = false;
     if (game.current.floor === LOBBY_FLOOR) {
-      setHint(missingGear().length
-        ? 'LOBBY DE TREINAMENTO — pegue o equipamento nas 3 estações da parede esquerda (Q-LINK, Visor Zeta e QPS)'
-        : 'LOBBY DE TREINAMENTO — leia as estações e abra o computador na mesa');
+      setHint(LOBBY_HINT, true);
     } else if (mode === 'continue') {
       setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — jogo retomado`);
     }
@@ -550,6 +554,9 @@ function bindGameEvents() {
     renderTelemetry();
   });
   scene.addEventListener('visor-toggle-request', toggleVisor);
+  elements['desktop-hint'].addEventListener('hint-expired', () => {
+    if (started && game.current.floor === LOBBY_FLOOR) setHint(LOBBY_HINT, true);
+  });
   scene.addEventListener('interaction-hint', ({ detail }) => {
     if (isActive()) setHint(detail.text);
   });
