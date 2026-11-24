@@ -3,7 +3,7 @@
 // ilustrações de moedas e gatos). O conteúdo está em js/content/quantum-slides.js.
 // Desktop: clique nos botões (ou na metade esquerda/direita da tela) ou use [ e ].
 // VR: toque os botões com a mão.
-import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../../content/quantum-slides.js';
+import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../../content/quantum-slides.js?v=20261124-1';
 
 const CANVAS = { width: 1600, height: 900 };
 const PAD = 72;
@@ -196,6 +196,45 @@ const DIAGRAMS = {
     ctx.fillStyle = open ? theme.accent : theme.bg;
     ctx.textAlign = 'center';
     ctx.fillText(open ? 'PASSAGEM' : 'PAREDE', x + w / 2, box.y + box.h / 2 + 10);
+    ctx.textAlign = 'left';
+  },
+
+  qpsMap(ctx, box, theme, time) {
+    // Mini mapa do QPS: paredes, porta, jogador e um setor chiando.
+    const grid = [
+      '###########',
+      '#.....#...#',
+      '#.###.#.#.#',
+      '#.#.....#.#',
+      '#.#.###.#.#',
+      '#...#.....#',
+      '###.#.###.#',
+      '#.....#...#',
+      '###########',
+    ];
+    const cell = Math.floor(Math.min(box.w / grid[0].length, box.h / grid.length));
+    const left = box.x + (box.w - cell * grid[0].length) / 2;
+    const top = box.y + (box.h - cell * grid.length) / 2;
+    ctx.fillStyle = '#04120a';
+    ctx.fillRect(left - 10, top - 10, cell * grid[0].length + 20, cell * grid.length + 20);
+    const tick = Math.floor((time || 0) / 150);
+    grid.forEach((row, z) => [...row].forEach((value, x) => {
+      const stale = x >= 6 && z >= 4 && z <= 7;
+      let alpha = value === '#' ? 0.8 : 0.08;
+      if (stale) alpha = 0.1 + (((x * 7 + z * 13 + tick * 5) % 9) / 9) * 0.45;
+      ctx.fillStyle = `rgba(57, 255, 136, ${alpha})`;
+      ctx.fillRect(left + x * cell, top + z * cell, cell - 2, cell - 2);
+    }));
+    ctx.fillStyle = '#e3cc4b';
+    ctx.fillRect(left + 9 * cell, top + 8 * cell, cell - 2, cell - 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(left + 1.5 * cell, top + 1.5 * cell, cell * 0.32, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#39ff88';
+    ctx.font = `bold ${Math.round(cell * 0.9)}px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.fillText('?', left + 8 * cell, top + 6.35 * cell);
     ctx.textAlign = 'left';
   },
 

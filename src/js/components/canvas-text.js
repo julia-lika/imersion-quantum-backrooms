@@ -44,8 +44,12 @@ AFRAME.registerComponent('canvas-text', {
     ctx.font = font;
 
     const lines = this.wrap(ctx, value.replace(/\\n/g, '\n'), canvasWidth - 24);
+    const canvasHeight = Math.max(1, lines.length) * CANVAS_TEXT_LINE_PX + 16;
+    // O three.js aloca a textura com tamanho fixo: se o canvas muda de tamanho,
+    // a textura antiga precisa ser descartada, senão sobra texto velho nela.
+    if (this.canvas.width !== canvasWidth || this.canvas.height !== canvasHeight) this.texture.dispose();
     this.canvas.width = canvasWidth;
-    this.canvas.height = Math.max(1, lines.length) * CANVAS_TEXT_LINE_PX + 16;
+    this.canvas.height = canvasHeight;
 
     if (terminal && value) {
       // Mesmo visual dos painéis: fundo verde-escuro, borda e linhas de varredura.

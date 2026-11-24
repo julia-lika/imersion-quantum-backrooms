@@ -41,8 +41,8 @@ export const LOBBY_SIGNS = [
   },
   {
     wall: 'left', cellZ: 12,
-    title: 'QPS', subtitle: 'MEDIÇÃO QUÂNTICA',
-    body: 'Cada andar esconde um QPS. Pegue com pinça ou encostando a mão (desktop: chegue perto e aperte Q ou clique nele).\n\nPegar o QPS MEDE os 12 qubits do andar: o estado colapsa num bitstring, o mapa é redesenhado com ele e a PORTA aparece. Este aqui é de treino e renasce a cada 10 s.',
+    title: 'QPS', subtitle: 'O SEU MAPA',
+    body: 'Cada andar esconde um QPS. Pegue com pinça ou encostando a mão (desktop: Q ou clique).\n\nPegar o QPS MEDE o andar: ele grava a planta naquele instante e revela a PORTA. Veja no pulso direito (desktop: M).\n\nO labirinto muda onde ninguém olha, e o mapa fica velho (trechos chiando). Nova leitura: pinça perto do mapa (desktop: R), 10 de energia.',
   },
   {
     wall: 'right', cellZ: 12.5, y: 2.32, height: 0.62,

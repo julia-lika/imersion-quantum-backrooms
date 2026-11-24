@@ -137,8 +137,9 @@ export const QUANTUM_SLIDES = [
       ['Na metáfora', 'No Quantum Backrooms'],
       ['Uma moeda girando', 'Um qubit (são 12 por andar)'],
       ['Mil caixas iguais', '1024 shots do circuito, gravados no jogo'],
-      ['Abrir a caixa', 'Pegar o QPS: o jogo sorteia um desses resultados'],
+      ['Abrir a caixa', 'Entrar num andar: o jogo sorteia um desses resultados'],
       ['O resultado', 'Um código de 12 bits, que vira a semente do mapa'],
+      ['Foto da caixa aberta', 'O QPS: grava a planta do andar naquele instante'],
       ['Caixa fechada', 'Paredes em superposição (metáfora visual)'],
     ],
   },
@@ -151,6 +152,28 @@ export const QUANTUM_SLIDES = [
         text: 'O código de 12 bits medido alimenta um gerador comum (não quântico): ele divide o andar em salas, abre passagens, ergue pilares e põe a porta longe da entrada.\n\nO quântico escolhe QUAL dos 4096 mapas aparece. Mesmo código, mesmo mapa, sempre.',
       },
       { diagram: 'map', caption: '010110101100 → salas, passagens e a porta (amarelo).' },
+    ],
+  },
+  {
+    theme: 'dark',
+    title: 'O labirinto muda quando ninguém olha',
+    flow: true,
+    cards: [
+      { label: 'OBSERVADO', heading: 'Você está vendo', text: 'Observar é medir: o que está diante dos seus olhos fica fixo.' },
+      { label: '18 S SEM OLHAR', heading: 'A medição se perde', text: 'Um trecho esquecido volta à superposição, como a moeda voltando a girar.' },
+      { label: 'MEDIDO DE NOVO', heading: 'Ele se reorganiza', text: 'O jogo tira um novo código de 12 bits e monta aquele trecho de outro jeito.' },
+    ],
+    note: 'Você percebe pelo aviso: a luz oscila e passa um zumbido. O labirinto continua sempre conectado. (Na física, decoerência é o ambiente apagando a superposição; aqui é uma metáfora de jogo.)',
+  },
+  {
+    theme: 'cream',
+    title: 'O QPS é o seu mapa',
+    cards: [
+      {
+        heading: 'Uma foto da caixa aberta',
+        text: 'Pegar o QPS é medir o andar: ele grava a planta naquele instante e mostra onde está a porta. Veja no pulso direito (desktop: M).\n\nComo os trechos esquecidos mudam, o mapa envelhece: as partes que mudaram aparecem chiando. Uma nova leitura (pinça perto do mapa, ou R) atualiza tudo e custa 10 de energia.',
+      },
+      { diagram: 'qpsMap', caption: 'Mapa com um trecho desatualizado (?).' },
     ],
   },
   {
@@ -181,11 +204,11 @@ export const QUANTUM_SLIDES = [
     cards: [
       {
         label: 'QUÂNTICO DE VERDADE',
-        text: '• O circuito de 12 qubits de cada andar\n• As chances e a contagem dos 1024 resultados\n• Sortear um resultado ao pegar o QPS\n• A entropia de cada andar',
+        text: '• O circuito de 12 qubits de cada andar\n• As chances e a contagem dos 1024 resultados\n• Sortear um resultado para cada andar e cada trecho que muda\n• A entropia de cada andar',
       },
       {
         label: 'MECÂNICA DE JOGO',
-        text: '• A entidade, a sanidade e a energia\n• As paredes que piscam\n• Os índices de coerência e ruído do painel\n• Construir as salas a partir do código',
+        text: '• A entidade, a sanidade e a energia\n• As paredes que piscam\n• Trechos mudarem quando ninguém olha\n• Construir as salas a partir do código',
       },
     ],
     note: 'Boa sorte, agente. A porta amarela no fim do salão leva ao ANDAR 01.',

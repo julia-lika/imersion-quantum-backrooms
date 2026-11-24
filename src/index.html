@@ -245,8 +245,8 @@
         box-shadow: inset 0 0 140px rgba(150, 70, 255, 0.45);
       }
 
-      /* Colapso do QPS: as pálpebras fecham devagar, a visão embaça, o mapa troca
-         no escuro e os olhos reabrem piscando. */
+      /* Piscar lento: as pálpebras fecham devagar, a visão embaça
+         e os olhos reabrem piscando. */
       .eyelid {
         position: fixed;
         left: 0;
@@ -287,30 +287,32 @@
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.7.x/dist/aframe-extras.min.js"></script>
     <script type="module" src="js/maze-physics.js"></script>
     <script type="module" src="js/map-generator.js?v=20261123-3"></script>
-    <script type="module" src="js/quantum-bank.js"></script>
+    <script type="module" src="js/quantum-bank.js?v=20261124-1"></script>
     <script type="module" src="js/components/backrooms-wall.js"></script>
-    <script type="module" src="js/phase-zero.js?v=20261123-30"></script>
+    <script type="module" src="js/phase-zero.js?v=20261124-1"></script>
     <script src="js/components/xr-hands.js"></script>
     <script src="js/components/hand-gestures.js?v=20261123-5"></script>
     <script src="js/components/player-locomotion.js?v=20261123-30"></script>
-    <script src="js/components/canvas-text.js?v=20261123-30"></script>
+    <script src="js/components/canvas-text.js?v=20261124-1"></script>
     <script src="js/components/terminal-panel.js"></script>
     <script src="js/components/wrist-hud.js?v=20261123-4"></script>
+    <script src="js/components/qps-map.js?v=20261124-1"></script>
     <script src="js/components/door-proximity.js"></script>
     <script src="js/components/lobby/lobby-furniture.js"></script>
     <script src="js/components/lobby/lobby-computer.js"></script>
     <script src="js/components/lobby/training-wall.js"></script>
-    <script type="module" src="js/components/lobby/quantum-slides.js?v=20261123-30"></script>
+    <script type="module" src="js/components/lobby/quantum-slides.js?v=20261124-1"></script>
     <script src="js/components/entity-tv.js?v=20261123-2"></script>
     <script src="js/components/vr-effects.js?v=20261123-1"></script>
     <script src="js/components/stairs-compass.js?v=20261123-1"></script>
-    <script src="js/components/quantum-ghost.js?v=20261123-3"></script>
+    <script src="js/components/quantum-ghost.js?v=20261124-1"></script>
     <script src="js/components/superposed-wall.js?v=20261123-2"></script>
     <script src="js/components/light-flicker.js"></script>
     <script src="js/components/fixture-lights.js?v=20261123-1"></script>
     <script src="js/components/floor-transition.js"></script>
-    <script type="module" src="js/components/quantum-map.js?v=20261123-15"></script>
-    <script src="js/components/scatter-props.js?v=20261123-3"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261124-1"></script>
+    <script type="module" src="js/components/maze-decoherence.js?v=20261124-1"></script>
+    <script src="js/components/scatter-props.js?v=20261124-1"></script>
   </head>
   <body>
     <section id="start-screen">
@@ -323,10 +325,10 @@
         <p>
           VR: BALANCE OS BRAÇOS PARA ANDAR // PINÇA NA TESTA LIGA/DESLIGA O VISOR ZETA<br />
           PALMAS NA PAREDE = SALTO DE FASE // MÃOS NOS OLHOS = SE PROTEGER<br />
-          OLHE PARA O PULSO = PAINEL Q-LINK<br />
+          PULSO ESQUERDO = PAINEL Q-LINK // PULSO DIREITO = MAPA DO QPS<br />
           PINÇA PARA PEGAR O QPS // LEVE A ÁGUA DE AMÊNDOA À BOCA
         </p>
-        <div class="start-note">DESKTOP: WASD // H PAINEL // Q PEGAR QPS // E PEGAR E BEBER ÁGUA DE AMÊNDOA // Z LIGA/DESLIGA O VISOR ZETA // X SALTO DE FASE // P PAUSA // ESC MENU // MOUSE OLHAR</div>
+        <div class="start-note">DESKTOP: WASD // H PAINEL // Q PEGAR QPS // E PEGAR E BEBER ÁGUA DE AMÊNDOA // M MAPA DO QPS // R NOVA LEITURA // Z LIGA/DESLIGA O VISOR ZETA // X SALTO DE FASE // P PAUSA // ESC MENU // MOUSE OLHAR</div>
         <div class="start-note">MELHOR NO META QUEST COM RASTREAMENTO DE MÃOS</div>
       </div>
     </section>
@@ -402,6 +404,7 @@
         <a-entity hand-tracking-controls="hand: left; modelColor: #d8bc75"></a-entity>
         <a-entity hand-tracking-controls="hand: right; modelColor: #d8bc75"></a-entity>
         <a-entity wrist-hud="hand: left"></a-entity>
+        <a-entity qps-map="hand: right"></a-entity>
       </a-entity>
       <a-entity id="player-head"></a-entity>
 
@@ -442,6 +445,7 @@
       <a-entity
         id="quantum-map"
         quantum-map="bitstring: 010110101100"
+        maze-decoherence
         position="0 0 0"
         scale="1 1 1"
       ></a-entity>
@@ -450,6 +454,6 @@
       <a-sky color="#0a0805"></a-sky>
     </a-scene>
 
-    <script src="js/quantum-measurement.js?v=20261123-30"></script>
+    <script src="js/quantum-measurement.js?v=20261124-1"></script>
   </body>
 </html>

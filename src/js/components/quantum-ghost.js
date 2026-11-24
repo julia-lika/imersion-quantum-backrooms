@@ -61,11 +61,21 @@ AFRAME.registerComponent('quantum-ghost', {
     this.onStrike = () => this.spawnFarFromPlayer();
     this.el.sceneEl.addEventListener('maze-world-updated', this.onWorldUpdated);
     this.el.sceneEl.addEventListener('ghost-strike', this.onStrike);
+    // Se um trecho se reorganizou e a entidade ficou dentro de parede, ela reaparece longe.
+    this.onShift = () => {
+      const world = window.quantumWorld;
+      const position = this.el.object3D.position;
+      if (!world) return;
+      const cell = window.quantumPhysics.worldToCell(world, position.x, position.z);
+      if (world.maze[cell.z]?.[cell.x] !== '.') this.spawnFarFromPlayer();
+    };
+    this.el.sceneEl.addEventListener('maze-region-shifted', this.onShift);
   },
 
   remove() {
     this.el.sceneEl.removeEventListener('maze-world-updated', this.onWorldUpdated);
     this.el.sceneEl.removeEventListener('ghost-strike', this.onStrike);
+    this.el.sceneEl.removeEventListener('maze-region-shifted', this.onShift);
   },
 
   playerCell() {
