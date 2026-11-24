@@ -59,7 +59,9 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
   no raio. Não existe mais QPS espalhado pelos andares nem "nova leitura".
 - **Mapa** (pulso direito no VR, M no desktop): claro = medindo agora;
   apagado = última leitura; chiando com "?" = o setor evoluiu depois da
-  última leitura. O círculo tracejado é o raio de medição.
+  última leitura. O círculo tracejado é o raio de medição. Paredes em
+  **azul** dá para atravessar com o Salto de Fase (X); em **roxo** estão em
+  superposição (Visor Zeta, Z), e o roxo fica mais forte com o visor ligado.
 - **Porta:** cada andar começa com a porta indefinida. Quando ela entra no
   raio do QPS (2 células sem QPS), o estado do andar é medido
   (`measureFromBank`) e a porta se define e aparece.
