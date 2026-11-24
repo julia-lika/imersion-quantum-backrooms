@@ -39,7 +39,8 @@ AFRAME.registerComponent('player-locomotion', {
     this.keys = new Set();
     this.swingSpeed = 0;
     this.lastValid = null;
-    this.initialFacingDone = false;
+    // Quadros até virar o jogador (spawn). Espera a cabeça e o andar atualizarem.
+    this.facingFrames = 2;
     this.ticks = 0;
     this.skipReason = 'ainda sem tick';
     this.lastMove = 0;
@@ -62,7 +63,7 @@ AFRAME.registerComponent('player-locomotion', {
     this.onWorldUpdated = () => this.escapeSolidCell();
     this.onTeleport = ({ detail }) => {
       this.teleportHead(detail.x, detail.z);
-      this.faceOpenDirection();
+      this.requestFacing(3);
     };
 
     window.addEventListener('keydown', this.onKeyDown);
@@ -74,8 +75,10 @@ AFRAME.registerComponent('player-locomotion', {
     this.el.sceneEl.addEventListener('player-teleport', this.onTeleport);
     // Ao entrar no VR a pose da cabeça muda: espera alguns quadros com o
     // rastreamento ativo e vira o jogador para a placa de boas-vindas.
-    this.onEnterVr = () => { this.vrFacingFrames = 30; };
+    this.onEnterVr = () => this.requestFacing(30);
+    this.onLobbyEntered = () => this.requestFacing(3);
     this.el.sceneEl.addEventListener('enter-vr', this.onEnterVr);
+    this.el.sceneEl.addEventListener('lobby-entered', this.onLobbyEntered);
 
     // Diagnóstico: no console do navegador, rode quantumDebug().
     window.quantumDebug = () => ({
@@ -104,6 +107,7 @@ AFRAME.registerComponent('player-locomotion', {
     this.el.sceneEl.removeEventListener('maze-world-updated', this.onWorldUpdated);
     this.el.sceneEl.removeEventListener('player-teleport', this.onTeleport);
     this.el.sceneEl.removeEventListener('enter-vr', this.onEnterVr);
+    this.el.sceneEl.removeEventListener('lobby-entered', this.onLobbyEntered);
     delete window.quantumDebug;
   },
 
@@ -174,6 +178,10 @@ AFRAME.registerComponent('player-locomotion', {
     if (turn !== 0) this.tracker.rotateAroundHead(turn * this.data.turnSpeed * dt);
   },
 
+  requestFacing(frames) {
+    this.facingFrames = Math.max(this.facingFrames || 0, frames);
+  },
+
   // Faz o jogador nascer olhando para um corredor aberto, e não para uma parede.
   // No lobby, nasce de frente para a placa de boas-vindas (FASE 0 // LOBBY),
   // no desktop e no VR.
@@ -217,13 +225,9 @@ AFRAME.registerComponent('player-locomotion', {
     }
     this.skipReason = 'ok';
 
-    if (!this.initialFacingDone) {
-      this.initialFacingDone = true;
-      this.faceOpenDirection();
-    }
-    if (this.vrFacingFrames > 0 && this.tracker.inVr) {
-      this.vrFacingFrames -= 1;
-      if (this.vrFacingFrames === 0 && window.quantumPlayer?.floor === 0) this.faceOpenDirection();
+    if (this.facingFrames > 0) {
+      this.facingFrames -= 1;
+      if (this.facingFrames === 0) this.faceOpenDirection();
     }
 
     const dt = Math.min(0.1, delta / 1000);

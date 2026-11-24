@@ -24,6 +24,8 @@ import { startPosition } from './maze-physics.js';
 
 const initialBits = '010110101100';
 const GEAR_STORAGE_KEY = 'quantum-backrooms-gear-v1';
+// Missão lida no computador do lobby (a porta do lobby só abre depois disso).
+const MISSION_STORAGE_KEY = 'quantum-backrooms-mission-v1';
 const GEAR_LABELS = { qlink: 'Q-LINK (relógio)', visor: 'VISOR ZETA (óculos)', qps: 'QPS (chip)' };
 // Raio de medição contínua do QPS, em células (~4,2 m). Sem QPS, só o que o
 // jogador vê de perto define a porta.
@@ -71,6 +73,13 @@ window.quantumPlayer = {
     }
   })(),
   hasQps: false,
+  missionRead: (() => {
+    try {
+      return localStorage.getItem(MISSION_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  })(),
   qpsRadius: QPS_RADIUS_CELLS,
   visor: false,
   eyesCovered: false,
@@ -145,6 +154,22 @@ function setGear(gear) {
 
 function missingGear() {
   return Object.keys(GEAR_LABELS).filter((key) => !window.quantumPlayer.gear[key]);
+}
+
+function setMissionRead(read) {
+  window.quantumPlayer.missionRead = read;
+  try {
+    localStorage.setItem(MISSION_STORAGE_KEY, read ? '1' : '0');
+  } catch {
+    // Sem armazenamento: vale só para esta sessão.
+  }
+}
+
+// O que ainda falta para a porta do lobby abrir: os 3 instrumentos e a missão.
+function lobbyMissing() {
+  const missing = missingGear().map((key) => GEAR_LABELS[key]);
+  if (!window.quantumPlayer.missionRead) missing.push('LER A MISSÃO no computador da mesa');
+  return missing;
 }
 
 // Medição contínua: quando a porta do andar entra no raio do QPS, o estado
@@ -345,8 +370,8 @@ function bindControls() {
 function transitionToNextFloor() {
   // No lobby a porta já está aberta; nos andares, só depois de medir o QPS.
   if (transitioning || (!game.current.measured && game.current.floor !== LOBBY_FLOOR)) return;
-  if (game.current.floor === LOBBY_FLOOR && missingGear().length) {
-    setHint(`PEGUE O EQUIPAMENTO ANTES — falta: ${missingGear().map((key) => GEAR_LABELS[key]).join(', ')}`);
+  if (game.current.floor === LOBBY_FLOOR && lobbyMissing().length) {
+    setHint(`PORTA BLOQUEADA — falta: ${lobbyMissing().join(', ')}`);
     window.setTimeout(() => document.querySelector('[floor-transition]')?.components['floor-transition']?.reset(), 2500);
     return;
   }
@@ -487,6 +512,7 @@ function bindGameEvents() {
       persistProgress();
     }
     // Jogo novo: os equipamentos voltam para as mesas do lobby.
+    if (mode !== 'continue') setMissionRead(false);
     if (mode !== 'continue' && Object.values(window.quantumPlayer.gear).some(Boolean)) {
       setGear({ qlink: false, visor: false, qps: false });
       setVisor({ ...survival, visor: false });
@@ -497,6 +523,7 @@ function bindGameEvents() {
     elements['phase-telemetry'].hidden = false;
     if (game.current.floor === LOBBY_FLOOR) {
       setHint(LOBBY_HINT, true);
+      scene.emit('lobby-entered');
     } else if (mode === 'continue') {
       setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — jogo retomado`);
     }
@@ -549,11 +576,17 @@ function bindGameEvents() {
       visor: 'VISOR ZETA HABILITADO — pinça na testa (desktop: Z) liga e desliga',
       qps: 'QPS HABILITADO — mede tudo num raio de ~4 m e desenha o mapa (pulso direito ou M)',
     }[gear];
-    const missing = missingGear();
-    setHint(missing.length ? `${next}. Falta: ${missing.map((key) => GEAR_LABELS[key]).join(', ')}` : `${next}. Equipamento completo!`);
+    const missing = lobbyMissing();
+    setHint(missing.length ? `${next}. Falta: ${missing.join(', ')}` : `${next}. Tudo pronto: a porta amarela leva ao ANDAR 01`);
     renderTelemetry();
   });
   scene.addEventListener('visor-toggle-request', toggleVisor);
+  scene.addEventListener('lobby-briefing-opened', () => {
+    if (window.quantumPlayer.missionRead) return;
+    setMissionRead(true);
+    const missing = lobbyMissing();
+    setHint(missing.length ? `MISSÃO LIDA — falta: ${missing.join(', ')}` : 'MISSÃO LIDA — tudo pronto: a porta amarela leva ao ANDAR 01');
+  });
   elements['desktop-hint'].addEventListener('hint-expired', () => {
     if (started && game.current.floor === LOBBY_FLOOR) setHint(LOBBY_HINT, true);
   });

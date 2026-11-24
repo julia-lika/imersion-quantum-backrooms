@@ -50,10 +50,11 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 
 - O lobby tem três estações de equipamento, cada uma com sua mesa e painel:
   **1. Q-LINK** (relógio, painel do pulso esquerdo / H), **2. Visor Zeta**
-  (óculos, pinça na testa / Z) e **3. QPS** (chip, no canto à esquerda do
-  telão). Cada item só funciona depois de pego na sua estação (encostar a mão,
-  pinça, Q ou clique) e fica com o jogador em todos os andares. Sem os três, a
-  porta do lobby não abre. Jogo novo devolve os itens às mesas.
+  (óculos, pinça na testa / Z) e **3. QPS** (chip, logo depois, na mesma
+  parede; o telão de slides fica na parede do fundo). Cada item só funciona depois de pego na sua estação (encostar a mão,
+  pinça, Q ou clique) e fica com o jogador em todos os andares. A porta do lobby
+  só abre com os três e depois de ler a missão no computador da mesa. Jogo
+  novo devolve os itens às mesas.
 - **Medição contínua:** a cada 0,2 s o QPS copia para o mapa tudo o que está
   no raio. Não existe mais QPS espalhado pelos andares nem "nova leitura".
 - **Mapa** (pulso direito no VR, M no desktop): claro = medindo agora;
