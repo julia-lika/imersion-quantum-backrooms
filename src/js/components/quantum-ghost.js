@@ -55,7 +55,11 @@ AFRAME.registerComponent('quantum-ghost', {
       this.updateLook(0, window.quantumPlayer?.visor, Infinity);
     });
     this.parts = [];
-    this.el.appendChild(model);
+    // Corpo: pivô no chão que gira para onde anda e faz o andar assustador.
+    this.body = document.createElement('a-entity');
+    this.body.appendChild(model);
+    this.el.appendChild(this.body);
+    this.gait = window.creepyGait?.create(0);
 
     this.onWorldUpdated = () => this.spawnFarFromPlayer();
     this.onStrike = () => this.spawnFarFromPlayer();
@@ -161,9 +165,18 @@ AFRAME.registerComponent('quantum-ghost', {
     this.target.set(goal.x, 0, goal.z);
     const position = this.el.object3D.position;
     const remaining = position.distanceTo(this.target);
-    const stepLength = (world.cellSize / interval) * delta * 1.15;
+    const moving = remaining > 0.02;
+    // Vira o corpo para onde anda; parada, encara o jogador.
+    const look = moving ? this.target : this.data.player.object3D.position;
+    const targetYaw = Math.atan2(look.x - position.x, look.z - position.z);
+    const pose = this.gait
+      ? window.creepyGait.update(this.gait, time, delta, { moving, targetYaw, pace: hunting ? 1.35 : 1 })
+      : null;
+    if (pose) window.creepyGait.apply(this.body.object3D, pose);
+    // Congelada súbita: não sai do lugar; depois arranca para recuperar.
+    const stepLength = pose?.frozen ? 0 : (world.cellSize / interval) * delta * 1.15 * (pose?.catchUp ?? 1);
     if (remaining <= stepLength) position.copy(this.target);
-    else position.lerp(this.target, stepLength / remaining);
+    else if (stepLength > 0) position.lerp(this.target, stepLength / remaining);
 
     const headWorld = this.data.player.object3D.position;
     const ghostEyes = this.el.object3D.position.clone().setY(headWorld.y);
