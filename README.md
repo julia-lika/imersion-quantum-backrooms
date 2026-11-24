@@ -55,7 +55,7 @@ plano gratuito a cada entrada e saída do raio de medição.
 
 O jogo sorteia amostras de `src/data/quantum-bank.json`, sem depender da fila
 ou da cota da IBM. O HUD mostra a origem verdadeira, por exemplo
-`LOCAL-SIM // python-statevector (gravado)` ou `IBM-QPU // <backend> (gravado)`.
+`SIMULADOR EXATO` ou `QPU IBM_TORINO // JOB D4F9A1C2 // 24/11/2026`.
 Para forçar a API ao vivo, abra a página com `?live`.
 
 O circuito (`backend/quantum_circuit.py`) tem rotações RY por andar, cadeia de CX,
@@ -70,6 +70,19 @@ Regerar o banco:
 python3 tools/pregen.py                 # simulador, sem credenciais
 IBM_QUANTUM_API_KEY=... python3 tools/pregen.py --backend ibm   # QPU real (precisa de qiskit-ibm-runtime)
 ```
+
+### Medir no hardware real pelo GitHub
+
+1. Crie a chave em https://quantum.cloud.ibm.com (plano Open, gratuito).
+2. Salve-a como secret `IBM_QUANTUM_API_KEY` em Settings > Secrets and variables > Actions
+   (e `IBM_QUANTUM_INSTANCE`, se a conta tiver mais de uma instância).
+3. Em Actions, abra **Medir no computador quântico (IBM)** e clique em **Run workflow**.
+
+Os andares vão num único job (um PUB por andar). O workflow grava o banco com
+backend, job ID, data, profundidade do circuito transpilado e a fidelidade em
+relação à distribuição ideal, faz o commit no `main` e republica o site. Se a fila
+demorar mais que o limite do workflow, rode de novo passando o `job_id` mostrado
+no log: ele só baixa o resultado, sem gastar cota.
 
 Testes: `npm test` (JavaScript) e, em `backend/`,
 `python3 -m unittest discover -s tests -v` (circuito).

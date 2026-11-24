@@ -1,0 +1,90 @@
+name: Medir no computador quântico (IBM)
+
+# Roda o circuito dos andares num QPU real da IBM e grava src/data/quantum-bank.json.
+# Precisa do secret IBM_QUANTUM_API_KEY (e, se a conta tiver mais de uma instância,
+# IBM_QUANTUM_INSTANCE). Actions > este workflow > Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      floors:
+        description: Quantos andares medir
+        default: "5"
+      shots:
+        description: Shots por andar
+        default: "1024"
+      backend:
+        description: Nome do backend (vazio = o menos ocupado, ex. ibm_torino)
+        default: ""
+      job_id:
+        description: Só baixar um job já enviado (se uma execução anterior expirou na fila)
+        default: ""
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: quantum-bank
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar Qiskit
+        run: pip install "qiskit~=2.5.2" "qiskit-ibm-runtime~=0.47.0"
+
+      - name: Rodar no hardware da IBM
+        env:
+          IBM_QUANTUM_API_KEY: ${{ secrets.IBM_QUANTUM_API_KEY }}
+          IBM_QUANTUM_INSTANCE: ${{ secrets.IBM_QUANTUM_INSTANCE }}
+          IBM_QUANTUM_BACKEND: ${{ inputs.backend }}
+          FLOORS: ${{ inputs.floors }}
+          SHOTS: ${{ inputs.shots }}
+          JOB_ID: ${{ inputs.job_id }}
+        run: |
+          if [ -z "$IBM_QUANTUM_API_KEY" ]; then
+            echo "::error::Falta o secret IBM_QUANTUM_API_KEY (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          args=(--backend ibm --floors "$FLOORS" --shots "$SHOTS")
+          if [ -n "$JOB_ID" ]; then args+=(--job-id "$JOB_ID"); fi
+          python3 tools/pregen.py "${args[@]}"
+
+      - name: Resumo
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          bank = json.load(open("src/data/quantum-bank.json"))
+          print(f"### Banco quântico: {bank['backend']} · job `{bank['job_id']}`\n")
+          print("| andar | shots | entropia medida | entropia ideal | fidelidade vs ideal |")
+          print("|---|---|---|---|---|")
+          for e in bank["entries"]:
+              print(f"| {e['floor']} | {e['shots']} | {e['entropy_bits']} | {e['ideal_entropy_bits']} | {e['fidelity_vs_ideal']} |")
+          PY
+
+      - name: Commit no main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898289+github-actions[bot]@users.noreply.github.com"
+          git add src/data/quantum-bank.json
+          if git diff --cached --quiet; then echo "nada mudou"; exit 0; fi
+          backend=$(python3 -c "import json;print(json.load(open('src/data/quantum-bank.json'))['backend'])")
+          git commit -m "Banco quântico medido em hardware real ($backend)"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Republicar o site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
