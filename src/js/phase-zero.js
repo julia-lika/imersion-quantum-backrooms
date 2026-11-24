@@ -173,21 +173,26 @@ function lobbyMissing() {
 }
 
 // Medição contínua: quando a porta do andar entra no raio do QPS, o estado
-// do andar é medido e a porta se define (aparece).
+// do andar é medido e a porta se define (aparece). Antes disso ela está em
+// superposição entre algumas posições possíveis (doorCandidates): basta uma
+// delas entrar no raio para o QPS medir, e a medição sorteia onde a porta fica.
 let doorMeasuring = false;
-let doorCache = { bits: null, stairs: null };
+let doorCache = { bits: null, candidates: [] };
+function doorCandidates() {
+  if (doorCache.bits !== game.current.currentBitstring && typeof window.generateQuantumMap === 'function') {
+    doorCache = { bits: game.current.currentBitstring, candidates: window.generateQuantumMap(game.current.currentBitstring).doorCandidates || [] };
+  }
+  return doorCache.candidates;
+}
 function checkDoorMeasurement() {
   if (game.current.floor === LOBBY_FLOOR || game.current.measured || doorMeasuring) return;
   const world = window.quantumWorld;
   const head = document.getElementById('player-head')?.object3D.position;
   if (!world || !head || typeof window.generateQuantumMap !== 'function') return;
-  if (doorCache.bits !== game.current.currentBitstring) {
-    doorCache = { bits: game.current.currentBitstring, stairs: window.generateQuantumMap(game.current.currentBitstring).stairs };
-  }
   const x = (head.x - world.origin) / world.cellSize;
   const z = (head.z - world.origin) / world.cellSize;
   const radius = window.quantumPlayer.hasQps ? QPS_RADIUS_CELLS : BARE_RADIUS_CELLS;
-  if (Math.hypot(x - doorCache.stairs.x, z - doorCache.stairs.z) > radius) return;
+  if (!doorCandidates().some((door) => Math.hypot(x - door.x, z - door.z) <= radius)) return;
   doorMeasuring = true;
   elements['backrooms-scene'].emit('door-measured');
 }
@@ -247,6 +252,7 @@ function syncMap() {
   elements['quantum-map'].setAttribute('quantum-map', {
     bitstring: game.current.currentBitstring,
     stairsVisible: Boolean(floor?.stairs?.visible),
+    door: floor?.stairs ? doorCandidates().findIndex((door) => door.x === floor.stairs.x && door.z === floor.stairs.z) : -1,
     floor: game.current.floor,
   });
   elements['backrooms-scene'].setAttribute('data-floor', game.current.floor);
@@ -393,7 +399,7 @@ function transitionToNextFloor() {
     syncMap();
     persistProgress();
     document.body.classList.remove('floor-transition');
-    setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — explore: a porta se define quando entra no raio do QPS`);
+    setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — a porta está em superposição entre algumas posições (amarelo tracejado no mapa); o QPS mede quando uma delas entra no raio`);
     transitioning = false;
     window.quantumPlayer.active = isActive();
     renderTelemetry();
@@ -620,11 +626,14 @@ function bindGameEvents() {
       detail.metrics
     );
 
-    // A medição não refaz o labirinto: só define a porta. O andar continua
-    // sendo o mesmo bitstring.
+    // A medição não refaz o labirinto: colapsa a porta numa das posições
+    // possíveis, escolhida pelo bitstring medido. O andar continua o mesmo.
     doorMeasuring = false;
     const floorBits = game.current.currentBitstring;
-    const map = window.generateQuantumMap(floorBits);
+    const candidates = doorCandidates();
+    const picked = window.pickDoorCandidate?.(candidates, detail.result.bitstring)
+      || { index: 0, cell: window.generateQuantumMap(floorBits).stairs };
+    const map = { stairs: picked.cell };
     game.current = recordMeasurement(game.current, {
       bitstring: floorBits,
       qps: detail.metrics.qps,
@@ -636,9 +645,19 @@ function bindGameEvents() {
       bitstring: detail.result.bitstring,
       source: `${detail.result.source} // ${detail.result.backend}`,
       stairs: map.stairs,
+      door: `${picked.index + 1}/${candidates.length}`,
     };
     elements['backrooms-scene'].emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.35 });
     syncMap();
+    const world = window.quantumWorld;
+    const head = document.getElementById('player-head')?.object3D.position;
+    const near = world && head && Math.hypot(
+      (head.x - world.origin) / world.cellSize - map.stairs.x,
+      (head.z - world.origin) / world.cellSize - map.stairs.z,
+    ) <= QPS_RADIUS_CELLS + 1;
+    setHint(near
+      ? `PORTA MEDIDA — de ${candidates.length} posições possíveis, ela colapsou aqui perto`
+      : `PORTA MEDIDA — de ${candidates.length} posições possíveis, ela colapsou em outro ponto do andar: veja no mapa (M ou pulso direito)`);
     persistProgress();
     renderTelemetry();
   });

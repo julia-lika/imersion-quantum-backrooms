@@ -62,9 +62,13 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
   última leitura. O círculo tracejado é o raio de medição. Paredes em
   **azul** dá para atravessar com o Salto de Fase (X); em **roxo** estão em
   superposição (Visor Zeta, Z), e o roxo fica mais forte com o visor ligado.
-- **Porta:** cada andar começa com a porta indefinida. Quando ela entra no
-  raio do QPS (2 células sem QPS), o estado do andar é medido
-  (`measureFromBank`) e a porta se define e aparece.
+- **Porta (medição de verdade):** cada andar começa com a porta em
+  superposição entre até 4 posições possíveis, afastadas umas das outras
+  (`findDoorCandidates`). No mapa elas piscam em amarelo tracejado. Quando
+  qualquer uma entra no raio do QPS (2 células sem QPS), o estado é medido
+  (`measureFromBank`) e o bitstring medido escolhe onde a porta fica
+  (`pickDoorCandidate`). Ela pode aparecer bem ali ou em outro ponto do andar.
+  Depois de medida, não muda mais de lugar.
 
 ## Conceito por conceito
 
@@ -73,7 +77,7 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 | Superposição | `RY(θ)` em cada qubit define a chance de dar 1 | Cada andar é um estado de 12 qubits até ser medido |
 | Emaranhamento | `CX(i, i+1)` em cadeia correlaciona vizinhos | Os bits medidos vêm correlacionados, não independentes |
 | Interferência e fase | Segunda camada de `RY` e anel de `CZ` | Alguns bitstrings (mapas) são bem mais prováveis |
-| Medição e colapso | Sorteio de 1 resultado entre os shots gravados (`measureFromBank`) | Cada andar nasce de uma medição; a porta se define quando entra no raio do QPS |
+| Medição e colapso | Sorteio de 1 resultado entre os shots gravados (`measureFromBank`) | Cada andar nasce de uma medição; a porta fica entre várias posições até o QPS medir, e a medição sorteia uma |
 | Efeito Zeno | Medir sem parar impede a evolução do estado | O raio do QPS congela o labirinto; fora dele, setores sem medição por 18 s evoluem e são medidos de novo |
 | Entropia | Shannon dos `counts` (`shannonEntropy`), 0 a 12 bits | Andares gravados ficam entre ~7 e 8 bits |
 | Tunelamento | Metáfora | Salto de fase: atravessa até 2 células de parede, 92% de sucesso, custa 25 de energia e 3 de sanidade |
@@ -101,7 +105,7 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 
 | Pasta / arquivo | Responsabilidade |
 | --- | --- |
-| `src/js/map-generator.js` | Bitstring → labirinto (BSP), porta, lobby fixo |
+| `src/js/map-generator.js` | Bitstring → labirinto (BSP), posições possíveis da porta e sorteio na medição, lobby fixo |
 | `src/js/maze-physics.js` | Grade, colisão, salto de fase, paredes em superposição |
 | `src/js/quantum-bank.js` | Leitura do banco, amostragem, entropia |
 | `src/js/quantum-measurement.js` | Medição ao pegar o QPS e HUD |

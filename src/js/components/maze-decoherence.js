@@ -102,8 +102,10 @@ AFRAME.registerComponent('maze-decoherence', {
     const world = window.quantumWorld;
     const mapEl = this.el.components['quantum-map'];
     const cells = [];
-    const stairs = mapEl?.mapInfo?.stairs;
-    if (stairs) cells.push({ x: stairs.x, z: stairs.z });
+    // Porta medida: só a célula dela. Ainda indefinida: todas as posições possíveis.
+    const info = mapEl?.mapInfo;
+    const doors = mapEl?.data.stairsVisible || !info?.doorCandidates?.length ? [info?.stairs] : info.doorCandidates;
+    doors.forEach((door) => door && cells.push({ x: door.x, z: door.z }));
     (mapEl?.itemCells || []).forEach((cell) => cell && cells.push(cell));
     const ghost = document.querySelector('[quantum-ghost]');
     if (ghost && world) {

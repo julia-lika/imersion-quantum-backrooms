@@ -195,9 +195,9 @@ export const QUANTUM_SLIDES = [
     cards: [
       {
         heading: 'O código é a semente',
-        text: 'O código de 12 bits medido alimenta um gerador comum (não quântico): ele divide o andar em salas, abre passagens, ergue pilares e põe a porta longe da entrada.\n\nO quântico escolhe QUAL dos 4096 mapas aparece. Mesmo código, mesmo mapa, sempre.',
+        text: 'O código de 12 bits medido alimenta um gerador comum (não quântico): ele divide o andar em salas, abre passagens, ergue pilares e marca algumas posições possíveis para a porta, longe da entrada.\n\nO quântico escolhe QUAL dos 4096 mapas aparece. Mesmo código, mesmo mapa, sempre.',
       },
-      { diagram: 'map', caption: '010110101100 → salas, passagens e a porta (amarelo).' },
+      { diagram: 'map', caption: '010110101100 → salas, passagens e onde a porta pode estar (amarelo).' },
     ],
   },
   {
@@ -228,7 +228,7 @@ export const QUANTUM_SLIDES = [
     cards: [
       {
         heading: 'Pegue no lobby, leve sempre',
-        text: 'O QPS é o chip na mesa do canto. Ele mede o tempo todo tudo num raio de ~4 m e desenha o mapa (pulso direito ou M).\n\nClaro = medindo agora. Apagado = última leitura. Chiando com ? = evoluiu desde então. A porta só se define quando entra no raio.',
+        text: 'O QPS é o chip da estação 3. Ele mede o tempo todo tudo num raio de ~4 m e desenha o mapa (pulso direito ou M).\n\nClaro = medindo agora. Apagado = última leitura. Chiando com ? = evoluiu desde então. A porta fica em superposição entre algumas posições (amarelo tracejado). Quando uma entra no raio, o QPS mede e sorteia onde ela aparece.',
       },
       { diagram: 'qpsMap', caption: 'Mapa do QPS com um trecho que evoluiu (?).' },
     ],
