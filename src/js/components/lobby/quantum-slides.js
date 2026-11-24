@@ -3,7 +3,7 @@
 // ilustrações de moedas e gatos). O conteúdo está em js/content/quantum-slides.js.
 // Desktop: clique nos botões (ou na metade esquerda/direita da tela) ou use [ e ].
 // VR: toque os botões com a mão.
-import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../../content/quantum-slides.js?v=20261124-1';
+import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../../content/quantum-slides.js?v=20261124-2';
 
 const CANVAS = { width: 1600, height: 900 };
 const PAD = 72;
@@ -238,6 +238,105 @@ const DIAGRAMS = {
     ctx.textAlign = 'left';
   },
 
+  // Três portas clássicas com as tabelas-verdade ao lado.
+  logicGates(ctx, box, theme) {
+    const gates = [
+      { name: 'NOT', inputs: 1, rows: [['0', '1'], ['1', '0']] },
+      { name: 'AND', inputs: 2, rows: [['0 0', '0'], ['0 1', '0'], ['1 0', '0'], ['1 1', '1']] },
+      { name: 'OR', inputs: 2, rows: [['0 0', '0'], ['0 1', '1'], ['1 0', '1'], ['1 1', '1']] },
+    ];
+    const rowH = box.h / 3;
+    gates.forEach((gate, index) => {
+      const y = box.y + index * rowH;
+      const mid = y + rowH / 2;
+      const gx = box.x + 40;
+      const gw = 110;
+      const gh = Math.min(70, rowH * 0.6);
+      ctx.strokeStyle = theme.text;
+      ctx.lineWidth = 3;
+      const ins = gate.inputs === 1 ? [mid] : [mid - gh * 0.25, mid + gh * 0.25];
+      ins.forEach((iy) => { ctx.beginPath(); ctx.moveTo(box.x, iy); ctx.lineTo(gx, iy); ctx.stroke(); });
+      ctx.beginPath(); ctx.moveTo(gx + gw, mid); ctx.lineTo(gx + gw + 40, mid); ctx.stroke();
+      ctx.fillStyle = theme.kicker;
+      ctx.fillRect(gx, mid - gh / 2, gw, gh);
+      ctx.fillStyle = theme.bg;
+      ctx.font = `bold 28px ${FONT}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(gate.name, gx + gw / 2, mid + 10);
+      // Tabela-verdade: entrada → saída.
+      const tx = gx + gw + 70;
+      const lineH = Math.min(36, (rowH - 12) / gate.rows.length);
+      ctx.font = `28px ${FONT}`;
+      ctx.textAlign = 'left';
+      gate.rows.forEach(([input, output], r) => {
+        const ry = mid - (gate.rows.length * lineH) / 2 + r * lineH + lineH * 0.75;
+        ctx.fillStyle = theme.muted;
+        ctx.fillText(`${input}  →`, tx, ry);
+        ctx.fillStyle = output === '1' ? theme.accent : theme.text;
+        ctx.font = `bold 28px ${FONT}`;
+        ctx.fillText(output, tx + 120, ry);
+        ctx.font = `28px ${FONT}`;
+      });
+    });
+    ctx.textAlign = 'left';
+  },
+
+  // Circuito de 2 qubits: H no primeiro, CNOT, e medição dos dois.
+  circuit(ctx, box, theme) {
+    const wires = [box.y + box.h * 0.32, box.y + box.h * 0.68];
+    const x0 = box.x + 70;
+    const x1 = box.x + box.w - 20;
+    ctx.strokeStyle = theme.text;
+    ctx.lineWidth = 3;
+    ctx.font = `bold 26px ${FONT}`;
+    ctx.textAlign = 'right';
+    wires.forEach((y, index) => {
+      ctx.fillStyle = theme.text;
+      ctx.fillText(`q${index}`, box.x + 50, y + 9);
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+    });
+    ctx.textAlign = 'center';
+    const size = 64;
+    const box_ = (x, y, label, color) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(x - size / 2, y - size / 2, size, size);
+      ctx.fillStyle = theme.bg;
+      ctx.font = `bold 30px ${FONT}`;
+      ctx.fillText(label, x, y + 11);
+    };
+    const span = x1 - x0;
+    // H
+    box_(x0 + span * 0.18, wires[0], 'H', theme.kicker);
+    // CNOT: ponto no controle, ⊕ no alvo.
+    const cx = x0 + span * 0.45;
+    ctx.beginPath(); ctx.moveTo(cx, wires[0]); ctx.lineTo(cx, wires[1]); ctx.stroke();
+    ctx.fillStyle = theme.text;
+    ctx.beginPath(); ctx.arc(cx, wires[0], 11, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, wires[1], 24, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - 24, wires[1]); ctx.lineTo(cx + 24, wires[1]);
+    ctx.moveTo(cx, wires[1] - 24); ctx.lineTo(cx, wires[1] + 24); ctx.stroke();
+    // Medidores.
+    const mx = x0 + span * 0.78;
+    wires.forEach((y) => {
+      ctx.fillStyle = theme.accent;
+      ctx.fillRect(mx - size / 2, y - size / 2, size, size);
+      ctx.strokeStyle = theme.bg;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(mx, y + 12, 20, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx, y + 12); ctx.lineTo(mx + 14, y - 14); ctx.stroke();
+      ctx.strokeStyle = theme.text;
+    });
+    ctx.font = `24px ${FONT}`;
+    ctx.fillStyle = theme.muted;
+    ctx.fillText('gira a moeda', x0 + span * 0.18, wires[0] - 48);
+    ctx.fillText('amarra as duas', cx, wires[0] - 48);
+    ctx.fillText('abre a caixa', mx, wires[0] - 48);
+    ctx.font = `bold 26px ${FONT}`;
+    ctx.fillStyle = theme.text;
+    ctx.fillText('00 ou 11', x0 + span * 0.97 - 30, wires[1] + 70);
+    ctx.textAlign = 'left';
+  },
+
   tunneling(ctx, box, theme) {
     const mid = box.x + box.w / 2;
     ctx.fillStyle = theme.text;
@@ -315,7 +414,10 @@ function drawArrow(ctx, x, y, color) {
 
 function drawTable(ctx, rows, rect, theme) {
   const rowHeight = Math.min(96, rect.h / rows.length);
-  const split = rect.w * 0.38;
+  const columns = rows[0].length;
+  // 2 colunas: 38% / 62%. 3 colunas: rótulo estreito e duas iguais.
+  const widths = columns === 2 ? [0.38, 0.62] : [0.22, 0.39, 0.39];
+  const starts = widths.map((_, index) => rect.x + rect.w * widths.slice(0, index).reduce((sum, w) => sum + w, 0));
   rows.forEach((row, index) => {
     const y = rect.y + index * rowHeight;
     ctx.fillStyle = index === 0 ? theme.card : (index % 2 ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)');
@@ -323,14 +425,24 @@ function drawTable(ctx, rows, rect, theme) {
     ctx.strokeStyle = theme.line;
     ctx.lineWidth = 2;
     ctx.strokeRect(rect.x, y, rect.w, rowHeight);
-    ctx.beginPath();
-    ctx.moveTo(rect.x + split, y);
-    ctx.lineTo(rect.x + split, y + rowHeight);
-    ctx.stroke();
-    ctx.font = `${index === 0 ? 'bold ' : ''}32px ${FONT}`;
-    ctx.fillStyle = theme.text;
-    ctx.fillText(row[0], rect.x + 18, y + rowHeight / 2 + 11);
-    ctx.fillText(row[1], rect.x + split + 18, y + rowHeight / 2 + 11);
+    starts.slice(1).forEach((x) => {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y + rowHeight);
+      ctx.stroke();
+    });
+    row.forEach((text, column) => {
+      const bold = index === 0 || (columns > 2 && column === 0);
+      let size = 32;
+      const maxWidth = rect.w * widths[column] - 30;
+      ctx.font = `${bold ? 'bold ' : ''}${size}px ${FONT}`;
+      while (size > 20 && ctx.measureText(text).width > maxWidth) {
+        size -= 2;
+        ctx.font = `${bold ? 'bold ' : ''}${size}px ${FONT}`;
+      }
+      ctx.fillStyle = theme.text;
+      ctx.fillText(text, starts[column] + 16, y + rowHeight / 2 + size * 0.35);
+    });
   });
 }
 
