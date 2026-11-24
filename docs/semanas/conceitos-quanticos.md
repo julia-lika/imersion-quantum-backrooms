@@ -16,9 +16,9 @@ mecânicas de jogo. O mesmo conteúdo aparece no telão de slides do lobby
 flowchart LR
   A[Circuito de 12 qubits<br/>backend/quantum_circuit.py] -->|1024 shots| B[Banco gravado<br/>src/data/quantum-bank.json]
   B -->|andar novo = medir| C[1 bitstring de 12 bits]
-  C -->|semente| D[Gerador clássico BSP<br/>src/js/map-generator.js]
-  D --> E[Salas, vãos, pilares,<br/>porta e paredes em superposição]
-  B -->|trecho não observado = medir de novo| F[Setor 7x7 se reorganiza<br/>src/js/decoherence.js]
+  C -->|bit i decide a região i| D[Grade 3x4 de regiões<br/>src/js/qubit-regions.js]
+  D --> E[Salas abertas, corredores,<br/>porta e paredes em superposição]
+  B -->|região não observada = medir de novo| F[Região do qubit se refaz<br/>src/js/decoherence.js]
   F --> E
 ```
 
@@ -89,10 +89,18 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 - **Real:** o circuito de 12 qubits, a amostragem dos seus resultados e a
   entropia calculada das medições. Hoje o banco vem de simulação exata
   (statevector, 1024 shots por andar); com `?live` o jogo chama a API.
-- **Clássico:** a construção do mapa. O bitstring é só a semente do gerador
-  BSP: o quântico escolhe *qual* dos 4096 mapas aparece, e o mesmo bitstring
-  sempre gera o mesmo mapa. A reorganização dos setores também é clássica, com
-  um bitstring novo do banco como semente.
+- **Quântico → mapa:** o interior do andar é uma grade de 3 colunas x 4 linhas,
+  uma região por qubit (q0 na entrada, numeração por linha, na ordem da cadeia
+  de CX). Bit 1 = sala aberta; bit 0 = corredores. Entre duas regiões vizinhas,
+  bits iguais apagam a parede e bits diferentes deixam uma parede com uma
+  passagem só, então a correlação entre vizinhos criada pelo CX aparece na
+  planta. Quando uma região decoere, o bit do qubit dela na nova medição decide
+  como ela volta. O HUD do desktop tem um mini-quadro 3x4 com o bit de cada
+  região e onde você está.
+- **Clássico:** a posição exata das paredes internas, das passagens e dos
+  pilares dentro de cada região, sorteada por um gerador pseudoaleatório
+  semeado pelo bitstring (mesmo bitstring = mesmo andar), e a passagem mínima
+  aberta se alguma sala ficar isolada.
 - **Inspirado na física:** o labirinto que só evolui longe do QPS segue a
   ideia do efeito Zeno quântico; o raio, os 18 s e os setores são regras de
   jogo.
@@ -100,7 +108,8 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
   em superposição.
 - **HUD do desktop:** à esquerda, a string medida do andar e de onde ela veio
   (simulador exato, hardware ou sorteio clássico); à direita, o desenho do
-  circuito de 12 qubits, o estado da porta e quantos trechos evoluíram.
+  circuito de 12 qubits, o quadro qubit → região, o estado da porta e quantos
+  trechos evoluíram.
   Sanidade, energia e objetivo ficam só no Q-LINK.
 - **Plano B:** se o banco não carrega, `sampleQuantumBitstring` gera bits
   clássicos que imitam a correlação entre vizinhos do CX. Não é medição.
@@ -109,7 +118,9 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 
 | Pasta / arquivo | Responsabilidade |
 | --- | --- |
-| `src/js/map-generator.js` | Bitstring → labirinto (BSP), posições possíveis da porta e sorteio na medição, lobby fixo |
+| `src/js/qubit-regions.js` | Grade 3x4: cada qubit decide sua região (sala aberta ou corredores) e as fronteiras |
+| `src/js/map-generator.js` | Monta o andar a partir das regiões, posições possíveis da porta e sorteio na medição, lobby fixo |
+| `src/js/qubit-board.js` | Mini-quadro do HUD: qual bit gerou cada região |
 | `src/js/maze-physics.js` | Grade, colisão, salto de fase, paredes em superposição |
 | `src/js/quantum-bank.js` | Leitura do banco, amostragem, entropia |
 | `src/js/quantum-measurement.js` | Medição ao pegar o QPS e HUD |

@@ -184,7 +184,7 @@ export const QUANTUM_SLIDES = [
       ['Uma moeda girando', 'Um qubit (cada andar tem 12)'],
       ['Mil caixas iguais', 'Os 1024 resultados do circuito, guardados no jogo'],
       ['Abrir a caixa', 'Entrar num andar: o jogo sorteia um desses resultados'],
-      ['O que saiu', 'Um código de 12 bits, que vira a semente do mapa'],
+      ['O que saiu', 'Um código de 12 bits: cada bit monta uma parte do mapa'],
       ['Olhar a caixa sem parar', 'O QPS, que mede tudo a uns 4 m de você o tempo todo'],
       ['Caixa fechada', 'A porta e as paredes em superposição'],
     ],
@@ -194,10 +194,10 @@ export const QUANTUM_SLIDES = [
     title: 'Como o mapa nasce',
     cards: [
       {
-        heading: 'O código é a semente',
-        text: 'O código de 12 bits vai para um gerador comum, nada quântico. Ele divide o andar em salas, abre passagens, coloca pilares e marca alguns lugares onde a porta pode estar.\n\nO quântico escolhe QUAL dos 4096 mapas você vai ver. Mesmo código, mesmo mapa, sempre.',
+        heading: 'Cada qubit é um pedaço do andar',
+        text: 'O andar é dividido numa grade de 3 por 4: são 12 regiões, uma para cada qubit. Se o qubit deu 1, a região vira uma sala aberta. Se deu 0, vira corredores.\n\nQuando dois vizinhos dão o mesmo bit, a parede entre eles some. Como o circuito amarra os qubits em fila, isso acontece mais do que no acaso: é o emaranhamento aparecendo na planta.',
       },
-      { diagram: 'map', caption: '010110101100 → salas, passagens e onde a porta pode estar (amarelo).' },
+      { diagram: 'map', caption: '010110101100 → q0=0 corredores, q1=1 sala aberta… O quadro do HUD mostra isso no andar.' },
     ],
   },
   {
@@ -207,7 +207,7 @@ export const QUANTUM_SLIDES = [
     cards: [
       { label: 'MEDINDO', heading: 'Perto de você', text: 'O QPS (uns 4 m em volta) e os seus olhos medem o tempo todo. Ali, nada muda.' },
       { label: '18 S SEM MEDIR', heading: 'Ele evolui', text: 'Sem ninguém medindo, aquele trecho volta a ficar em superposição.' },
-      { label: 'MEDIDO DE NOVO', heading: 'Outro resultado', text: 'O jogo sorteia um código novo e o trecho aparece reorganizado.' },
+      { label: 'MEDIDO DE NOVO', heading: 'Outro resultado', text: 'O qubit daquela região é medido de novo. Se o bit mudou, a sala vira corredores (ou o contrário).' },
     ],
     note: 'Você percebe pelo aviso: a luz treme e passa um zumbido. O labirinto nunca fica sem saída. Os números (raio, 18 s) são regra de jogo; a ideia vem do efeito Zeno, no próximo slide.',
   },

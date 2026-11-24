@@ -3,7 +3,7 @@
 // ilustrações de moedas e gatos). O conteúdo está em js/content/quantum-slides.js.
 // Desktop: clique nos botões (ou na metade esquerda/direita da tela) ou use [ e ].
 // VR: toque os botões com a mão.
-import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../../content/quantum-slides.js?v=20261124-13';
+import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../../content/quantum-slides.js?v=20261124-14';
 
 const CANVAS = { width: 1600, height: 900 };
 const PAD = 72;
@@ -161,21 +161,38 @@ const DIAGRAMS = {
   },
 
   map(ctx, box, theme) {
+    // Grade 3x4: cada qubit medido decide a sua região (1 sala aberta, 0 corredores).
+    const bits = '010110101100';
     ctx.font = `bold 30px ${FONT}`;
     ctx.fillStyle = theme.accent;
-    ctx.fillText('010110101100', box.x, box.y + 32);
-    const cell = Math.min(box.w, box.h - 56) / 12;
-    const gx = box.x + (box.w - cell * 12) / 2;
+    ctx.fillText(bits, box.x, box.y + 32);
+    const cols = 3;
+    const rows = 4;
+    const gap = 8;
+    const size = Math.min((box.w - gap * (cols - 1)) / cols, (box.h - 56 - gap * (rows - 1)) / rows);
+    const gx = box.x + (box.w - (size * cols + gap * (cols - 1))) / 2;
     const gy = box.y + 52;
-    const walls = new Set(['5,0', '5,1', '5,2', '5,5', '5,6', '5,7', '0,7', '1,7', '2,7', '6,4', '7,4', '9,4', '10,4', '11,4', '8,9', '8,10', '8,11', '2,3', '9,7']);
-    for (let z = 0; z < 12; z += 1) {
-      for (let x = 0; x < 12; x += 1) {
-        ctx.fillStyle = walls.has(`${x},${z}`) ? theme.text : theme.line;
-        ctx.fillRect(gx + x * cell + 1, gy + z * cell + 1, cell - 2, cell - 2);
+    for (let q = 0; q < 12; q += 1) {
+      const c = q % cols;
+      const r = Math.floor(q / cols);
+      const x = gx + c * (size + gap);
+      const y = gy + r * (size + gap);
+      const open = bits[q] === '1';
+      ctx.fillStyle = open ? theme.accent : theme.line;
+      ctx.fillRect(x, y, size, size);
+      if (!open) {
+        // Corredores: uma parede no meio com passagem.
+        ctx.fillStyle = theme.text;
+        ctx.fillRect(x + size / 2 - 3, y, 6, size * 0.62);
       }
+      // Vizinho com o mesmo bit: a fronteira some (as regiões se juntam).
+      ctx.fillStyle = open ? theme.accent : theme.line;
+      if (c < cols - 1 && bits[q] === bits[q + 1]) ctx.fillRect(x + size, y + size * 0.15, gap, size * 0.7);
+      if (r < rows - 1 && bits[q] === bits[q + cols]) ctx.fillRect(x + size * 0.15, y + size, size * 0.7, gap);
+      ctx.font = `bold ${Math.round(size * 0.24)}px ${FONT}`;
+      ctx.fillStyle = open ? theme.bg : theme.text;
+      ctx.fillText(`q${q}=${bits[q]}`, x + 6, y + size * 0.3);
     }
-    ctx.fillStyle = theme.kicker;
-    ctx.fillRect(gx + 11 * cell + 1, gy + 11 * cell + 1, cell - 2, cell - 2);
   },
 
   superposedWall(ctx, box, theme, time) {
