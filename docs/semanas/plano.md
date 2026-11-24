@@ -23,7 +23,7 @@ Cada semana tem a sua lista na própria página, e eu vou marcando conforme term
 No fim, quero que alguém pegue o headset sem explicação nenhuma e consiga jogar. Para mim, isso significa:
 
 - [ ] ter 5 andares, cada um vindo de uma medição diferente;
-- [ ] o mapa realmente refletir o circuito, e não só usar o resultado como semente;
+- [x] o mapa realmente refletir o circuito, e não só usar o resultado como semente;
 - [ ] dar para ganhar no andar 5 e perder quando a sanidade zera;
 - [ ] rodar a 72 fps no Quest;
 - [ ] usar dados de um computador quântico de verdade e mostrar isso dentro do jogo;

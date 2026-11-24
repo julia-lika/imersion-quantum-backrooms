@@ -25,12 +25,12 @@ Essa semana tem dois lados. Um é deixar o jogo com cara de Backrooms de verdade
 
 - [ ] Escrever como funciona hoje, do circuito até o mapa
 - [ ] Explicar por que, do jeito atual, o circuito não faz diferença no mapa
-- [ ] Decidir como cada qubit vira uma parte do mapa (a ideia é uma grade 3×4, uma região por qubit)
+- [x] Cada qubit vira uma parte do mapa: grade 3×4, uma região por qubit (1 = sala aberta, 0 = corredores), com mini-quadro no HUD
 - [ ] Usar a entropia para decidir quantas paredes ficam em superposição
 - [ ] Fazer gráficos no simulador para mostrar que a distribuição não é uniforme
 - [ ] Ajustar os ângulos do circuito para cada andar ficar diferente
 - [ ] Mandar os jobs dos 5 andares para a IBM
-- [ ] Testes para o banco e para o mapeamento novo
+- [x] Testes para o banco e para o mapeamento novo
 
 ## Pendências
 
