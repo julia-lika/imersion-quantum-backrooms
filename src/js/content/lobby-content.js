@@ -15,14 +15,14 @@ export const LOBBY_FURNITURE = [
   // Estações de equipamento: uma mesa menor (o mesmo modelo) para cada item.
   { piece: 'desk', wall: 'left', inset: 0.42, cellZ: 8.2, rotation: 90, scale: [0.6, 1, 0.75] },
   { piece: 'desk', wall: 'left', inset: 0.42, cellZ: 11.2, rotation: 90, scale: [0.6, 1, 0.75] },
-  { piece: 'desk', wall: 'far', inset: 0.42, cellX: 2.2, rotation: 180, scale: [0.6, 1, 0.75] },
+  { piece: 'desk', wall: 'left', inset: 0.42, cellZ: 15.2, rotation: 90, scale: [0.6, 1, 0.75] },
 ];
 
 // Notebook do briefing perto da borda da mesa, do lado em que o jogador fica.
 export const LOBBY_COMPUTER = { cellX: 5.5, cellZ: 4, edgeOffset: 0.32, y: 0.76, rotation: -10 };
 
-// Telão de slides sobre computação quântica (parede esquerda, fundo do salão).
-export const LOBBY_SLIDES = { wall: 'left', cellZ: 15, y: 1.6, width: 2.6 };
+// Telão de slides sobre computação quântica (parede do fundo, canto esquerdo).
+export const LOBBY_SLIDES = { wall: 'far', cellX: 2.5, y: 1.6, width: 2.6 };
 
 // TV de segurança com a entidade andando, embaixo da placa da ENTIDADE.
 export const LOBBY_TV = { wall: 'right', cellZ: 14.5, y: 0.78, inset: 0.345 };
@@ -31,7 +31,7 @@ export const LOBBY_SIGNS = [
   {
     wall: 'right', cellZ: 2.5,
     title: 'FASE 0 // LOBBY', subtitle: 'TREINAMENTO',
-    body: 'Bem-vindo, agente. Este é o lobby de treinamento.\n\nANDAR: balance os braços (VR) ou WASD/setas, olhando com o mouse.\n\nLeia as estações ao longo do salão e abra o COMPUTADOR na mesa: toque com a mão (VR), clique ou aperte E. No fundo, à esquerda, o telão explica a física do jogo.',
+    body: 'Bem-vindo, agente. Este é o lobby de treinamento.\n\nANDAR: balance os braços (VR) ou WASD/setas, olhando com o mouse.\n\nLeia as estações ao longo do salão e abra o COMPUTADOR na mesa: toque com a mão (VR), clique ou aperte E. No fundo do salão, o telão explica a física do jogo.',
   },
   {
     wall: 'left', cellZ: 8.2, y: 1.85,
@@ -59,14 +59,14 @@ export const LOBBY_SIGNS = [
     body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nVISOR ZETA: pinça na testa (Z) revela paredes em superposição.\nSALTO DE FASE: palmas na parede (X) para atravessar.\nTeste os dois na parede de treino ao lado.',
   },
   {
-    wall: 'far', cellX: 2.2, y: 1.85, height: 0.95,
+    wall: 'left', cellZ: 15.2, y: 1.85, height: 0.95,
     title: 'ESTAÇÃO 3: QPS', subtitle: 'O CHIP QUÂNTICO',
     body: 'O chip é o QPS. Ele mede sem parar tudo num raio de ~4 m e desenha o mapa (pulso direito; desktop: M). O que é medido o tempo todo não muda: efeito Zeno.\n\nLonge de você ninguém mede e o labirinto evolui (no mapa: ?). A porta só se define quando entra no raio. Pegue o chip (desktop: Q).',
   },
   {
     wall: 'far', cellX: 8.6, height: 0.6,
     title: 'SAÍDA', subtitle: 'ANDAR 01',
-    body: 'A porta amarela leva ao ANDAR 01.\n\nQuando estiver pronto, atravesse. Boa sorte, agente.',
+    body: 'A porta amarela leva ao ANDAR 01.\n\nEla só abre depois de pegar os 3 instrumentos e ler a missão no computador. Boa sorte, agente.',
   },
 ];
 

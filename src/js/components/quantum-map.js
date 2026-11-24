@@ -1,5 +1,5 @@
 import { buildLightPanels, buildWallGeometry } from './level-geometry.js';
-import { buildLobby } from './lobby/lobby-builder.js?v=20261124-4';
+import { buildLobby } from './lobby/lobby-builder.js?v=20261124-7';
 
 const LOBBY_RESPAWN_MS = 10000;
 
@@ -247,13 +247,25 @@ AFRAME.registerComponent('quantum-map', {
   createGear(type) {
     const config = {
       qps: { model: '#chip-qps-model', scale: 4, color: '#44ffcc' },
-      qlink: { model: '#relogio-qlink-model', scale: 2.8, color: '#39ff88' },
+      qlink: { model: '#relogio-qlink-model', scale: 1.6, color: '#39ff88' },
       visor: { model: '#oculos-zeta-model', scale: 1.6, color: '#b46bff' },
     }[type];
     const gear = document.createElement('a-entity');
     const model = document.createElement('a-entity');
     model.setAttribute('gltf-model', config.model);
     model.setAttribute('scale', `${config.scale} ${config.scale} ${config.scale}`);
+    // Apoia o modelo no tampo: a base fica na altura do item e o centro no eixo
+    // do giro (os modelos do pack não vêm centralizados).
+    model.addEventListener('model-loaded', () => {
+      gear.object3D.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(model.object3D);
+      if (box.isEmpty()) return;
+      const center = gear.object3D.worldToLocal(box.getCenter(new THREE.Vector3()));
+      const base = gear.object3D.worldToLocal(new THREE.Vector3(0, box.min.y, 0).setX(box.getCenter(new THREE.Vector3()).x).setZ(box.getCenter(new THREE.Vector3()).z));
+      model.object3D.position.x -= center.x;
+      model.object3D.position.z -= center.z;
+      model.object3D.position.y -= base.y;
+    });
     const glow = document.createElement('a-entity');
     glow.setAttribute('light', `type: point; color: ${config.color}; intensity: 0.5; distance: 1.6`);
     glow.setAttribute('position', '0 0.15 0');

@@ -7,7 +7,7 @@ import {
   LOBBY_SLIDES,
   LOBBY_TRAINING_WALLS,
   LOBBY_TV,
-} from '../../content/lobby-content.js?v=20261124-4';
+} from '../../content/lobby-content.js?v=20261124-7';
 
 // Rotação de uma peça presa a cada parede, com a frente virada para o salão.
 const WALL_ROTATION = { left: 90, right: -90, far: 180 };
@@ -61,7 +61,10 @@ function addComputer(parent, frame) {
 function addSlides(parent, frame) {
   const { x, z } = place(frame, LOBBY_SLIDES);
   append(parent, {
-    position: `${x + 0.03} ${LOBBY_SLIDES.y} ${z}`,
+    // Um pouco à frente da parede, para não brigar com ela.
+    position: LOBBY_SLIDES.wall === 'far'
+      ? `${x} ${LOBBY_SLIDES.y} ${z - 0.03}`
+      : `${x + 0.03} ${LOBBY_SLIDES.y} ${z}`,
     rotation: `0 ${WALL_ROTATION[LOBBY_SLIDES.wall]} 0`,
     'quantum-slides': { width: LOBBY_SLIDES.width },
   });
