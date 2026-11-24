@@ -80,8 +80,8 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 | Medição e colapso | Sorteio de 1 resultado entre os shots gravados (`measureFromBank`) | Cada andar nasce de uma medição; a porta fica entre várias posições até o QPS medir, e a medição sorteia uma |
 | Efeito Zeno | Medir sem parar impede a evolução do estado | O raio do QPS congela o labirinto; fora dele, setores sem medição por 18 s evoluem e são medidos de novo |
 | Entropia | Shannon dos `counts` (`shannonEntropy`), 0 a 12 bits | Andares gravados ficam entre ~7 e 8 bits |
-| Tunelamento | Metáfora | Salto de fase: atravessa até 2 células de parede, 92% de sucesso, custa 25 de energia e 3 de sanidade |
-| Superposição de parede | Metáfora (`isSuperposedOpen` oscila no tempo) | Visor Zeta mostra o estado; entrar na parede aberta a mede e ela fica aberta até você sair (`observeSuperposedWalls`) |
+| Tunelamento | Metáfora | Salto de fase: atravessa até 2 células de parede comum (azul no mapa), 92% de sucesso, custa 25 de energia e 3 de sanidade; não passa por parede em superposição |
+| Superposição de parede | Metáfora (`isSuperposedOpen` oscila no tempo) | Visor Zeta mostra o estado; ela só deixa passar quando abre: entrar nessa hora a mede e ela fica aberta até você sair (`observeSuperposedWalls`). O salto de fase é barrado (`phaseBlocker`) |
 
 ## O que é real e o que é jogo
 

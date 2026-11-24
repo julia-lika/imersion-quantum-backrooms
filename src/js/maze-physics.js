@@ -144,7 +144,19 @@ export function resolveMove(world, position, delta, radius = PLAYER_RADIUS, time
 }
 
 // Procura a primeira célula livre depois de pelo menos uma parede na direção do olhar.
+// Parede em superposição não é atravessável pelo salto de fase: ela só deixa
+// passar quando colapsa aberta. Nesse caso o salto é barrado (phaseBlocker).
 export function findPhaseTarget(world, position, direction, timeSeconds = 0, maxCells = 3) {
+  const result = scanPhase(world, position, direction, timeSeconds, maxCells);
+  return result?.cell ? result : null;
+}
+
+// Diz por que o salto não sai: 'superposed' quando a parede é roxa.
+export function phaseBlocker(world, position, direction, timeSeconds = 0, maxCells = 3) {
+  return scanPhase(world, position, direction, timeSeconds, maxCells)?.blocked ?? null;
+}
+
+function scanPhase(world, position, direction, timeSeconds, maxCells) {
   const horizontal = Math.abs(direction.x) >= Math.abs(direction.z);
   const stepX = horizontal ? Math.sign(direction.x) : 0;
   const stepZ = horizontal ? 0 : Math.sign(direction.z);
@@ -159,6 +171,7 @@ export function findPhaseTarget(world, position, direction, timeSeconds = 0, max
     if (x <= 0 || z <= 0 || x >= world.size - 1 || z >= world.size - 1) return null;
 
     if (isCellSolid(world, x, z, timeSeconds)) {
+      if (world.superposed?.has(cellKey(x, z))) return { blocked: 'superposed' };
       crossedWall = true;
     } else if (crossedWall) {
       return { cell: { x, z }, ...cellToWorld(world, x, z) };
@@ -290,6 +303,7 @@ if (typeof window !== 'undefined') {
     isSuperposedCollapsed,
     resolveMove,
     findPhaseTarget,
+    phaseBlocker,
     findSuperposedWalls,
     pickFloorCells,
     cellDistance,

@@ -1,4 +1,4 @@
-import { MAZE_SIZE } from './maze-physics.js';
+import { MAZE_SIZE } from './maze-physics.js?v=20261124-12';
 
 // Cada andar é decidido por uma medição de 12 qubits (um bitstring de 12 bits).
 export const QUBITS = 12;

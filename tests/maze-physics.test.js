@@ -105,3 +105,23 @@ test('QPS e Almond Water sempre caem em células livres do Level 0', () => {
     });
   });
 });
+
+test('salto de fase não atravessa parede em superposição fechada', async () => {
+  const { createMazeWorld, findPhaseTarget, phaseBlocker, cellToWorld } = await import('../src/js/maze-physics.js');
+  const grid = () => [
+    '#####',
+    '#.#.#',
+    '#####',
+    '#####',
+    '#####',
+  ].map((row) => row.split(''));
+  const plain = createMazeWorld(grid());
+  assert.ok(findPhaseTarget(plain, cellToWorld(plain, 1, 1), { x: 1, z: 0 }));
+
+  const quantum = createMazeWorld(grid(), { superposed: [{ x: 2, z: 1, offset: 0 }] });
+  const from = cellToWorld(quantum, 1, 1);
+  const closedAt = [...Array(200).keys()].map((i) => i * 0.1)
+    .find((time) => phaseBlocker(quantum, from, { x: 1, z: 0 }, time) === 'superposed');
+  assert.notEqual(closedAt, undefined);
+  assert.equal(findPhaseTarget(quantum, from, { x: 1, z: 0 }, closedAt), null);
+});
