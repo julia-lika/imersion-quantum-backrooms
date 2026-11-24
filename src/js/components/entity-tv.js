@@ -112,7 +112,11 @@ AFRAME.registerComponent('entity-tv', {
       root.scale.setScalar(0.18);
       root.position.y = 2;
       this.entity = new THREE.Group();
-      this.entity.add(root);
+      // Corpo com o andar assustador (gira, manca, treme e congela).
+      this.body = new THREE.Group();
+      this.body.add(root);
+      this.entity.add(this.body);
+      this.gait = window.creepyGait?.create(performance.now());
       // Luz fraca junto da entidade para ela se destacar na imagem escura.
       const rim = new THREE.PointLight('#d8c8ff', 1.2, 3, 1.5);
       rim.position.set(0.4, 1.6, 0.8);
@@ -226,11 +230,15 @@ AFRAME.registerComponent('entity-tv', {
 
     // A entidade vem do fundo do corredor até perto da câmera e recomeça.
     if (this.entity) {
-      this.walkZ += TV_WALK_SPEED * elapsed;
-      if (this.walkZ > TV_CORRIDOR.near) this.walkZ = TV_CORRIDOR.far;
+      // Anda em zigue-zague: o corpo vira para a direção do passo.
       const sway = Math.sin(time * 0.0021);
-      this.entity.position.set(sway * 0.25, Math.abs(Math.sin(time * 0.004)) * 0.05, this.walkZ);
-      this.entity.rotation.set(0, sway * 0.25, Math.sin(time * 0.004) * 0.05);
+      const pose = this.gait
+        ? window.creepyGait.update(this.gait, time, elapsed * 1000, { moving: true, targetYaw: Math.cos(time * 0.0021) * 0.45 })
+        : null;
+      if (!pose?.frozen) this.walkZ += TV_WALK_SPEED * elapsed * (pose?.catchUp ?? 1);
+      if (this.walkZ > TV_CORRIDOR.near) this.walkZ = TV_CORRIDOR.far;
+      this.entity.position.set(sway * 0.25, 0, this.walkZ);
+      if (pose) window.creepyGait.apply(this.body, pose);
     }
     this.flicker.forEach((light, index) => {
       light.intensity = index === 1 && Math.random() < 0.3 ? 0.15 : 1.4;
