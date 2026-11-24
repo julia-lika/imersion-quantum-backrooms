@@ -102,3 +102,35 @@ AFRAME.registerComponent('canvas-text', {
     this.mesh.geometry.dispose();
   },
 });
+
+// Some com o texto depois de `delay` ms. Cada texto novo (canvas-text mudou)
+// aparece de novo e reinicia a contagem. Usado nas dicas do canto inferior.
+AFRAME.registerComponent('auto-hide', {
+  schema: { delay: { type: 'number', default: 20000 } },
+
+  init() {
+    this.onChange = ({ detail }) => {
+      if (detail.name === 'canvas-text') this.restart();
+    };
+    this.el.addEventListener('componentchanged', this.onChange);
+    this.restart();
+  },
+
+  // persistent: texto fixo, não some. Ao sumir, avisa com `hint-expired`
+  // (o lobby usa isso para voltar ao texto fixo dele).
+  restart(persistent = false) {
+    window.clearTimeout(this.timer);
+    this.el.object3D.visible = true;
+    if (persistent) return;
+    this.timer = window.setTimeout(() => {
+      this.el.object3D.visible = false;
+      this.el.emit('hint-expired');
+    }, this.data.delay);
+  },
+
+  remove() {
+    window.clearTimeout(this.timer);
+    this.el.removeEventListener('componentchanged', this.onChange);
+    this.el.object3D.visible = true;
+  },
+});

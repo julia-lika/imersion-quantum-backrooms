@@ -14,6 +14,9 @@ const KEY_DIRECTIONS = {
 // Q e E agora pegam o QPS e a Água de Amêndoa; no desktop o giro fica com o mouse.
 const TURN_KEYS = {};
 
+// Placa de boas-vindas do lobby (parede direita, cellZ 2.5 em lobby-content.js).
+const LOBBY_WELCOME_CELL = { x: 11.5, z: 2.5 };
+
 AFRAME.registerComponent('player-locomotion', {
   schema: {
     keyboardSpeed: { type: 'number', default: 2.2 },
@@ -69,6 +72,10 @@ AFRAME.registerComponent('player-locomotion', {
     this.el.sceneEl.addEventListener('phase-shift-resolved', this.onPhaseResolved);
     this.el.sceneEl.addEventListener('maze-world-updated', this.onWorldUpdated);
     this.el.sceneEl.addEventListener('player-teleport', this.onTeleport);
+    // Ao entrar no VR a pose da cabeça muda: espera alguns quadros com o
+    // rastreamento ativo e vira o jogador para a placa de boas-vindas.
+    this.onEnterVr = () => { this.vrFacingFrames = 30; };
+    this.el.sceneEl.addEventListener('enter-vr', this.onEnterVr);
 
     // Diagnóstico: no console do navegador, rode quantumDebug().
     window.quantumDebug = () => ({
@@ -96,6 +103,7 @@ AFRAME.registerComponent('player-locomotion', {
     this.el.sceneEl.removeEventListener('phase-shift-resolved', this.onPhaseResolved);
     this.el.sceneEl.removeEventListener('maze-world-updated', this.onWorldUpdated);
     this.el.sceneEl.removeEventListener('player-teleport', this.onTeleport);
+    this.el.sceneEl.removeEventListener('enter-vr', this.onEnterVr);
     delete window.quantumDebug;
   },
 
@@ -167,14 +175,25 @@ AFRAME.registerComponent('player-locomotion', {
   },
 
   // Faz o jogador nascer olhando para um corredor aberto, e não para uma parede.
+  // No lobby, nasce de frente para a placa de boas-vindas (FASE 0 // LOBBY),
+  // no desktop e no VR.
   faceOpenDirection() {
     const world = window.quantumWorld;
     const physics = window.quantumPhysics;
     const tracker = this.tracker;
-    if (!world || !physics?.bestOpenDirection || !tracker || tracker.inVr) return;
+    if (!world || !physics?.bestOpenDirection || !tracker) return;
 
     const head = tracker.head.world;
-    const open = physics.bestOpenDirection(world.maze, physics.worldToCell(world, head.x, head.z));
+    let open = null;
+    if (window.quantumPlayer?.floor === 0) {
+      const target = {
+        x: world.origin + LOBBY_WELCOME_CELL.x * world.cellSize,
+        z: world.origin + LOBBY_WELCOME_CELL.z * world.cellSize,
+      };
+      open = { x: target.x - head.x, z: target.z - head.z };
+    } else if (!tracker.inVr) {
+      open = physics.bestOpenDirection(world.maze, physics.worldToCell(world, head.x, head.z));
+    }
     if (!open) return;
 
     this.updateBasis();
@@ -201,6 +220,10 @@ AFRAME.registerComponent('player-locomotion', {
     if (!this.initialFacingDone) {
       this.initialFacingDone = true;
       this.faceOpenDirection();
+    }
+    if (this.vrFacingFrames > 0 && this.tracker.inVr) {
+      this.vrFacingFrames -= 1;
+      if (this.vrFacingFrames === 0 && window.quantumPlayer?.floor === 0) this.faceOpenDirection();
     }
 
     const dt = Math.min(0.1, delta / 1000);
