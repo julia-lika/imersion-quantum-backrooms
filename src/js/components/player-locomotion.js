@@ -14,8 +14,8 @@ const KEY_DIRECTIONS = {
 // Q e E agora pegam o QPS e a Água de Amêndoa; no desktop o giro fica com o mouse.
 const TURN_KEYS = {};
 
-// Placa de boas-vindas do lobby (parede direita, cellZ 2.5 em lobby-content.js).
-const LOBBY_WELCOME_CELL = { x: 11.5, z: 2.5 };
+// Placa de boas-vindas do lobby (painel solto à frente do spawn, em lobby-content.js).
+const LOBBY_WELCOME_CELL = { x: 3.4, z: 1.2 };
 
 AFRAME.registerComponent('player-locomotion', {
   schema: {
