@@ -12,7 +12,21 @@ export const LOBBY_FURNITURE = [
   { piece: 'metalTable', wall: 'right', inset: 0.6, cellZ: 7.5, rotation: 90 },
   { piece: 'terminal', wall: 'right', inset: 0.6, cellZ: 7.5, y: 0.75, rotation: 90 },
   { piece: 'blueChair', cellX: 10, cellZ: 7.5, rotation: -90 },
+  // Mesa dos equipamentos, no canto à esquerda do telão de slides. Da esquerda
+  // para a direita de quem olha: relógio, óculos e chip, na ordem da placa.
+  { piece: 'desk', wall: 'far', cellX: 2.2, inset: 0.55, rotation: 180 },
 ];
+
+// Equipamentos do agente expostos na mesa do canto. Os modelos são pequenos de
+// verdade (o chip tem 4 cm), então ficam ampliados na vitrine.
+export const LOBBY_GEAR = {
+  wall: 'far', inset: 0.5, y: 0.74,
+  items: [
+    { model: '#relogio-qlink-model', label: 'Q-LINK', cellX: 2.85, scale: 2.8, lift: 0.08, tilt: 0 },
+    { model: '#oculos-zeta-model', label: 'VISOR ZETA', cellX: 2.2, scale: 1.6, lift: 0.03, tilt: 0 },
+    { model: '#chip-qps-model', label: 'QPS', cellX: 1.55, scale: 4, lift: 0.02, tilt: 0 },
+  ],
+};
 
 // Notebook do briefing perto da borda da mesa, do lado em que o jogador fica.
 export const LOBBY_COMPUTER = { cellX: 5.5, cellZ: 4, edgeOffset: 0.32, y: 0.76, rotation: -10 };
@@ -53,6 +67,11 @@ export const LOBBY_SIGNS = [
     wall: 'right', cellZ: 14.5,
     title: 'ENTIDADE', subtitle: 'PERIGO',
     body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nVISOR ZETA: pinça na testa (Z) revela paredes em superposição.\nSALTO DE FASE: palmas na parede (X) para atravessar.\nTeste os dois na parede de treino ao lado.',
+  },
+  {
+    wall: 'far', cellX: 2.2, y: 1.8, height: 0.95,
+    title: 'EQUIPAMENTO', subtitle: 'DO AGENTE',
+    body: 'RELÓGIO = Q-LINK: painel do pulso esquerdo (H). Andar, sanidade, energia e entidade.\n\nÓCULOS = VISOR ZETA: pinça na testa (Z). Mostra as paredes em superposição; gasta energia.\n\nCHIP QUÂNTICO = QPS: pegue no andar (Q). Mede o andar, vira o seu mapa (pulso direito ou M) e revela a porta.',
   },
   {
     wall: 'far', cellX: 8.6, height: 0.6,

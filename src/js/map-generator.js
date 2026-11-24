@@ -204,6 +204,7 @@ export const LOBBY = {
     [5, 4], [6, 4], // mesa com o computador
     [11, 7], [11, 8], // mesa de metal com o terminal
     [3, 5], // poltrona
+    [1, 17], [2, 17], [3, 17], // mesa dos equipamentos (canto do telão)
   ],
   items: {
     almondWater: { x: 9, z: 10 },

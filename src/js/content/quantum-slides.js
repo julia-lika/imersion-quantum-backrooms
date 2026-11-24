@@ -52,6 +52,28 @@ export const QUANTUM_SLIDES = [
     ],
   },
   {
+    theme: 'cream',
+    title: 'O que é um algoritmo?',
+    flow: true,
+    cards: [
+      { label: 'ENTRADA', heading: 'O que você tem', text: 'Ingredientes. Ou, num computador, uma fileira de bits.' },
+      { label: 'PASSOS', heading: 'A receita', text: 'Instruções exatas, uma depois da outra, sem pular nenhuma.' },
+      { label: 'SAÍDA', heading: 'O resultado', text: 'O bolo pronto. Ou outra fileira de bits: a resposta.' },
+    ],
+    note: 'Um algoritmo é uma receita passo a passo. Ordenar cartas, achar o caminho mais curto, gerar um labirinto: tudo isso é algoritmo. No computador, cada passo vira operações com bits.',
+  },
+  {
+    theme: 'dark',
+    title: 'Portas lógicas: os tijolos do computador',
+    cards: [
+      {
+        heading: 'Bits entram, um bit sai',
+        text: '• NOT: inverte. 0 vira 1, 1 vira 0.\n• AND (E): dá 1 só se as duas entradas forem 1.\n• OR (OU): dá 1 se pelo menos uma for 1.\n\nO processador tem bilhões dessas portas. Juntando muitas, ele soma, compara e roda qualquer algoritmo clássico, como o gerador de salas deste jogo.',
+      },
+      { diagram: 'logicGates', caption: 'Cada porta e a sua tabela: entrada → saída.' },
+    ],
+  },
+  {
     theme: 'dark',
     title: 'Um bit é uma moeda parada.\nUm qubit é uma moeda girando.',
     cards: [
@@ -104,12 +126,36 @@ export const QUANTUM_SLIDES = [
     ],
   },
   {
+    theme: 'cream',
+    title: 'Algoritmo quântico = circuito com portas',
+    cards: [
+      {
+        heading: 'Fios e caixinhas',
+        text: 'Cada fio é um qubit. As caixinhas são portas quânticas, lidas da esquerda para a direita, como uma receita.\n\n• H (Hadamard): põe a moeda para girar, meio a meio.\n• CNOT: inverte o segundo qubit se o primeiro for 1. Isso amarra (emaranha) os dois.\n• Medição: abre a caixa e dá 0 ou 1.',
+      },
+      { diagram: 'circuit', caption: 'O circuito mais famoso: dá 00 ou 11, nunca 01 ou 10.' },
+    ],
+  },
+  {
+    theme: 'yellow',
+    title: 'Clássico x quântico',
+    table: [
+      ['', 'Algoritmo clássico', 'Algoritmo quântico'],
+      ['Guarda', 'Bits: 0 ou 1', 'Qubits: 0 e 1 com chances'],
+      ['Portas', 'NOT, AND, OR', 'H, X, CNOT, RY, CZ'],
+      ['Durante a conta', 'Um valor de cada vez', 'Muitas possibilidades juntas'],
+      ['Resultado', 'Sempre o mesmo', 'Um sorteio: roda muitas vezes'],
+      ['Bom para', 'Quase tudo do dia a dia', 'Alguns problemas (moléculas, criptografia)'],
+    ],
+    note: 'Computador quântico não é um computador mais rápido para tudo: ele ganha só em problemas específicos. Neste jogo, o quântico sorteia o código e o clássico constrói as salas.',
+  },
+  {
     theme: 'dark',
     title: 'O circuito escolhe as chances',
     cards: [
       {
         heading: 'As portas giram a moeda',
-        text: '• RY: inclina a moeda para um lado\n• CX: amarra duas moedas\n• CZ: muda o ritmo do giro\n\nCada andar tem o seu circuito de 12 qubits, sempre o mesmo para aquele andar.',
+        text: 'O circuito deste jogo usa 3 portas:\n• RY: gira a moeda no ângulo que quisermos (um H ajustável)\n• CX: é o CNOT, amarra duas moedas\n• CZ: muda o ritmo (a fase) do giro\n\nCada andar tem o seu circuito de 12 qubits, sempre o mesmo para aquele andar.',
       },
       {
         label: 'MIL ABERTURAS DA MESMA CAIXA',
