@@ -7,7 +7,7 @@ import {
 } from '../src/js/map-generator.js';
 import { MAZE_SIZE } from '../src/js/maze-physics.js';
 
-test('o bitstring de 12 qubits é a semente: mesmo bitstring, mesmo mapa', () => {
+test('mesmo bitstring, mesmo mapa; bitstrings diferentes, mapas diferentes', () => {
   const first = generateQuantumMap('010110101100');
   const second = generateQuantumMap('010110101100');
   const other = generateQuantumMap('110010011101');
@@ -73,13 +73,13 @@ test('toda célula livre é alcançável a partir da entrada', () => {
   });
 });
 
-test('tem salas grandes e é mais aberto que um labirinto de corredores', () => {
+test('tem regiões amplas e continua mais aberto que fechado', () => {
   BITSTRINGS.forEach((bits) => {
     const map = generateQuantumMap(bits);
     const floorCells = map.maze.flat().filter((cell) => cell === '.').length;
 
     assert.ok(map.roomCenters.length >= 1, bits);
-    assert.ok(floorCells > MAZE_SIZE * MAZE_SIZE * 0.7, bits);
+    assert.ok(floorCells > MAZE_SIZE * MAZE_SIZE * 0.6, bits);
   });
 });
 

@@ -5,11 +5,11 @@ import {
   NEAR_CELLS,
   UNOBSERVED_MS,
   SHIFT_COOLDOWN_MS,
-  listSectors,
   isSectorObserved,
   reshuffleSector,
   pickSectorSuperposed,
 } from '../decoherence.js';
+import { listRegions } from '../qubit-regions.js';
 
 const CHECK_MS = 200;
 const HINT_LIMIT = 2;
@@ -45,7 +45,8 @@ AFRAME.registerComponent('maze-decoherence', {
   reset() {
     const world = window.quantumWorld;
     const now = performance.now();
-    this.sectors = world ? listSectors(world.size) : [];
+    // Um setor por qubit: as 12 regiões da grade 3x4.
+    this.sectors = world ? listRegions(world.size) : [];
     this.lastSeen = Object.fromEntries(this.sectors.map((sector) => [sector.id, now]));
     this.versions = Object.fromEntries(this.sectors.map((sector) => [sector.id, 0]));
     this.lastShift = now;
@@ -143,6 +144,12 @@ AFRAME.registerComponent('maze-decoherence', {
     this.lastSeen[sector.id] = now;
     if (changed.length === 0) return null;
 
+    // O mini-quadro do HUD passa a mostrar o bit novo desta região.
+    const region = mapComponent.mapInfo?.regions?.[sector.qubit];
+    if (region) {
+      region.bit = bitstring[sector.qubit];
+      region.type = region.bit === '1' ? 'sala aberta' : 'corredores';
+    }
     const superposed = pickSectorSuperposed(world.maze, sector, bitstring, 1);
     mapComponent.applySectorChange(sector, superposed);
     this.shifts += 1;

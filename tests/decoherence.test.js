@@ -77,3 +77,20 @@ test('observar: perto ou no campo de visão conta; de costas ou atrás de parede
   assert.ok(!isSectorObserved(walled, third, viewer), 'parede no caminho');
   assert.ok(isSectorObserved(walled, third, viewer, { transparent: (x) => x === 11 }), 'superposição conta como transparente');
 });
+
+test('nas regiões dos qubits, a reorganização segue o bit novo e mantém tudo conectado', async () => {
+  const { listRegions } = await import('../src/js/qubit-regions.js');
+  for (let seed = 0; seed < 4096; seed += 211) {
+    const map = generateQuantumMap(bits(seed));
+    const maze = map.maze;
+    const protectedCells = [{ x: map.stairs.x, z: map.stairs.z }, { x: 1, z: 1 }];
+    listRegions(maze.length).forEach((region, index) => {
+      const measured = bits((seed * 13 + index * 389) % 4096);
+      reshuffleSector(maze, region, measured, { protectedCells, salt: index });
+      assert.ok(isFullyConnected(maze), `desconectou: andar ${seed}, ${region.id}`);
+      let walls = 0;
+      for (let z = region.minZ; z <= region.maxZ; z += 1) for (let x = region.minX; x <= region.maxX; x += 1) if (maze[z][x] === '#') walls += 1;
+      if (measured[region.qubit] === '1') assert.ok(walls <= 1, `${region.id} devia abrir`);
+    });
+  }
+});

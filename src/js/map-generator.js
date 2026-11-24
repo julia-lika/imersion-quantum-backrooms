@@ -1,4 +1,5 @@
 import { MAZE_SIZE } from './maze-physics.js?v=20261124-12';
+import { buildRegionMaze } from './qubit-regions.js?v=20261124-13';
 
 // Cada andar é decidido por uma medição de 12 qubits (um bitstring de 12 bits).
 export const QUBITS = 12;
@@ -6,21 +7,6 @@ export const QUBITS = 12;
 function normalizeBits(bitstring, length) {
   const bits = String(bitstring ?? '').replace(/[^01]/g, '');
   return (bits + '0'.repeat(length)).slice(0, length);
-}
-
-// Gerador do Level 0: em vez de corredores de 1 célula, divide a área em salas
-// grandes (BSP) separadas por paredes finas, com vãos largos, paredes que
-// terminam no meio do nada e salas de pilares. Tudo determinístico pelos bits.
-const MIN_ROOM = 4;
-
-function createRandom(bitstring) {
-  let seed = (Number.parseInt(bitstring.slice(0, 12), 2) + 1) * 2654435761;
-  return () => {
-    seed = (seed + 0x6D2B79F5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 function floodFrom(maze, startX, startZ) {
@@ -71,96 +57,19 @@ function connectAll(maze, random) {
   }
 }
 
+// O andar: cada qubit desenha a sua região (ver qubit-regions.js). Depois a
+// entrada fica livre e, se alguma sala ficou isolada, abre-se a passagem mínima.
 function buildMaze(bitstring, size = MAZE_SIZE) {
-  const maze = Array.from({ length: size }, (_, z) => Array.from(
-    { length: size },
-    (__, x) => (x === 0 || z === 0 || x === size - 1 || z === size - 1 ? '#' : '.')
-  ));
-  const random = createRandom(bitstring);
-  const randomInt = (min, max) => min + Math.floor(random() * (max - min + 1));
-  const rooms = [];
-
-  const split = (room, depth) => {
-    const width = room.maxX - room.minX + 1;
-    const depthZ = room.maxZ - room.minZ + 1;
-    const canSplitX = width >= MIN_ROOM * 2 + 1;
-    const canSplitZ = depthZ >= MIN_ROOM * 2 + 1;
-    const keepOpen = depth >= 2 && width * depthZ <= 110 && random() < 0.35;
-
-    if ((!canSplitX && !canSplitZ) || keepOpen) {
-      rooms.push(room);
-      return;
-    }
-
-    const vertical = canSplitX && (!canSplitZ || (width === depthZ ? random() < 0.5 : width > depthZ));
-    const min = (vertical ? room.minX : room.minZ) + MIN_ROOM;
-    const max = (vertical ? room.maxX : room.maxZ) - MIN_ROOM;
-    const line = randomInt(min, max);
-    const from = vertical ? room.minZ : room.minX;
-    const to = vertical ? room.maxZ : room.maxX;
-    const length = to - from + 1;
-    const set = (t, value) => {
-      if (vertical) maze[t][line] = value;
-      else maze[line][t] = value;
-    };
-
-    for (let t = from; t <= to; t += 1) set(t, '#');
-
-    // Vãos largos na parede: um ou dois, de 2 a 3 células.
-    const openings = length > 10 && random() < 0.6 ? 2 : 1;
-    for (let index = 0; index < openings; index += 1) {
-      const gap = randomInt(2, 3);
-      const start = randomInt(from, Math.max(from, to - gap + 1));
-      for (let t = start; t < start + gap && t <= to; t += 1) set(t, '.');
-    }
-
-    // Às vezes a parede termina antes de encostar na outra: espaço contínuo e confuso.
-    if (random() < 0.4) {
-      const cut = randomInt(2, Math.max(2, Math.floor(length / 3)));
-      const atStart = random() < 0.5;
-      for (let index = 0; index < cut; index += 1) set(atStart ? from + index : to - index, '.');
-    }
-
-    const [first, second] = vertical
-      ? [{ ...room, maxX: line - 1 }, { ...room, minX: line + 1 }]
-      : [{ ...room, maxZ: line - 1 }, { ...room, minZ: line + 1 }];
-    split(first, depth + 1);
-    split(second, depth + 1);
-  };
-
-  split({ minX: 1, maxX: size - 2, minZ: 1, maxZ: size - 2 }, 0);
-
-  // Salas grandes ganham pilares isolados em grade (nunca encostam em paredes).
-  const roomCenters = [];
-  rooms.forEach((room) => {
-    const width = room.maxX - room.minX + 1;
-    const depthZ = room.maxZ - room.minZ + 1;
-    if (width * depthZ >= 36) {
-      roomCenters.push([Math.floor((room.minX + room.maxX) / 2), Math.floor((room.minZ + room.maxZ) / 2)]);
-    }
-    if (width < 7 || depthZ < 7 || random() < 0.4) return;
-
-    const spacing = random() < 0.5 ? 3 : 4;
-    for (let z = room.minZ + 2; z <= room.maxZ - 2; z += spacing) {
-      for (let x = room.minX + 2; x <= room.maxX - 2; x += spacing) {
-        let clear = true;
-        for (let dz = -1; dz <= 1 && clear; dz += 1) {
-          for (let dx = -1; dx <= 1; dx += 1) {
-            if (maze[z + dz][x + dx] !== '.') clear = false;
-          }
-        }
-        if (clear) maze[z][x] = '#';
-      }
-    }
-  });
-
-  // Entrada e canto oposto sempre livres.
+  const { maze, regions, random } = buildRegionMaze(bitstring, size);
   [[1, 1], [2, 1], [1, 2], [2, 2], [size - 2, size - 2]].forEach(([x, z]) => {
     maze[z][x] = '.';
   });
   connectAll(maze, random);
-
-  return { maze, roomCenters };
+  const roomCenters = regions.map((r) => [Math.floor((r.minX + r.maxX) / 2), Math.floor((r.minZ + r.maxZ) / 2)]);
+  const publicRegions = regions.map(({ id, qubit, row, col, minX, maxX, minZ, maxZ, bit, type }) => (
+    { id, qubit, row, col, minX, maxX, minZ, maxZ, bit, type }
+  ));
+  return { maze, roomCenters, regions: publicRegions };
 }
 
 // A porta de saída fica embutida na parede externa do mapa (atrás dela só há
@@ -285,10 +194,11 @@ export function generateLobbyMap(size = MAZE_SIZE) {
   };
 }
 
-// Como o mapa nasce (fiel ao código): o bitstring medido vira a SEMENTE de um
-// gerador clássico (BSP de salas, vãos e pilares). O quântico escolhe QUAL dos
-// 4096 mapas possíveis aparece; a construção das salas é clássica e
-// determinística (mesmo bitstring = mesmo mapa).
+// Como o mapa nasce (fiel ao código): o interior é uma grade 3x4 de regiões e
+// cada um dos 12 qubits medidos decide a sua: 1 = sala aberta, 0 = corredores.
+// Fronteira entre bits iguais some; entre bits diferentes vira parede com uma
+// passagem. Só a posição exata de vãos e pilares é pseudoaleatória (semeada
+// pelo bitstring, então mesmo bitstring = mesmo mapa).
 export function generateQuantumMap(bitstring) {
   const bits = normalizeBits(bitstring, QUBITS);
   const mazeResult = buildMaze(bits);
@@ -299,6 +209,7 @@ export function generateQuantumMap(bitstring) {
     bitstring: bits,
     maze: mazeResult.maze,
     roomCenters: mazeResult.roomCenters,
+    regions: mazeResult.regions,
     stairs: { ...stairs, visible: false },
     doorCandidates,
     quantumMetrics: analyzeQuantumState(bits),

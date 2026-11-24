@@ -1,3 +1,5 @@
+import { layoutRegion } from './qubit-regions.js';
+
 // Decoerência: o labirinto muda em tempo real, mas só onde ninguém está olhando.
 //
 // A ideia (metáfora de jogo, inspirada na física): observar é medir, e o que foi
@@ -6,8 +8,10 @@
 // bits tirado da mesma distribuição do andar (banco de medições). O trecho então
 // se reorganiza. O que o jogador está vendo nunca muda.
 //
-// O mapa é dividido em setores de SECTOR_SIZE x SECTOR_SIZE células. A troca de
-// um setor é local: só as células dele mudam, e o labirinto inteiro continua
+// No jogo os setores são as 12 regiões dos qubits (qubit-regions.js): quando uma
+// região decoere, o bit do SEU qubit na nova medição decide se ela volta como
+// sala aberta ou corredores. listSectors (quadrados de SECTOR_SIZE) fica como
+// divisão genérica. A troca de um setor é local: só as células dele mudam, e o labirinto inteiro continua
 // conectado (nenhuma sala fica isolada e ninguém fica preso).
 
 export const SECTOR_SIZE = 7;
@@ -216,7 +220,10 @@ export function reshuffleSector(maze, sector, bitstring, { protectedCells = [], 
   // Móveis (lobby) nunca entram aqui; se aparecerem, o setor não é tocado.
   if (before.some(({ cell }) => cell === 'F')) return [];
 
-  layoutSector(maze, sector, random);
+  // Região de um qubit: o bit dele na nova medição decide o tipo (sala aberta ou
+  // corredores). Setor genérico (sem qubit): arranjo livre.
+  if (Number.isInteger(sector.qubit)) layoutRegion(maze, sector, String(bitstring)[sector.qubit], random);
+  else layoutSector(maze, sector, random);
   protectedCells.forEach(({ x, z }) => {
     if (inSector(sector, x, z)) maze[z][x] = '.';
   });

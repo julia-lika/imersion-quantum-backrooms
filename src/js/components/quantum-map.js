@@ -108,6 +108,8 @@ AFRAME.registerComponent('quantum-map', {
     if (!lobby) map.stairs = this.doorCell(map.doorCandidates, map.stairs);
     this.mapInfo = {
       stairs: map.stairs, doorCandidates: map.doorCandidates || [], origin, cellSize, height, lobby, bitstring: map.bitstring,
+      // Qual qubit gerou cada região (mini-quadro do HUD); a decoerência atualiza o bit.
+      regions: (map.regions || []).map((region) => ({ ...region })),
     };
     this.superposedEls = new Map();
     this.rebuildWalls();
