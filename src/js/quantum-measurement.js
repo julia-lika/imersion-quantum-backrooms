@@ -17,8 +17,6 @@
 
   startGame.addEventListener('click', hideStartScreen);
   document.querySelector('#continue-game')?.addEventListener('click', hideStartScreen);
-  // Entrar em VR sem clicar em ENTER também inicia o jogo.
-  scene.addEventListener('enter-vr', hideStartScreen);
 
   // Pegar o QPS mede o estado: grava a planta do andar (o mapa do QPS) e
   // revela a porta. O labirinto em si não muda nessa hora; ele muda sozinho,

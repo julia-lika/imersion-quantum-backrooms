@@ -42,6 +42,10 @@ function createHandState() {
     // Eixo perpendicular à palma: Y nas juntas do hand tracking, X no grip dos controles.
     palmAxis: new THREE.Vector3(0, 1, 0),
     look: { hold: 0, shown: false, block: 0, speed: 0 },
+    // Raio de apontar (targetRaySpace): controles e mãos. Usado pelo menu no VR.
+    rayValid: false,
+    rayOrigin: new THREE.Vector3(),
+    rayDirection: new THREE.Vector3(0, 0, -1),
     previous: new THREE.Vector3(),
     world: new THREE.Vector3(),
     velocity: new THREE.Vector3(),
@@ -155,6 +159,7 @@ AFRAME.registerComponent('xr-hands', {
     HAND_SIDES.forEach((side) => {
       this.hands[side].wasTracked = this.hands[side].tracked;
       this.hands[side].tracked = false;
+      this.hands[side].rayValid = false;
     });
 
     if (frame && referenceSpace && this.session) {
@@ -181,6 +186,14 @@ AFRAME.registerComponent('xr-hands', {
   readInputSource(source, frame, referenceSpace, dt) {
     const hand = this.hands[source.handedness];
     if (!hand) return;
+
+    const rayPose = source.targetRaySpace ? frame.getPose(source.targetRaySpace, referenceSpace) : null;
+    if (rayPose) {
+      const { position: p, orientation: q } = rayPose.transform;
+      hand.rayOrigin.set(p.x, p.y, p.z);
+      hand.rayDirection.set(0, 0, -1).applyQuaternion(this.lookQuat.set(q.x, q.y, q.z, q.w));
+      hand.rayValid = true;
+    }
 
     let pose = null;
     if (source.hand) {
