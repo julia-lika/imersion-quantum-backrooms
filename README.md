@@ -30,9 +30,10 @@ O conteúdo de desenvolvimento fica em `src/`. Como essa pasta é montada no con
 
 ## Modo cooperativo (2 jogadores)
 
-Um jogador no desktop é o **operador**: abre `operador.html` (ou o link
-"console do operador" em MODO COOPERATIVO na tela inicial), vê o andar inteiro, a
-porta e as jogadas da IA, mas não tem visão de corredor. O outro, no Quest ou
+Um jogador é o **operador** (desktop ou VR): em MODO COOPERATIVO na tela inicial,
+clica em SER O OPERADOR e fica no lobby. Um monitor sobre o balcão mostra o código
+da sala, o andar inteiro do explorador, a porta e as jogadas da IA, mas ele não
+tem visão de corredor e não desce. O outro, no Quest ou
 em outro PC, é o **explorador**: digita o código de 4
 letras da sala e entra só com o Q-LINK, sem mapa. Os dois conversam por voz
 pela mesma conexão.
@@ -47,19 +48,22 @@ pela mesma conexão.
   e fecha um corredor nele (sempre deixando um desvio), e a cada 3 jogadas tenta
   cercá-lo com um anel de paredes. O operador vê cada jogada 6–7 s antes; o
   explorador não. As paredes da IA se desfazem sozinhas depois de 45 s.
-- Cercado, o explorador sai com o Salto de Fase. VARREDURA (espaço, no console)
-  cancela a próxima jogada da IA e desfaz a jaula. Recarga de 20 s.
+- Cercado, o explorador sai com o Salto de Fase. A VARREDURA é um botão num
+  pedestal no fundo do salão: o operador corre até lá e aperta (E, clique ou
+  encostar a mão no VR). Cancela a próxima jogada da IA e desfaz a jaula.
+  Recarga de 20 s. V muta o microfone do operador.
 - O explorador muta o microfone com V (desktop) ou fazendo a pinça com a outra
-  mão perto do Q-LINK (VR); o console mostra quando ele está mudo.
+  mão perto do Q-LINK (VR); o monitor do operador mostra quando ele está mudo.
 - Se o explorador não conectar, a tela diz onde parou. "Sala não encontrada"
-  é código errado ou console fechado. "A conexão não fechou" é a rede: as duas
+  é código errado ou o operador saiu do jogo. "A conexão não fechou" é a rede: as duas
   pontas acham a sala, mas a rede (Wi-Fi da faculdade, isolamento de clientes,
   NAT restrito) bloqueia a conexão direta. Permita o microfone nas duas pontas,
   ponha os dois no mesmo Wi-Fi ou no roteador do celular, ou use um servidor
   TURN próprio nos dois links:
   `?turn=turn:SERVIDOR:3478&turnuser=USUARIO&turnpass=SENHA`.
 - Para testar sem rede, em duas abas do mesmo navegador:
-  `operador.html?transporte=local&sala=TEST` e `index.html?transporte=local&sala=TEST`
+  `index.html?transporte=local&operador&sala=TEST` e `index.html?transporte=local&sala=TEST`
+  (`operador.html` também leva ao jogo como operador)
   (sem voz).
 
 ## IBM Quantum

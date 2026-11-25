@@ -156,6 +156,25 @@
         text-transform: uppercase;
       }
 
+      #coop-host {
+        display: block;
+        width: 100%;
+        margin: 8px 0 10px;
+        padding: 10px;
+        border: 1px solid #b89551;
+        background: rgba(184, 149, 81, 0.12);
+        color: #f4dda1;
+        cursor: pointer;
+        font: inherit;
+        letter-spacing: 0.12em;
+      }
+
+      #coop-host:disabled,
+      #coop-connect:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+
       #coop-connect {
         flex: 1;
         border: 1px solid #b89551;
@@ -374,7 +393,7 @@
     <script type="module" src="js/map-generator.js?v=20261125-4"></script>
     <script type="module" src="js/quantum-bank.js?v=20261124-13"></script>
     <script type="module" src="js/components/backrooms-wall.js"></script>
-    <script type="module" src="js/phase-zero.js?v=ai1-20261125-3"></script>
+    <script type="module" src="js/phase-zero.js?v=op1-20261125-1"></script>
     <script src="js/components/xr-hands.js?v=20261125-3"></script>
     <script src="js/components/hand-gestures.js?v=20261125-1"></script>
     <script src="js/components/player-locomotion.js?v=20261125-4"></script>
@@ -382,7 +401,7 @@
     <script src="js/components/terminal-panel.js"></script>
     <script src="js/components/wrist-hud.js?v=mute1-20261125-1"></script>
     <script src="js/components/qps-map.js?v=desk1-20261125-1"></script>
-    <script src="js/components/vr-start-menu.js?v=20261125-1"></script>
+    <script src="js/components/vr-start-menu.js?v=20261125-op1"></script>
     <script src="js/components/door-proximity.js"></script>
     <script src="js/components/lobby/lobby-furniture.js?v=20261124-4"></script>
     <script src="js/components/lobby/lobby-computer.js"></script>
@@ -412,7 +431,8 @@
         <button id="continue-game" type="button" hidden>CONTINUAR</button>
         <button id="coop-open" type="button">MODO COOPERATIVO (2 JOGADORES)</button>
         <div id="coop-panel" hidden>
-          OPERADOR (DESKTOP): abra o <a id="coop-operator-link" href="operador.html" target="_blank" rel="noopener">console do operador</a>. Ele vê o mapa inteiro e cada jogada da IA que fecha caminhos, mas não o corredor. (No duo não há computação quântica: ela fica no modo solo.)<br />
+          OPERADOR (DESKTOP OU VR): fica no lobby. Um monitor sobre o balcão mostra o andar inteiro do explorador e cada jogada da IA que fecha caminhos; a VARREDURA é um botão no fundo do salão, então é preciso correr até ele. (No duo não há computação quântica: ela fica no modo solo.)
+          <button id="coop-host" type="button">SER O OPERADOR (FICA NO LOBBY)</button><br />
           EXPLORADOR (VR OU DESKTOP): digite o código da sala do operador. Você só tem o Q-LINK: sem mapa, guiado pela voz. No desktop: WASD, mouse, H (Q-LINK), X (Salto de Fase) e V (muta o microfone); use fone para a voz não voltar. No VR: com o Q-LINK aberto, pinça com a outra mão perto dele muta.
           <div class="coop-row">
             <input id="coop-code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD" aria-label="Código da sala" />
@@ -557,6 +577,7 @@
     </a-scene>
 
     <script src="js/quantum-measurement.js?v=20261125-3"></script>
-    <script type="module" src="js/coop/coop-explorer.js?v=20261125-5"></script>
+    <script type="module" src="js/coop/coop-explorer.js?v=20261125-6"></script>
+    <script type="module" src="js/coop/operator-lobby.js?v=20261125-op1"></script>
   </body>
 </html>

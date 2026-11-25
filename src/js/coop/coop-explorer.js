@@ -83,6 +83,7 @@ function handleMessage(message) {
 }
 
 async function connect() {
+  if (window.quantumCoop?.role === 'operator') return;
   const code = normalizeRoomCode($('coop-code').value);
   if (code.length !== 4) {
     setStatus('O CÓDIGO TEM 4 LETRAS — está na tela do operador');
@@ -157,7 +158,8 @@ function bind() {
   document.addEventListener('keydown', (event) => {
     if (event.code !== 'KeyV' || event.repeat || !window.quantumCoop?.active) return;
     if (event.target instanceof HTMLInputElement) return;
-    toggleMute();
+    // Explorador ou operador: cada um registra o próprio toggleMute.
+    window.quantumCoop.toggleMute?.();
   });
   const panel = $('coop-panel');
   $('coop-open').addEventListener('click', () => {
@@ -168,14 +170,6 @@ function bind() {
   $('coop-code').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') connect();
   });
-  // Mantém ?transporte=local no link do console (teste em duas abas).
-  // Repassa ao console do operador as opções de rede (teste local, TURN próprio).
-  const params = new URLSearchParams(location.search);
-  const forward = new URLSearchParams();
-  ['transporte', 'turn', 'turnuser', 'turnpass'].forEach((name) => {
-    if (params.has(name)) forward.set(name, params.get(name));
-  });
-  if ([...forward].length) $('coop-operator-link').href = `operador.html?${forward}`;
   const room = normalizeRoomCode(new URLSearchParams(location.search).get('sala'));
   if (room.length === 4) {
     panel.hidden = false;

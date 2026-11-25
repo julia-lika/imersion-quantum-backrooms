@@ -58,7 +58,10 @@ let lastWristUpdate = 0;
 const START_POSITION = startPosition();
 // Modo cooperativo (js/coop/coop-explorer.js): este navegador é o EXPLORADOR.
 // O operador, no desktop, é dono do andar; aqui só roda o corpo do jogador.
-const coop = () => (window.quantumCoop?.active ? window.quantumCoop : null);
+const coop = () => (window.quantumCoop?.active && window.quantumCoop.role === 'explorer' ? window.quantumCoop : null);
+// No duo, o OPERADOR fica no lobby (js/coop/operator-lobby.js): joga o lobby
+// normal, mas não desce de andar e não mexe no save do solo.
+const operatorMode = () => Boolean(window.quantumCoop?.active && window.quantumCoop.role === 'operator');
 let coopRequest = false;
 let coopBlocks = 0;
 const SURVIVAL_TICK_MS = 100;
@@ -129,7 +132,7 @@ function localBitstring() {
 
 function persistProgress() {
   // O cooperativo não mexe no save do jogo solo.
-  if (coop()) return;
+  if (coop() || operatorMode()) return;
   try {
     saveGameState(game.current);
   } catch {
@@ -142,7 +145,7 @@ window.quantumPlayer.hasQps = window.quantumPlayer.gear.qps;
 function setGear(gear) {
   window.quantumPlayer.gear = { ...gear };
   window.quantumPlayer.hasQps = Boolean(gear.qps);
-  if (coop()) return;
+  if (coop() || operatorMode()) return;
   try {
     localStorage.setItem(GEAR_STORAGE_KEY, JSON.stringify(window.quantumPlayer.gear));
   } catch {
@@ -156,7 +159,7 @@ function missingGear() {
 
 function setMissionRead(read) {
   window.quantumPlayer.missionRead = read;
-  if (coop()) return;
+  if (coop() || operatorMode()) return;
   try {
     localStorage.setItem(MISSION_STORAGE_KEY, read ? '1' : '0');
   } catch {
@@ -200,7 +203,9 @@ function checkDoorMeasurement() {
 
 // Único texto fixo do canto inferior (no lobby). As outras dicas somem em 20 s
 // e, no lobby, este texto volta no lugar delas.
-const LOBBY_HINT = 'LOBBY DE TREINAMENTO — pegue os 3 instrumentos nas estações (Q-LINK, Visor Zeta e QPS) e leia a missão no computador da mesa';
+const SOLO_LOBBY_HINT = 'LOBBY DE TREINAMENTO — pegue os 3 instrumentos nas estações (Q-LINK, Visor Zeta e QPS) e leia a missão no computador da mesa';
+const OPERATOR_HINT = 'OPERADOR — o monitor sobre o balcão mostra o andar do explorador e a IA. A VARREDURA fica no fundo do salão: corra até lá e aperte (E, clique ou toque)';
+const lobbyHint = () => (operatorMode() ? OPERATOR_HINT : SOLO_LOBBY_HINT);
 
 function setHint(message, persistent = false) {
   // Objeto (não string): o texto pode conter ";" sem quebrar o atributo.
@@ -449,6 +454,11 @@ function bindControls() {
 }
 
 function transitionToNextFloor() {
+  if (operatorMode()) {
+    setHint('VOCÊ É O OPERADOR — fique no lobby: quem desce é o explorador');
+    window.setTimeout(() => document.querySelector('[floor-transition]')?.components['floor-transition']?.reset(), 2500);
+    return;
+  }
   // Cooperativo: o operador confere a porta e manda o próximo andar.
   if (coop()) {
     if (!game.current.measured || coopRequest || transitioning) return;
@@ -627,7 +637,7 @@ function bindGameEvents() {
     window.quantumPlayer.active = isActive();
     elements['phase-telemetry'].hidden = false;
     if (game.current.floor === LOBBY_FLOOR) {
-      setHint(LOBBY_HINT, true);
+      setHint(lobbyHint(), true);
       scene.emit('lobby-entered');
     } else if (mode === 'continue') {
       setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — jogo retomado`);
@@ -694,7 +704,7 @@ function bindGameEvents() {
     setHint(missing.length ? `MISSÃO LIDA — falta: ${missing.join(', ')}` : 'MISSÃO LIDA — tudo pronto: a porta amarela leva ao ANDAR 01');
   });
   elements['desktop-hint'].addEventListener('hint-expired', () => {
-    if (started && game.current.floor === LOBBY_FLOOR) setHint(LOBBY_HINT, true);
+    if (started && game.current.floor === LOBBY_FLOOR) setHint(lobbyHint(), true);
   });
   scene.addEventListener('interaction-hint', ({ detail }) => {
     if (isActive()) setHint(detail.text);

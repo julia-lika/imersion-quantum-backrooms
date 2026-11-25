@@ -163,6 +163,11 @@ AFRAME.registerComponent('vr-start-menu', {
         if ($('coop-panel')?.hidden) $('coop-open')?.click();
         this.page = 'coop';
       });
+      y += 116;
+      add('operator', 'SER O OPERADOR (FICA NO LOBBY)', 178, y, 700, 92, () => {
+        if ($('coop-panel')?.hidden) $('coop-open')?.click();
+        $('coop-host')?.click();
+      }, { disabled: Boolean(coop?.active) || $('coop-host')?.disabled });
       return buttons;
     }
 
@@ -227,7 +232,7 @@ AFRAME.registerComponent('vr-start-menu', {
 
     if (this.page === 'coop') {
       ctx.font = `20px ${MONO}`;
-      ctx.fillText('DIGITE O CÓDIGO DA SALA QUE APARECE NO CONSOLE DO OPERADOR', W / 2, 184);
+      ctx.fillText('DIGITE O CÓDIGO DA SALA QUE APARECE NO MONITOR DO OPERADOR', W / 2, 184);
       const code = ($('coop-code')?.value || '').toUpperCase();
       for (let index = 0; index < 4; index += 1) {
         const x = W / 2 - 2 * 86 + index * 86 + 8;
@@ -337,7 +342,7 @@ AFRAME.registerComponent('vr-start-menu', {
         hint.object3D.visible = true;
       }
       if (show) {
-        this.page = window.quantumCoop?.active ? 'coop' : 'main';
+        this.page = window.quantumCoop?.active && window.quantumCoop.role !== 'operator' ? 'coop' : 'main';
         this.placeInFront(tracker.head);
         this.signature = '';
       } else {
