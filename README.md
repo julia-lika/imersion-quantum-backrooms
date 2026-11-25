@@ -28,6 +28,30 @@ Abra `https://localhost:8443`. Na primeira execução, aceite o certificado loca
 
 O conteúdo de desenvolvimento fica em `src/`. Como essa pasta é montada no contêiner, alterações em `src/index.html` aparecem após recarregar o navegador sem refazer a imagem.
 
+## Modo cooperativo (2 jogadores)
+
+Um jogador no desktop é o **operador**: abre `operador.html` (ou o link
+"console do QPS" em MODO COOPERATIVO na tela inicial), vê o andar inteiro, as
+posições possíveis da porta e os trechos que vão se reorganizar, mas não tem
+visão de corredor. O outro, no Quest, é o **explorador**: digita o código de 4
+letras da sala e entra só com o Q-LINK, sem mapa. Os dois conversam por voz
+pela mesma conexão.
+
+- Conexão navegador a navegador (WebRTC via PeerJS). Não precisa de servidor
+  próprio; o serviço público do PeerJS só faz o pareamento pelo código.
+- O operador é o host: ele gera o andar, roda a decoerência, decide a porta e
+  manda o labirinto para o explorador; o explorador manda posição, olhar e onde
+  está a entidade.
+- Armadilhas: de tempos em tempos o trecho onde o explorador está vai colapsar.
+  Só o operador vê o aviso (7 s). Se o explorador não sair, as paredes fecham em
+  volta dele. Ele sai com o Salto de Fase ou quando o operador mede de novo.
+- MEDIR (espaço, no console): congela os trechos num raio de 4 células em volta
+  do explorador, cancela colapsos ali, desfaz a jaula e mede a porta se uma
+  posição possível estiver no raio. Recarga de 20 s.
+- Para testar sem rede, em duas abas do mesmo navegador:
+  `operador.html?transporte=local&sala=TEST` e `index.html?transporte=local&sala=TEST`
+  (sem voz).
+
 ## IBM Quantum
 
 O navegador nunca recebe o token da IBM. A API Python em `backend/` é acessada

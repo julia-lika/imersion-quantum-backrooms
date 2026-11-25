@@ -56,6 +56,10 @@ let lastSave = 0;
 let lastWristUpdate = 0;
 
 const START_POSITION = startPosition();
+// Modo cooperativo (js/coop/coop-explorer.js): este navegador é o EXPLORADOR.
+// O operador, no desktop, é dono do andar; aqui só roda o corpo do jogador.
+const coop = () => (window.quantumCoop?.active ? window.quantumCoop : null);
+let coopRequest = false;
 const SURVIVAL_TICK_MS = 100;
 // Névoa escura de base (o index.html define a cor); sobe com a loucura.
 const FOG_BASE_DENSITY = 0.085;
@@ -123,6 +127,8 @@ function localBitstring() {
 }
 
 function persistProgress() {
+  // O cooperativo não mexe no save do jogo solo.
+  if (coop()) return;
   try {
     saveGameState(game.current);
   } catch {
@@ -135,6 +141,7 @@ window.quantumPlayer.hasQps = window.quantumPlayer.gear.qps;
 function setGear(gear) {
   window.quantumPlayer.gear = { ...gear };
   window.quantumPlayer.hasQps = Boolean(gear.qps);
+  if (coop()) return;
   try {
     localStorage.setItem(GEAR_STORAGE_KEY, JSON.stringify(window.quantumPlayer.gear));
   } catch {
@@ -148,6 +155,7 @@ function missingGear() {
 
 function setMissionRead(read) {
   window.quantumPlayer.missionRead = read;
+  if (coop()) return;
   try {
     localStorage.setItem(MISSION_STORAGE_KEY, read ? '1' : '0');
   } catch {
@@ -175,6 +183,8 @@ function doorCandidates() {
   return doorCache.candidates;
 }
 function checkDoorMeasurement() {
+  // No cooperativo quem mede a porta é o operador (host).
+  if (coop()) return;
   if (game.current.floor === LOBBY_FLOOR || game.current.measured || doorMeasuring) return;
   const world = window.quantumWorld;
   const head = document.getElementById('player-head')?.object3D.position;
@@ -216,6 +226,10 @@ function isActive() {
 }
 
 function objectiveText() {
+  if (coop()) {
+    if (transitioning) return 'AGUARDANDO O OPERADOR';
+    return game.current.measured ? 'A PORTA FOI MEDIDA: PEÇA O CAMINHO' : 'OUÇA O OPERADOR: ELE TEM O MAPA';
+  }
   if (game.current.floor === LOBBY_FLOOR) {
     return missingGear().length ? 'PEGUE O EQUIPAMENTO NAS 3 ESTAÇÕES' : 'TUTORIAL: A PORTA LEVA AO ANDAR 01';
   }
@@ -432,6 +446,18 @@ function bindControls() {
 }
 
 function transitionToNextFloor() {
+  // Cooperativo: o operador confere a porta e manda o próximo andar.
+  if (coop()) {
+    if (!game.current.measured || coopRequest || transitioning) return;
+    coopRequest = true;
+    coop().send({ t: 'stairs' });
+    setHint('NA PORTA — esperando o operador abrir o próximo andar');
+    window.setTimeout(() => {
+      coopRequest = false;
+      document.querySelector('[floor-transition]')?.components['floor-transition']?.reset();
+    }, 2500);
+    return;
+  }
   // No lobby a porta já está aberta; nos andares, só depois de medir o QPS.
   if (transitioning || (!game.current.measured && game.current.floor !== LOBBY_FLOOR)) return;
   if (game.current.floor === LOBBY_FLOOR && lobbyMissing().length) {
@@ -471,6 +497,14 @@ function resetPlayerPosition() {
 // Sanidade zerada: o jogador se perde e recomeça do andar 1.
 function loseSanity() {
   if (transitioning) return;
+  if (coop()) {
+    // O operador recomeça o andar 1 e manda de volta (enterCoopFloor).
+    if (coopRequest) return;
+    coopRequest = true;
+    coop().send({ t: 'sanity-lost' });
+    window.setTimeout(() => { coopRequest = false; }, 4000);
+    return;
+  }
 
   transitioning = true;
   window.quantumPlayer.active = false;
@@ -565,6 +599,10 @@ function bindGameEvents() {
   // ENTRAR (ou entrar em VR) = lobby; CONTINUAR = retoma o andar salvo.
   function beginGame(mode = 'lobby') {
     if (started) return;
+    if (coop()) {
+      beginCoopGame();
+      return;
+    }
     started = true;
     // ENTRAR NO LOBBY = jogo novo. Na primeira entrada da página o lobby já está
     // no estado inicial; depois de voltar ao menu com Esc, recomeça do zero.
@@ -681,6 +719,7 @@ function bindGameEvents() {
   });
 
   window.addEventListener('quantum-measured', ({ detail }) => {
+    if (coop()) return;
     state.current = collapseQuantumState(
       state.current,
       `${detail.result.bitstring}${detail.result.bitstring}`,
@@ -725,6 +764,129 @@ function bindGameEvents() {
 
   elements['backrooms-scene'].addEventListener('stairs-reached', transitionToNextFloor);
 }
+
+// ---------- Modo cooperativo (explorador) ----------
+// Começa direto no andar que o operador mandou: só com o Q-LINK, sem mapa.
+function beginCoopGame() {
+  started = true;
+  playedThisSession = true;
+  setGear({ qlink: true, visor: false, qps: false });
+  setMissionRead(true);
+  setVisor(createSurvivalState());
+  // O painel do circuito traz o mini-quadro das regiões (um mapa do andar):
+  // no cooperativo o mapa é só do operador.
+  elements['phase-telemetry'].hidden = true;
+  const pending = coop().floor;
+  if (pending) enterCoopFloor({ ...pending, reason: 'join' });
+  window.quantumPlayer.active = isActive();
+  setHint('MODO COOPERATIVO — você não tem mapa. O operador vê o andar inteiro e sabe onde as paredes vão fechar: ouça e responda');
+  syncAtmosphere();
+  renderTelemetry();
+}
+
+function coopDoorState(index, bits) {
+  const cell = doorCandidates()[index];
+  if (!cell) return;
+  game.current = recordMeasurement(game.current, {
+    bitstring: game.current.currentBitstring,
+    qps: window.analyzeQuantumState?.(bits || game.current.currentBitstring).qps,
+    stairs: cell,
+  });
+  window.quantumMeasureStats = {
+    count: (window.quantumMeasureStats?.count ?? 0) + 1,
+    bitstring: bits,
+    source: 'operador',
+    stairs: cell,
+    door: `${index + 1}/${doorCandidates().length}`,
+  };
+}
+
+function applyCoopWorld(message) {
+  if (message.floor !== game.current.floor || message.bits !== game.current.currentBitstring) return;
+  const mapComponent = elements['quantum-map'].components['quantum-map'];
+  mapComponent?.applyWorldState(message.maze, message.superposed, message.regionBits);
+}
+
+// Andar novo vindo do operador. reason: join/start (sem animação), stairs
+// (descida) ou sanity (sanidade zerada, volta ao andar 1).
+function enterCoopFloor(message) {
+  const sameFloor = message.floor === game.current.floor && message.bits === game.current.currentBitstring;
+  const apply = () => {
+    if (!sameFloor || message.reason !== 'start') {
+      const keepSanity = message.reason === 'stairs' ? game.current.sanity : 100;
+      game.current = { ...createGameState(message.bits, message.floor), sanity: keepSanity };
+      state.current = createPhaseState(message.bits);
+      if (message.reason === 'sanity' || message.reason === 'join') setVisor(createSurvivalState());
+      resetPlayerPosition();
+    }
+    if (message.door >= 0 && !game.current.measured) coopDoorState(message.door, message.doorBits);
+    syncMap();
+    applyCoopWorld(message);
+    syncAtmosphere();
+    coopRequest = false;
+    renderTelemetry();
+  };
+
+  if (!started || message.reason === 'join' || message.reason === 'start') {
+    apply();
+    return;
+  }
+  transitioning = true;
+  window.quantumPlayer.active = false;
+  const sanity = message.reason === 'sanity';
+  const className = sanity ? 'sanity-lost' : 'floor-transition';
+  const duration = sanity ? 2400 : 900;
+  document.body.classList.add(className);
+  elements['backrooms-scene'].emit('screen-effect', { type: 'fade', color: '#000000', duration });
+  window.setTimeout(() => {
+    apply();
+    document.body.classList.remove(className);
+    setHint(sanity
+      ? 'VOCÊ SE PERDEU — de volta ao ANDAR 01. O operador já tem o mapa novo'
+      : `ANDAR ${String(game.current.floor).padStart(2, '0')} — o operador está lendo o mapa novo`);
+    transitioning = false;
+    window.quantumPlayer.active = isActive();
+    renderTelemetry();
+  }, duration);
+}
+
+function coopDoorMeasured({ index, bits }) {
+  if (game.current.measured) return;
+  coopDoorState(index, bits);
+  elements['backrooms-scene'].emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.35 });
+  syncMap();
+  setHint('A PORTA FOI MEDIDA — ela apareceu em algum lugar do andar; o operador sabe onde');
+  renderTelemetry();
+}
+
+// Efeitos que o operador manda junto com as mudanças do labirinto.
+function coopEffect(kind) {
+  const scene = elements['backrooms-scene'];
+  if (kind === 'shift') window.quantumDecoherence?.signal?.();
+  if (kind === 'trapped') {
+    window.quantumDecoherence?.signal?.();
+    flash('ghost-strike', 700);
+    scene.emit('screen-effect', { type: 'flash', color: '#000000', duration: 900, peak: 0.6 });
+    setHint('AS PAREDES FECHARAM EM VOLTA DE VOCÊ — encoste as palmas numa parede para o Salto de Fase (X) ou peça ao operador para medir');
+  }
+  if (kind === 'released') {
+    scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
+    setHint('O OPERADOR MEDIU — as paredes da jaula voltaram ao lugar');
+  }
+  if (kind === 'escaped') setHint('VOCÊ ESCAPOU DA JAULA — atrás de você, as paredes já se desfazem');
+  if (kind === 'lost') setHint('O OPERADOR CAIU — o labirinto congelou até ele voltar');
+  if (kind === 'measure') {
+    scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 400, peak: 0.18 });
+  }
+}
+
+window.quantumGame = {
+  enterCoopFloor,
+  applyCoopWorld,
+  coopDoorMeasured,
+  coopEffect,
+  started: () => started,
+};
 
 cacheElements();
 bindControls();

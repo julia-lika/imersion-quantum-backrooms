@@ -202,6 +202,45 @@ AFRAME.registerComponent('quantum-map', {
     this.rebuildWalls();
   },
 
+  // Modo cooperativo: o operador manda o labirinto inteiro (uma linha de texto
+  // por fileira) e as paredes em superposição. Só o que mudou é refeito.
+  applyWorldState(rows, superposed = [], regionBits = '') {
+    const world = window.quantumWorld;
+    if (!world || !this.mapInfo || this.mapInfo.lobby || rows?.length !== world.size) return false;
+    let changed = false;
+    rows.forEach((row, z) => {
+      for (let x = 0; x < world.size; x += 1) {
+        const value = row[x] === '#' ? '#' : '.';
+        if (world.maze[z][x] !== value) {
+          world.maze[z][x] = value;
+          changed = true;
+        }
+      }
+    });
+    const next = new Map(superposed.map((wall) => [`${wall.x},${wall.z}`, wall]));
+    [...this.superposedEls.entries()].forEach(([key, el]) => {
+      if (next.has(key) && next.get(key).offset === world.superposed.get(key)) return;
+      el.parentNode?.removeChild(el);
+      this.superposedEls.delete(key);
+      world.superposed.delete(key);
+      world.collapsed.delete(key);
+      changed = true;
+    });
+    next.forEach((wall, key) => {
+      if (this.superposedEls.has(key)) return;
+      this.addSuperposedWall(wall);
+      changed = true;
+    });
+    [...String(regionBits)].forEach((bit, qubit) => {
+      const region = this.mapInfo.regions?.[qubit];
+      if (!region || region.bit === bit) return;
+      region.bit = bit;
+      region.type = bit === '1' ? 'sala aberta' : 'corredores';
+    });
+    if (changed) this.rebuildWalls();
+    return changed;
+  },
+
   // Um QPS por andar (até ser coletado) e garrafas de Água de Amêndoa espalhadas.
   addItems(map, origin, cellSize) {
     const exclude = [

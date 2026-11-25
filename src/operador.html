@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quantum Backrooms — Console do Operador</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #060604;
+        --panel: rgba(8, 8, 4, 0.82);
+        --amber: #d8bc75;
+        --amber-hi: #ffe69b;
+        --amber-dim: #6f613f;
+        --green: #39ff88;
+        --red: #ff4d5e;
+        --orange: #ffaa3c;
+        --violet: #c45cff;
+        font-family: "Courier New", monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: var(--bg); color: var(--amber); }
+      body { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; padding: 16px; }
+      @media (max-width: 900px) { body { grid-template-columns: 1fr; } }
+      h1 { margin: 0 0 4px; color: var(--amber-hi); font-size: 1rem; font-weight: 400; letter-spacing: 0.18em; }
+      .muted { color: var(--amber-dim); font-size: 0.68rem; letter-spacing: 0.08em; line-height: 1.6; }
+      #map-wrap { position: relative; display: grid; place-items: center; min-height: 0; }
+      #map { width: min(100%, calc(100vh - 32px)); aspect-ratio: 1; border: 1px solid rgba(228, 199, 125, 0.25); background: #020201; }
+      aside { display: flex; flex-direction: column; gap: 12px; min-height: 0; max-height: calc(100vh - 32px); overflow: auto; }
+      @media (max-width: 900px) { aside { max-height: none; } }
+      .card { padding: 12px 14px; border: 1px solid rgba(228, 199, 125, 0.28); border-left: 2px solid #b89551; background: var(--panel); font-size: 0.72rem; letter-spacing: 0.08em; line-height: 1.7; }
+      .card h2 { margin: 0 0 6px; color: var(--amber-hi); font-size: 0.72rem; font-weight: 400; letter-spacing: 0.16em; }
+      #room-code { color: var(--amber-hi); font-size: 2.6rem; letter-spacing: 0.32em; line-height: 1.1; }
+      .value { color: #f4dda1; }
+      button { font: inherit; letter-spacing: 0.14em; cursor: pointer; }
+      #measure { width: 100%; padding: 14px; border: 1px solid #44ffcc; background: #0d3b30; color: #bfffee; font-weight: bold; }
+      #measure:disabled { cursor: not-allowed; opacity: 0.55; }
+      #measure-bar { height: 4px; margin-top: 6px; background: rgba(68, 255, 204, 0.15); }
+      #measure-bar > div { height: 100%; width: 100%; background: #44ffcc; }
+      .row { display: flex; gap: 8px; }
+      .row button { flex: 1; padding: 8px; border: 1px solid var(--amber-dim); background: transparent; color: var(--amber); }
+      #alerts { display: flex; flex-direction: column; gap: 6px; }
+      .alert { padding: 8px 10px; border: 1px solid var(--orange); color: var(--orange); font-size: 0.78rem; }
+      .alert.trap { border-color: var(--red); color: #ffd0d5; background: rgba(120, 0, 20, 0.45); animation: pulse 700ms ease-in-out infinite alternate; }
+      .alert.caged { border-color: var(--red); color: #fff; background: rgba(160, 0, 30, 0.7); }
+      @keyframes pulse { from { opacity: 0.75; } to { opacity: 1; } }
+      #log { flex: 1; min-height: 120px; overflow: auto; margin: 0; padding: 0; list-style: none; font-size: 0.66rem; }
+      #log li { padding: 3px 0; border-bottom: 1px solid rgba(228, 199, 125, 0.08); }
+      #log time { color: var(--amber-dim); margin-right: 6px; }
+      .legend span { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
+      #waiting { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; color: var(--amber-hi); letter-spacing: 0.14em; font-size: 0.8rem; text-shadow: 0 0 8px #000; }
+      #waiting[hidden] { display: none; }
+      a { color: var(--green); }
+    </style>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  </head>
+  <body>
+    <div id="map-wrap">
+      <canvas id="map" width="920" height="920"></canvas>
+      <div id="waiting">ESPERANDO O EXPLORADOR<br /><br />NO QUEST: ABRA O JOGO → MODO COOPERATIVO → DIGITE O CÓDIGO</div>
+    </div>
+    <aside>
+      <div class="card">
+        <h1>QPS // CONSOLE DO OPERADOR</h1>
+        <div class="muted">Você vê o andar inteiro, mas não o corredor. O explorador vê o corredor, mas não tem mapa. Guie-o pela voz até a porta.</div>
+      </div>
+      <div class="card">
+        <h2>CÓDIGO DA SALA</h2>
+        <div id="room-code">----</div>
+        <div id="link-status" class="muted">ABRINDO A SALA...</div>
+        <div id="voice-status" class="muted">VOZ: DESLIGADA</div>
+        <div class="row" style="margin-top: 6px">
+          <button id="mic" type="button">LIGAR MICROFONE</button>
+          <button id="mute" type="button" disabled>MUTAR (V)</button>
+        </div>
+      </div>
+      <div class="card">
+        <div>ANDAR <span id="floor" class="value">--</span> // STRING <span id="bits" class="value">--</span></div>
+        <div>PORTA: <span id="door" class="value">--</span></div>
+        <div>EXPLORADOR EM: <span id="where" class="value">--</span></div>
+        <button id="measure" type="button" style="margin-top: 8px">MEDIR COM O QPS (ESPAÇO)</button>
+        <div id="measure-bar"><div></div></div>
+        <div class="muted">Mede um raio de 4 células em volta do explorador: congela os trechos (efeito Zeno), cancela colapsos ali, solta quem está preso e, se uma posição possível da porta estiver no raio, a porta colapsa. Recarga de 20 s.</div>
+      </div>
+      <div id="alerts"></div>
+      <div class="card legend muted">
+        <span style="background:#d8bc75"></span>parede
+        <span style="background:#c45cff"></span>superposição
+        <span style="background:#ffd23c"></span>porta possível
+        <span style="background:#44ffcc"></span>porta medida
+        <span style="background:#ff4d5e"></span>colapso / entidade
+      </div>
+      <ul id="log" class="card"></ul>
+    </aside>
+    <script type="module" src="js/coop/operator-console.js?v=20261125-1"></script>
+  </body>
+</html>
