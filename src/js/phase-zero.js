@@ -636,9 +636,9 @@ function bindGameEvents() {
     setGear({ ...window.quantumPlayer.gear, [gear]: true });
     scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
     const next = {
-      qlink: 'Q-LINK HABILITADO — olhe para o pulso esquerdo (desktop: H)',
+      qlink: 'Q-LINK HABILITADO — traga o pulso esquerdo ao rosto e gire (desktop: H)',
       visor: 'VISOR ZETA HABILITADO — pinça na testa (desktop: Z) liga e desliga',
-      qps: 'QPS HABILITADO — mede tudo num raio de ~4 m e desenha o mapa (pulso direito ou M)',
+      qps: 'QPS HABILITADO — mede tudo num raio de ~4 m e desenha o mapa (pulso direito ao rosto ou M)',
     }[gear];
     const missing = lobbyMissing();
     setHint(missing.length ? `${next}. Falta: ${missing.join(', ')}` : `${next}. Tudo pronto: a porta amarela leva ao ANDAR 01`);

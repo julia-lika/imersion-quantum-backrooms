@@ -15,6 +15,8 @@ const PHASE_HOLD_SECONDS = 1.1;
 const PHASE_COOLDOWN_SECONDS = 2;
 const GRAB_RADIUS = 0.3;
 const TOUCH_RADIUS = 0.2;
+// Equipamentos ficam no tampo da mesa: um raio maior para alcançar com a mão.
+const GEAR_TOUCH_RADIUS = 0.28;
 const DESKTOP_GRAB_RADIUS = 1.3;
 // Equipamentos que se pegam uma vez e ficam com o jogador.
 const GEAR_TYPES = new Set(['qps', 'qlink', 'visor']);
@@ -189,8 +191,9 @@ AFRAME.registerComponent('hand-gestures', {
       const hand = this.tracker.hands[side];
       if (!hand.tracked) return;
 
+      const gear = this.findNearestItem(hand.world, GEAR_TOUCH_RADIUS);
+      if (GEAR_TYPES.has(gear?.dataset.item)) this.collectGear(gear, 600);
       const item = this.findNearestItem(hand.world, TOUCH_RADIUS);
-      if (GEAR_TYPES.has(item?.dataset.item)) this.collectGear(item, 600);
       // Encostar a mão na Água de Amêndoa a segura; levar à boca bebe, pinçar e soltar larga.
       const recentlyDropped = performance.now() - Number(item?.dataset.droppedAt || 0) < 1500;
       if (item?.dataset.item === 'almond-water' && !this.held[side] && !this.isHeld(item) && !recentlyDropped) {

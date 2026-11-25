@@ -1,11 +1,10 @@
-// Q-LINK de pulso. Só aparece quando o jogador olha para o pulso esquerdo (VR)
+// Q-LINK de pulso. Só aparece quando o jogador traz o pulso esquerdo ao rosto,
+// girado para os olhos, e segura um instante (VR)
 // ou aperta H (desktop, o painel sobe para o campo de visão). Visual de
 // telemetria: fundo quase preto, texto verde fósforo, rótulos espaçados,
 // leituras grandes e barras segmentadas, desenhado em canvas.
 const PANEL_WIDTH = 0.22;
 const PANEL_HEIGHT = 0.15;
-const LOOK_ANGLE = THREE.MathUtils.degToRad(28);
-const LOOK_DISTANCE = 0.7;
 // Q-LINK em tons de laranja, como o relógio.
 const ORANGE = '#ff9a3c';
 const ORANGE_DIM = 'rgba(255, 154, 60, 0.45)';
@@ -42,7 +41,6 @@ AFRAME.registerComponent('wrist-hud', {
     this.state = { floor: 0, sanity: 100, energy: 100, visor: false, objective: '' };
     this.opacity = 0;
     this.desktopOpen = false;
-    this.toHand = new THREE.Vector3();
     this.target = new THREE.Vector3();
     this.forward = new THREE.Vector3();
 
@@ -242,11 +240,9 @@ AFRAME.registerComponent('wrist-hud', {
       show = false;
     } else if (tracker.inVr) {
       if (hand?.tracked) {
-        // Visível só quando o pulso está no centro do olhar e perto do rosto.
+        // Só com o gesto deliberado de olhar o pulso (ver xr-hands.wristLook).
         this.el.object3D.position.copy(hand.position).add({ x: 0, y: 0.08, z: 0 });
-        this.el.object3D.getWorldPosition(this.target);
-        this.toHand.subVectors(this.target, head.world);
-        show = this.toHand.length() < LOOK_DISTANCE && this.toHand.angleTo(head.forward) < LOOK_ANGLE;
+        show = tracker.wristLook(this.data.hand, Math.min(0.1, delta / 1000));
         this.el.object3D.lookAt(head.world);
       }
     } else if (this.desktopOpen) {

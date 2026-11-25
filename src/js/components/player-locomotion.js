@@ -1,5 +1,7 @@
-// Locomoção por balanço de braços (VR) e teclado (desktop), sempre com colisão no labirinto.
-// Desktop: WASD ou setas andam, Q/E giram, arrastar o mouse olha.
+// Locomoção (sempre com colisão no labirinto):
+// - VR: balançar os braços e marchar no lugar (o sobe e desce da cabeça a cada
+//   passo) andam; os dois somam.
+// - Desktop: WASD ou setas andam, Shift corre, arrastar o mouse olha.
 const KEY_DIRECTIONS = {
   KeyW: [0, 1],
   KeyS: [0, -1],
@@ -24,6 +26,11 @@ AFRAME.registerComponent('player-locomotion', {
     swingDeadzone: { type: 'number', default: 0.35 },
     swingGain: { type: 'number', default: 1.5 },
     maxSwingSpeed: { type: 'number', default: 2.6 },
+    runMultiplier: { type: 'number', default: 1.9 },
+    // Marcha no lugar: velocidade vertical média da cabeça acima da zona morta.
+    stepDeadzone: { type: 'number', default: 0.06 },
+    stepGain: { type: 'number', default: 10 },
+    maxStepSpeed: { type: 'number', default: 2.2 },
   },
 
   init() {
@@ -38,6 +45,9 @@ AFRAME.registerComponent('player-locomotion', {
 
     this.keys = new Set();
     this.swingSpeed = 0;
+    this.running = false;
+    // Detector de passos: trocas de sentido (sobe/desce) da cabeça.
+    this.bob = { vy: 0, sign: 0, reversals: [] };
     this.lastValid = null;
     // Quadros até virar o jogador (spawn). Espera a cabeça e o andar atualizarem.
     this.facingFrames = 2;
@@ -49,12 +59,19 @@ AFRAME.registerComponent('player-locomotion', {
     this.right = new THREE.Vector3();
 
     this.onKeyDown = (event) => {
+      this.running = event.shiftKey;
       if (!KEY_DIRECTIONS[event.code] && !TURN_KEYS[event.code]) return;
       if (event.code.startsWith('Arrow')) event.preventDefault(); // não rolar a página
       this.keys.add(event.code);
     };
-    this.onKeyUp = (event) => this.keys.delete(event.code);
-    this.onBlur = () => this.keys.clear();
+    this.onKeyUp = (event) => {
+      this.running = event.shiftKey;
+      this.keys.delete(event.code);
+    };
+    this.onBlur = () => {
+      this.keys.clear();
+      this.running = false;
+    };
 
     this.onPhaseRequest = () => this.requestPhaseShift();
     this.onPhaseResolved = ({ detail }) => {
@@ -119,7 +136,31 @@ AFRAME.registerComponent('player-locomotion', {
     this.right.set(-this.forward.z, 0, this.forward.x);
   },
 
-  // Velocidade das mãos relativa à cabeça: balançar os braços = andar.
+  // Marcha no lugar: cada passo faz a cabeça subir e descer alguns centímetros.
+  // Conta só quando o sobe e desce se repete (2+ trocas de sentido em 1,2 s),
+  // para que agachar ou olhar para baixo uma vez não ande.
+  computeStepSpeed(dt) {
+    const { head } = this.tracker;
+    const bob = this.bob;
+    const now = this.sceneTime;
+    const vy = head.velocity.y;
+    // Andar de verdade (room-scale) já move a cabeça: não soma passo virtual.
+    const physicalWalk = Math.hypot(head.velocity.x, head.velocity.z) > 0.6;
+
+    bob.vy += (Math.abs(vy) - bob.vy) * Math.min(1, dt * 4);
+    const sign = vy > 0.06 ? 1 : (vy < -0.06 ? -1 : 0);
+    if (sign !== 0 && sign !== bob.sign) {
+      if (bob.sign !== 0) bob.reversals.push(now);
+      bob.sign = sign;
+    }
+    while (bob.reversals.length && now - bob.reversals[0] > 1.2) bob.reversals.shift();
+
+    if (physicalWalk || bob.reversals.length < 2) return 0;
+    return Math.min(this.data.maxStepSpeed, Math.max(0, bob.vy - this.data.stepDeadzone) * this.data.stepGain);
+  },
+
+  // Velocidade das mãos relativa à cabeça (balançar os braços) somada à marcha
+  // no lugar (pernas): as duas andam.
   computeSwingSpeed(dt) {
     const { hands, head } = this.tracker;
     const gestures = this.el.components['hand-gestures'];
@@ -136,6 +177,8 @@ AFRAME.registerComponent('player-locomotion', {
         Math.max(0, swing - this.data.swingDeadzone) * this.data.swingGain * oneHandPenalty
       );
     }
+    const step = gestures?.isBusy() ? 0 : this.computeStepSpeed(dt);
+    target = Math.min(this.data.maxSwingSpeed, target + step);
 
     const smoothing = Math.min(1, dt * (target > this.swingSpeed ? 5 : 3));
     this.swingSpeed += (target - this.swingSpeed) * smoothing;
@@ -152,7 +195,8 @@ AFRAME.registerComponent('player-locomotion', {
       const [strafe, ahead] = direction;
       move.addScaledVector(this.forward, ahead).addScaledVector(this.right, strafe);
     });
-    if (move.lengthSq() > 0) move.normalize().multiplyScalar(this.data.keyboardSpeed * dt);
+    const run = this.running && !tracker.inVr ? this.data.runMultiplier : 1;
+    if (move.lengthSq() > 0) move.normalize().multiplyScalar(this.data.keyboardSpeed * run * dt);
 
     if (tracker.inVr) {
       move.addScaledVector(this.forward, this.computeSwingSpeed(dt) * dt);
