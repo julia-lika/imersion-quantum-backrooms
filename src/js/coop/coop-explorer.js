@@ -1,7 +1,7 @@
 // Modo cooperativo, lado do EXPLORADOR (VR ou desktop). Liga a tela inicial ao
 // operador: digita o código da sala, conecta, liga a voz e, dentro do jogo,
 // manda a posição 10 vezes por segundo e aplica o que o operador decide.
-import { createCoopLink, normalizeRoomCode } from './coop-net.js';
+import { createCoopLink, normalizeRoomCode, requestMicrophone } from './coop-net.js?v=20261125-4';
 
 const PEERJS_URL = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
 const POS_MS = 100;
@@ -98,7 +98,10 @@ async function connect() {
     $('coop-connect').disabled = false;
     return;
   }
-  link = createCoopLink({ role: 'guest', code });
+  setStatus('PERMITA O MICROFONE (VOZ E CONEXÃO NA MESMA REDE)...');
+  const stream = await requestMicrophone();
+  setStatus('CONECTANDO...');
+  link = createCoopLink({ role: 'guest', code, stream });
   window.quantumCoop = {
     active: true,
     role: 'explorer',
@@ -141,8 +144,13 @@ function bind() {
     if (event.key === 'Enter') connect();
   });
   // Mantém ?transporte=local no link do console (teste em duas abas).
-  const local = new URLSearchParams(location.search).get('transporte') === 'local';
-  if (local) $('coop-operator-link').href = 'operador.html?transporte=local';
+  // Repassa ao console do operador as opções de rede (teste local, TURN próprio).
+  const params = new URLSearchParams(location.search);
+  const forward = new URLSearchParams();
+  ['transporte', 'turn', 'turnuser', 'turnpass'].forEach((name) => {
+    if (params.has(name)) forward.set(name, params.get(name));
+  });
+  if ([...forward].length) $('coop-operator-link').href = `operador.html?${forward}`;
   const room = normalizeRoomCode(new URLSearchParams(location.search).get('sala'));
   if (room.length === 4) {
     panel.hidden = false;

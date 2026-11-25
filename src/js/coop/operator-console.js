@@ -4,7 +4,7 @@
 import '../map-generator.js';
 import '../quantum-bank.js';
 import { createCoopWorld } from './coop-world.js';
-import { createCoopLink, normalizeRoomCode, randomRoomCode } from './coop-net.js';
+import { createCoopLink, normalizeRoomCode, randomRoomCode, requestMicrophone } from './coop-net.js?v=20261125-4';
 
 const TICK_MS = 200;
 const $ = (id) => document.getElementById(id);
@@ -313,10 +313,14 @@ function handleMessage(message) {
   }
 }
 
+let micStream = null;
+
 function openRoom(code) {
   $('room-code').textContent = code;
-  history.replaceState(null, '', `${location.pathname}?sala=${code}${location.search.includes('transporte=local') ? '&transporte=local' : ''}`);
-  link = createCoopLink({ role: 'host', code });
+  const params = new URLSearchParams(location.search);
+  params.set('sala', code);
+  history.replaceState(null, '', `${location.pathname}?${params}`);
+  link = createCoopLink({ role: 'host', code, stream: micStream });
   link.on('status', (text) => { $('link-status').textContent = text; });
   link.on('open', () => {
     $('link-status').textContent = 'EXPLORADOR CONECTADO';
@@ -339,8 +343,10 @@ function openRoom(code) {
       openRoom(randomRoomCode());
       return;
     }
-    $('link-status').textContent = `ERRO: ${error}`;
-    log(`Erro de conexão: ${error}`);
+    // A sala continua aberta: o explorador pode tentar de novo.
+    const text = error === 'webrtc' ? 'a conexão com o explorador não fechou (rede bloqueando)' : error;
+    $('link-status').textContent = `TENTATIVA FALHOU: ${text} — A SALA CONTINUA ABERTA`;
+    log(`Erro de conexão: ${text}`);
   });
 }
 
@@ -372,6 +378,12 @@ async function start() {
   world = createCoopWorld({ drawBits, now: performance.now() });
   window.coopOperator = { world: () => world, link: () => link };
   bindUi();
+  $('link-status').textContent = 'PERMITA O MICROFONE (VOZ E CONEXÃO NA MESMA REDE)...';
+  micStream = await requestMicrophone();
+  if (micStream) {
+    $('mic').textContent = 'MICROFONE LIGADO';
+    $('mute').disabled = false;
+  }
   const code = normalizeRoomCode(new URLSearchParams(location.search).get('sala'));
   openRoom(code.length === 4 ? code : randomRoomCode());
   log(`Andar ${String(world.state.floor).padStart(2, '0')} gerado da string ${world.state.bitstring}`);
