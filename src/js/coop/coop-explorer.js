@@ -62,7 +62,7 @@ function handleMessage(message) {
     case 'floor':
       window.quantumCoop.floor = message;
       if (game()?.started()) game().enterCoopFloor(message);
-      setStatus(`CONECTADO À SALA ${link.code} — ANDAR ${String(message.floor).padStart(2, '0')} PRONTO. CLIQUE EM ENTRAR OU ENTRE EM VR`);
+      setStatus(`CONECTADO À SALA ${link.code} — ANDAR ${String(message.floor).padStart(2, '0')} PRONTO. CLIQUE (OU, NO VR, APONTE) EM ENTRAR COMO EXPLORADOR`);
       $('start-game').textContent = 'ENTRAR COMO EXPLORADOR';
       break;
     case 'world':

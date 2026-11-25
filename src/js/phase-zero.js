@@ -665,7 +665,8 @@ function bindGameEvents() {
   document.addEventListener('keydown', (event) => {
     if (event.code === 'Escape' && !event.repeat) returnToMenu();
   });
-  scene.addEventListener('enter-vr', () => beginGame('lobby'));
+  // No VR o menu inicial aparece como painel 3D (vr-start-menu): entrar no VR
+  // não começa o jogo sozinho.
 
   // Cada estação do lobby habilita um equipamento, que fica com o agente.
   scene.addEventListener('gear-collected', ({ detail }) => {
