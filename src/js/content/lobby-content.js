@@ -35,7 +35,7 @@ export const LOBBY_SIGNS = [
     // para +X): é a primeira coisa que ele vê.
     cellX: 3.4, cellZ: 1.2, y: 1.6, rotation: -90,
     title: 'FASE 0 // LOBBY', subtitle: 'TREINAMENTO',
-    body: 'Bem-vindo, agente. Este é o lobby de treinamento.\n\nANDAR: balance os braços e marche no lugar (VR) ou WASD/setas, olhando com o mouse. Shift corre.\n\nLeia as estações ao longo do salão e abra o COMPUTADOR na mesa: toque com a mão (VR), clique ou aperte E. No fundo do salão, o telão explica a física do jogo.',
+    body: 'Bem-vindo, agente. Este é o lobby de treinamento.\n\nANDAR: marche no lugar, balançando os braços para ir mais rápido (VR), ou WASD/setas, olhando com o mouse. Shift corre.\n\nLeia as estações ao longo do salão e abra o COMPUTADOR na mesa: toque com a mão (VR), clique ou aperte E. No fundo do salão, o telão explica a física do jogo.',
   },
   {
     wall: 'left', cellZ: 8.2, y: 1.85,

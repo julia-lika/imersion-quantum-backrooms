@@ -1,6 +1,6 @@
 // Locomoção (sempre com colisão no labirinto):
-// - VR: balançar os braços e marchar no lugar (o sobe e desce da cabeça a cada
-//   passo) andam; os dois somam.
+// - VR: marchar no lugar (o sobe e desce da cabeça a cada passo) anda; balançar
+//   os braços junto acelera, mas sozinho não anda.
 // - Desktop: WASD ou setas andam, Shift corre, arrastar o mouse olha.
 const KEY_DIRECTIONS = {
   KeyW: [0, 1],
@@ -26,6 +26,8 @@ AFRAME.registerComponent('player-locomotion', {
     swingDeadzone: { type: 'number', default: 0.35 },
     swingGain: { type: 'number', default: 1.5 },
     maxSwingSpeed: { type: 'number', default: 2.6 },
+    // Quanto o balanço dos braços acelera a marcha (sem passos, braços não andam).
+    armBoost: { type: 'number', default: 0.5 },
     runMultiplier: { type: 'number', default: 1.9 },
     // Marcha no lugar: velocidade vertical média da cabeça acima da zona morta.
     stepDeadzone: { type: 'number', default: 0.06 },
@@ -148,7 +150,7 @@ AFRAME.registerComponent('player-locomotion', {
     const physicalWalk = Math.hypot(head.velocity.x, head.velocity.z) > 0.6;
 
     bob.vy += (Math.abs(vy) - bob.vy) * Math.min(1, dt * 4);
-    const sign = vy > 0.06 ? 1 : (vy < -0.06 ? -1 : 0);
+    const sign = vy > 0.08 ? 1 : (vy < -0.08 ? -1 : 0);
     if (sign !== 0 && sign !== bob.sign) {
       if (bob.sign !== 0) bob.reversals.push(now);
       bob.sign = sign;
@@ -159,15 +161,17 @@ AFRAME.registerComponent('player-locomotion', {
     return Math.min(this.data.maxStepSpeed, Math.max(0, bob.vy - this.data.stepDeadzone) * this.data.stepGain);
   },
 
-  // Velocidade das mãos relativa à cabeça (balançar os braços) somada à marcha
-  // no lugar (pernas): as duas andam.
+  // Andar exige marchar no lugar (pernas: o sobe e desce da cabeça). Balançar os
+  // braços sozinho não anda; junto com os passos, deixa o passo mais rápido.
   computeSwingSpeed(dt) {
     const { hands, head } = this.tracker;
     const gestures = this.el.components['hand-gestures'];
     const tracked = ['left', 'right'].filter((side) => hands[side].tracked);
+    // Roda todo quadro para o detector de passos não perder trocas de sentido.
+    const step = this.computeStepSpeed(dt);
     let target = 0;
 
-    if (tracked.length > 0 && !gestures?.isBusy()) {
+    if (step > 0 && tracked.length > 0 && !gestures?.isBusy()) {
       const swing = tracked.reduce((total, side) => (
         total + hands[side].velocity.clone().sub(head.velocity).length()
       ), 0) / tracked.length;
@@ -177,8 +181,9 @@ AFRAME.registerComponent('player-locomotion', {
         Math.max(0, swing - this.data.swingDeadzone) * this.data.swingGain * oneHandPenalty
       );
     }
-    const step = gestures?.isBusy() ? 0 : this.computeStepSpeed(dt);
-    target = Math.min(this.data.maxSwingSpeed, target + step);
+    target = step > 0 && !gestures?.isBusy()
+      ? Math.min(this.data.maxSwingSpeed, step + target * this.data.armBoost)
+      : 0;
 
     const smoothing = Math.min(1, dt * (target > this.swingSpeed ? 5 : 3));
     this.swingSpeed += (target - this.swingSpeed) * smoothing;
