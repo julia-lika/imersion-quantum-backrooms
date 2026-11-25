@@ -1,49 +1,47 @@
-// Modo cooperativo assimétrico: o estado do mundo que o OPERADOR (desktop,
-// host) controla e manda para o EXPLORADOR (VR).
+// Modo duo (cooperativo assimétrico): o estado do mundo que o OPERADOR
+// (desktop, host) controla e manda para o EXPLORADOR (VR ou desktop).
 //
-// O operador é dono do andar: a string medida, o labirinto, a decoerência, as
-// armadilhas e a porta. O explorador só manda de volta onde está, para onde
-// olha e onde está a entidade. Nada aqui toca no DOM: o mesmo código roda no
-// navegador do operador e nos testes (node --test).
+// No modo solo o labirinto é quântico (bitstring medido, decoerência, porta em
+// superposição). No duo não: quem mexe nas paredes é uma IA ADVERSÁRIA. Ela
+// acompanha o explorador, calcula o caminho mais curto dele até a porta e fecha
+// um trecho desse caminho para forçar desvios. De vez em quando tenta
+// encurralar: fecha um anel de paredes em volta dele. O operador vê cada jogada
+// com alguns segundos de antecedência (o explorador não vê) e joga contra a IA:
+// tira o explorador do caminho, ou gasta a VARREDURA, que cancela a próxima
+// jogada e desfaz a jaula. Preso, o explorador também sai com o Salto de Fase.
 //
-// Diferença para o jogo solo: aqui as paredes podem fechar de verdade em volta
-// do explorador. Antes, o operador recebe um aviso com contagem regressiva
-// ("B3 colapsa em 6 s") que o explorador não vê. Quem fica preso sai com o
-// Salto de Fase (atravessa a parede, gasta energia) ou quando o operador mede
-// de novo (efeito Zeno: o QPS fixa o trecho e desfaz a jaula).
-import { generateQuantumMap, pickDoorCandidate } from '../map-generator.js';
-import { findSuperposedWalls, pickFloorCells } from '../maze-physics.js';
-import {
-  NEAR_CELLS,
-  UNOBSERVED_MS,
-  SHIFT_COOLDOWN_MS,
-  distanceToSector,
-  isSectorObserved,
-  pickSectorSuperposed,
-  reshuffleSector,
-} from '../decoherence.js';
+// Nada aqui toca no DOM: o mesmo código roda no console do operador e nos
+// testes (node --test).
+import { generateQuantumMap } from '../map-generator.js';
+import { pickFloorCells } from '../maze-physics.js';
+import { distanceToSector } from '../decoherence.js';
 import { listRegions } from '../qubit-regions.js';
 
 export const COOP = {
-  // Aviso que só o operador vê antes de um trecho se reorganizar.
-  ambientWarnMs: 5000,
-  // Aviso antes de uma armadilha (o trecho onde o explorador está colapsa).
-  trapWarnMs: 7000,
-  firstTrapMs: 30000,
-  trapMinGapMs: 25000,
-  trapMaxGapMs: 40000,
-  // Raio da medição do QPS do operador, em células, em volta do explorador.
-  qpsRadius: 4,
-  // Os olhos do explorador medem a porta quando chegam perto de uma posição possível.
-  eyesRadius: 2,
-  measureCooldownMs: 20000,
-  // Quanto tempo o explorador precisa ficar fora da jaula (Salto de Fase) para ela sumir.
+  // Primeira jogada da IA depois que o explorador entra no andar.
+  firstMoveMs: 20000,
+  moveMinGapMs: 15000,
+  moveMaxGapMs: 24000,
+  // Aviso (só para o operador) antes de a IA fechar um corredor.
+  blockWarnMs: 6000,
+  // Aviso antes de um cerco (jaula em volta do explorador).
+  cageWarnMs: 7000,
+  // A cada quantas jogadas a IA tenta um cerco.
+  cageEvery: 3,
+  // Paredes da IA se desfazem sozinhas depois de um tempo (o andar não trava).
+  wallLifeMs: 45000,
+  // Onde a IA corta o caminho: entre estes passos à frente do explorador.
+  cutMinSteps: 3,
+  cutMaxSteps: 9,
+  scanCooldownMs: 20000,
+  // Quanto tempo o explorador precisa ficar fora da jaula para ela sumir.
   escapeReleaseMs: 1500,
-  // Na hora de descer, o explorador precisa estar perto da porta medida.
+  // Na hora de descer, o explorador precisa estar perto da porta.
   stairsRadius: 2.5,
 };
 
 const COLUMN_LETTERS = 'ABC';
+const DIRECTIONS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 export function regionLabel(region) {
   return `${COLUMN_LETTERS[region.col] ?? '?'}${region.row + 1}`;
@@ -53,12 +51,7 @@ function key(x, z) {
   return `${x},${z}`;
 }
 
-function cloneMaze(maze) {
-  return maze.map((row) => [...row]);
-}
-
-// Região onde a célula está; numa linha de fronteira (passagem entre duas
-// regiões), a região mais próxima.
+// Região onde a célula está; numa linha de fronteira, a região mais próxima.
 export function nearestRegion(regions, x, z) {
   let best = null;
   regions.forEach((region) => {
@@ -66,6 +59,70 @@ export function nearestRegion(regions, x, z) {
     if (!best || distance < best.distance) best = { region, distance };
   });
   return best?.region || null;
+}
+
+// Caminho mais curto (BFS em 4 direções) de `from` até `to`; null se não houver.
+export function shortestPath(maze, from, to) {
+  const size = maze.length;
+  const open = (x, z) => x > 0 && z > 0 && x < size - 1 && z < size - 1 && maze[z][x] !== '#';
+  if (!open(from.x, from.z) || !open(to.x, to.z)) return null;
+  const previous = new Map([[key(from.x, from.z), null]]);
+  const queue = [from];
+  while (queue.length) {
+    const cell = queue.shift();
+    if (cell.x === to.x && cell.z === to.z) {
+      const path = [];
+      for (let at = key(to.x, to.z); at; at = previous.get(at)) {
+        const [x, z] = at.split(',').map(Number);
+        path.unshift({ x, z });
+      }
+      return path;
+    }
+    DIRECTIONS.forEach(([dx, dz]) => {
+      const next = { x: cell.x + dx, z: cell.z + dz };
+      const id = key(next.x, next.z);
+      if (!open(next.x, next.z) || previous.has(id)) return;
+      previous.set(id, key(cell.x, cell.z));
+      queue.push(next);
+    });
+  }
+  return null;
+}
+
+// A IA escolhe onde cortar: um ponto do caminho entre cutMinSteps e cutMaxSteps
+// à frente, fechado de parede a parede na perpendicular. Só vale um corte que
+// ainda deixa outro caminho até a porta (a IA força desvio, não tranca o andar).
+export function planBlock(maze, from, door, { protectedCells = [] } = {}) {
+  const path = shortestPath(maze, from, door);
+  if (!path || path.length < COOP.cutMinSteps + 3) return null;
+  const banned = new Set(protectedCells.map((cell) => key(cell.x, cell.z)));
+  const last = Math.min(COOP.cutMaxSteps, path.length - 3);
+  const options = [];
+  for (let step = COOP.cutMinSteps; step <= last; step += 1) {
+    const cell = path[step];
+    const next = path[step + 1];
+    const along = { x: next.x - cell.x, z: next.z - cell.z };
+    const across = { x: along.z, z: along.x };
+    // Parede perpendicular ao caminho, até 2 células para cada lado.
+    const cells = [cell];
+    [1, -1].forEach((sign) => {
+      for (let reach = 1; reach <= 2; reach += 1) {
+        const x = cell.x + across.x * sign * reach;
+        const z = cell.z + across.z * sign * reach;
+        if (maze[z]?.[x] !== '.') break;
+        cells.push({ x, z });
+      }
+    });
+    if (cells.some((c) => banned.has(key(c.x, c.z)))) continue;
+    const test = maze.map((row) => [...row]);
+    cells.forEach((c) => { test[c.z][c.x] = '#'; });
+    const detour = shortestPath(test, from, door);
+    if (!detour) continue;
+    // Prefere cortes estreitos que mais alongam o caminho.
+    options.push({ cells, step, detour: detour.length - path.length, width: cells.length });
+  }
+  options.sort((a, b) => (b.detour - b.width) - (a.detour - a.width));
+  return options[0] || null;
 }
 
 export function createCoopWorld({
@@ -84,17 +141,16 @@ export function createCoopWorld({
     doorCandidates: [],
     itemCells: [],
     door: -1,
-    doorBits: null,
-    measured: false,
+    measured: true,
     explorer: null,
     ghost: null,
-    lastSeen: {},
-    lastShift: now,
     pending: [],
+    aiWalls: [],
     cage: null,
-    shifts: 0,
-    nextTrapAt: now + COOP.firstTrapMs,
-    lastMeasureAt: -Infinity,
+    moves: 0,
+    nextMoveAt: now + COOP.firstMoveMs,
+    lastScanAt: -Infinity,
+    lastNow: now,
     version: 0,
   };
 
@@ -102,34 +158,37 @@ export function createCoopWorld({
     world.version += 1;
   }
 
+  function gap() {
+    return COOP.moveMinGapMs + random() * (COOP.moveMaxGapMs - COOP.moveMinGapMs);
+  }
+
   function loadFloor(nextFloor, bits, at) {
     const map = generateQuantumMap(bits);
     world.floor = nextFloor;
     world.bitstring = map.bitstring;
-    world.maze = cloneMaze(map.maze);
+    world.maze = map.maze.map((row) => [...row]);
     world.size = world.maze.length;
-    world.superposed = new Map(findSuperposedWalls(map.maze, map.bitstring).map(({ x, z, offset }) => [key(x, z), offset]));
-    world.regions = listRegions(world.size).map((region) => ({
-      ...region,
-      label: regionLabel(region),
-      bit: map.bitstring[region.qubit],
-    }));
+    // Sem paredes em superposição: isso é do modo solo (quântico).
+    world.superposed = new Map();
+    world.regions = listRegions(world.size).map((region) => ({ ...region, label: regionLabel(region) }));
     world.doorCandidates = map.doorCandidates || [];
-    // As mesmas células onde o jogo do explorador põe a Água de Amêndoa.
     world.itemCells = pickFloorCells(map.maze, map.bitstring, 3, [
       { x: 1, z: 1 }, { x: 2, z: 1 }, { x: 1, z: 2 }, map.stairs,
     ]).slice(1);
-    world.door = -1;
-    world.doorBits = null;
-    world.measured = false;
-    world.lastSeen = Object.fromEntries(world.regions.map((region) => [region.id, at]));
-    world.lastShift = at;
+    // A porta já começa definida: o operador sabe onde ela está.
+    world.door = Math.floor(random() * Math.max(1, world.doorCandidates.length));
+    world.measured = true;
     world.pending = [];
+    world.aiWalls = [];
     world.cage = null;
-    world.shifts = 0;
-    world.nextTrapAt = at + COOP.firstTrapMs;
-    world.lastMeasureAt = -Infinity;
+    world.moves = 0;
+    world.nextMoveAt = at + COOP.firstMoveMs;
+    world.lastScanAt = -Infinity;
     bump();
+  }
+
+  function doorCell() {
+    return world.doorCandidates[world.door];
   }
 
   function explorerCell() {
@@ -137,19 +196,19 @@ export function createCoopWorld({
     return { x: Math.round(world.explorer.x), z: Math.round(world.explorer.z) };
   }
 
-  function observeOptions() {
-    return { transparent: (x, z) => world.superposed.has(key(x, z)), near: NEAR_CELLS };
+  function nearExplorer(cells, radius = 1) {
+    const here = explorerCell();
+    if (!here) return false;
+    return cells.some((cell) => Math.max(Math.abs(cell.x - here.x), Math.abs(cell.z - here.z)) <= radius);
   }
 
   function protectedCells() {
     const cells = [];
-    const doors = world.measured ? [world.doorCandidates[world.door]] : world.doorCandidates;
-    doors.forEach((door) => door && cells.push({ x: door.x, z: door.z }));
+    const door = doorCell();
+    if (door) cells.push(door);
     world.itemCells.forEach((cell) => cell && cells.push(cell));
-    if (world.ghost) cells.push({ x: Math.round(world.ghost.x), z: Math.round(world.ghost.z) });
     const here = explorerCell();
     if (here) {
-      // A célula do explorador e as vizinhas: compensa o atraso da rede.
       for (let dz = -1; dz <= 1; dz += 1) {
         for (let dx = -1; dx <= 1; dx += 1) cells.push({ x: here.x + dx, z: here.z + dz });
       }
@@ -157,28 +216,14 @@ export function createCoopWorld({
     return cells;
   }
 
-  function reshuffle(region) {
-    const bits = drawBits(world.floor) || world.bitstring;
-    const changed = reshuffleSector(world.maze, region, bits, {
-      protectedCells: protectedCells(),
-      salt: world.shifts + 1,
-    });
-    world.shifts += 1;
-    region.bit = String(bits)[region.qubit];
-    // Troca as paredes em superposição do setor.
-    [...world.superposed.keys()].forEach((cellKey) => {
-      const [x, z] = cellKey.split(',').map(Number);
-      if (x >= region.minX && x <= region.maxX && z >= region.minZ && z <= region.maxZ) world.superposed.delete(cellKey);
-    });
-    pickSectorSuperposed(world.maze, region, bits, 1).forEach(({ x, z, offset }) => world.superposed.set(key(x, z), offset));
-    bump();
-    return changed.length;
+  function labelAt(cell) {
+    return nearestRegion(world.regions, cell.x, cell.z)?.label || '?';
   }
 
   // Jaula 3x3 em volta do explorador: o anel a 2 células vira parede (1 célula
   // de espessura, dá para atravessar com o Salto de Fase).
   function buildCage(center) {
-    const doors = new Set(world.doorCandidates.map((door) => key(door.x, door.z)));
+    const door = doorCell();
     const cells = [];
     for (let dz = -2; dz <= 2; dz += 1) {
       for (let dx = -2; dx <= 2; dx += 1) {
@@ -186,57 +231,72 @@ export function createCoopWorld({
         const z = center.z + dz;
         if (x <= 0 || z <= 0 || x >= world.size - 1 || z >= world.size - 1) continue;
         const ring = Math.max(Math.abs(dx), Math.abs(dz)) === 2;
-        if (ring && doors.has(key(x, z))) continue;
+        if (ring && door && door.x === x && door.z === z) continue;
         const value = ring ? '#' : '.';
-        const superposed = world.superposed.get(key(x, z));
-        cells.push({ x, z, prev: world.maze[z][x], value, superposed });
+        cells.push({ x, z, prev: world.maze[z][x], value });
         world.maze[z][x] = value;
-        world.superposed.delete(key(x, z));
       }
     }
     bump();
     return cells;
   }
 
+  function restore(cells) {
+    cells.forEach(({ x, z, prev, value }) => {
+      if (world.maze[z][x] === value) world.maze[z][x] = prev;
+    });
+    bump();
+  }
+
   function releaseCage() {
     if (!world.cage) return false;
-    world.cage.cells.forEach(({ x, z, prev, value, superposed }) => {
-      if (world.maze[z][x] === value) world.maze[z][x] = prev;
-      if (superposed !== undefined) world.superposed.set(key(x, z), superposed);
-    });
+    restore(world.cage.cells);
     world.cage = null;
-    world.nextTrapAt = Math.max(world.nextTrapAt, world.lastNow + gap());
-    bump();
+    world.nextMoveAt = Math.max(world.nextMoveAt, world.lastNow + gap());
     return true;
   }
 
-  function gap() {
-    return COOP.trapMinGapMs + random() * (COOP.trapMaxGapMs - COOP.trapMinGapMs);
+  // Próxima jogada da IA: cerco (de tempos em tempos) ou corte no caminho.
+  function planMove(at, events) {
+    const here = explorerCell();
+    const door = doorCell();
+    if (!here || !door) return;
+    world.moves += 1;
+    const cage = world.moves % COOP.cageEvery === 0;
+    if (cage) {
+      world.pending.push({ kind: 'cage', label: labelAt(here), at: at + COOP.cageWarnMs, since: at });
+      events.push({ type: 'warn', kind: 'cage', label: labelAt(here), ms: COOP.cageWarnMs });
+      return;
+    }
+    const plan = planBlock(world.maze, here, door, { protectedCells: protectedCells() });
+    if (!plan) {
+      world.nextMoveAt = at + 4000;
+      return;
+    }
+    const label = labelAt(plan.cells[0]);
+    world.pending.push({ kind: 'block', label, cells: plan.cells, at: at + COOP.blockWarnMs, since: at });
+    events.push({ type: 'warn', kind: 'block', label, ms: COOP.blockWarnMs, detour: plan.detour });
   }
 
-  function regionById(id) {
-    return world.regions.find((region) => region.id === id);
-  }
-
-  function explorerInside(region, margin = 0.5) {
-    if (!world.explorer) return false;
-    return distanceToSector(region, world.explorer.x, world.explorer.z) <= margin;
-  }
-
-  function collapseDoor(events) {
-    if (world.measured || !world.doorCandidates.length) return;
-    const bits = drawBits(world.floor) || world.bitstring;
-    const picked = pickDoorCandidate(world.doorCandidates, bits);
-    world.door = picked.index;
-    world.doorBits = bits;
-    world.measured = true;
+  function resolve(item, at, events) {
+    if (item.kind === 'cage') {
+      // O cerco pega onde o explorador estiver agora: a IA o segue.
+      const center = explorerCell();
+      world.cage = { cells: buildCage(center), center, since: at, outsideSince: null };
+      events.push({ type: 'trapped', label: labelAt(center) });
+      return;
+    }
+    // Corte: não fecha em cima do explorador. Se ele já passou, a IA erra.
+    const cells = item.cells.filter((cell) => world.maze[cell.z][cell.x] === '.');
+    if (!cells.length || nearExplorer(cells, 0)) {
+      events.push({ type: 'dodged', label: item.label });
+      return;
+    }
+    const placed = cells.map(({ x, z }) => ({ x, z, prev: '.', value: '#' }));
+    placed.forEach(({ x, z }) => { world.maze[z][x] = '#'; });
+    world.aiWalls.push({ cells: placed, until: at + COOP.wallLifeMs, label: item.label });
     bump();
-    events.push({ type: 'door', index: picked.index, total: world.doorCandidates.length, cell: picked.cell, bits });
-  }
-
-  function doorInRange(radius) {
-    if (!world.explorer) return false;
-    return world.doorCandidates.some((door) => Math.hypot(world.explorer.x - door.x, world.explorer.z - door.z) <= radius);
+    events.push({ type: 'blocked', label: item.label, cells: placed.length });
   }
 
   loadFloor(floor, drawBits(floor) || '010110101100', now);
@@ -246,58 +306,36 @@ export function createCoopWorld({
       return world;
     },
 
-    // Explorador: posição em células (com fração), direção do olhar e entidade.
     setExplorer(explorer, ghost = null) {
       world.explorer = explorer;
       world.ghost = ghost;
     },
 
+    // O explorador entrou (ou voltou) no andar: a IA espera um pouco antes de agir.
+    startClock(at) {
+      world.pending = [];
+      if (!world.cage) world.nextMoveAt = at + COOP.firstMoveMs;
+    },
+
     update(at) {
       world.lastNow = at;
       const events = [];
-      const viewer = world.explorer;
-      if (!viewer) return events;
+      if (!world.explorer) return events;
 
-      const options = observeOptions();
-      world.regions.forEach((region) => {
-        if (isSectorObserved(world.maze, region, viewer, options)) world.lastSeen[region.id] = at;
-      });
-
-      // Olhos do explorador: chegar perto de uma posição possível mede a porta.
-      if (!world.measured && doorInRange(COOP.eyesRadius)) collapseDoor(events);
-
-      // Avisos vencidos: o trecho colapsa agora.
       world.pending.filter((item) => item.at <= at).forEach((item) => {
         world.pending = world.pending.filter((other) => other !== item);
-        const region = regionById(item.regionId);
-        if (!region) return;
-        if (item.trap) {
-          const inside = explorerInside(region);
-          const changed = reshuffle(region);
-          world.lastSeen[region.id] = at;
-          world.lastShift = at;
-          if (inside) {
-            const center = explorerCell();
-            world.cage = { cells: buildCage(center), center, regionId: region.id, since: at, outsideSince: null };
-            events.push({ type: 'trapped', label: region.label, changed });
-          } else {
-            world.nextTrapAt = at + gap();
-            events.push({ type: 'dodged', label: region.label, changed });
-          }
-          return;
-        }
-        // Decoerência comum: continua sem mudar diante dos olhos do explorador.
-        if (isSectorObserved(world.maze, region, viewer, options)) {
-          events.push({ type: 'cancelled', label: region.label, reason: 'observed' });
-          return;
-        }
-        const changed = reshuffle(region);
-        world.lastSeen[region.id] = at;
-        world.lastShift = at;
-        events.push({ type: 'collapse', label: region.label, changed });
+        resolve(item, at, events);
+        world.nextMoveAt = at + gap();
       });
 
-      // Jaula: se o explorador saiu dela (Salto de Fase), ela se desfaz.
+      // Paredes antigas da IA se desfazem (se o explorador não estiver nelas).
+      world.aiWalls = world.aiWalls.filter((wall) => {
+        if (wall.until > at || nearExplorer(wall.cells, 0)) return true;
+        restore(wall.cells);
+        events.push({ type: 'expired', label: wall.label });
+        return false;
+      });
+
       if (world.cage) {
         const here = explorerCell();
         const out = Math.max(Math.abs(here.x - world.cage.center.x), Math.abs(here.z - world.cage.center.z)) >= 2;
@@ -309,94 +347,52 @@ export function createCoopWorld({
         }
       }
 
-      const busy = world.cage || world.pending.length;
-      // Armadilha: o trecho onde o explorador está vai colapsar.
-      if (!busy && at >= world.nextTrapAt) {
-        const region = nearestRegion(world.regions, viewer.x, viewer.z);
-        if (region) {
-          world.pending.push({ regionId: region.id, label: region.label, at: at + COOP.trapWarnMs, trap: true, since: at });
-          events.push({ type: 'warn', label: region.label, trap: true, ms: COOP.trapWarnMs });
-        }
-      } else if (!busy && at - world.lastShift >= SHIFT_COOLDOWN_MS) {
-        // Decoerência comum: o trecho mais esquecido, com aviso para o operador.
-        const region = world.regions
-          .filter((candidate) => at - world.lastSeen[candidate.id] >= UNOBSERVED_MS)
-          .filter((candidate) => !isSectorObserved(world.maze, candidate, viewer, options))
-          .sort((a, b) => world.lastSeen[a.id] - world.lastSeen[b.id])[0];
-        if (region) {
-          world.pending.push({ regionId: region.id, label: region.label, at: at + COOP.ambientWarnMs, trap: false, since: at });
-          world.lastShift = at;
-          events.push({ type: 'warn', label: region.label, trap: false, ms: COOP.ambientWarnMs });
-        }
-      }
+      if (!world.cage && !world.pending.length && at >= world.nextMoveAt) planMove(at, events);
       return events;
     },
 
-    // O explorador entrou (ou voltou) no andar: os relógios recomeçam, para a
-    // primeira armadilha não cair assim que ele chega.
-    startClock(at) {
-      world.regions.forEach((region) => { world.lastSeen[region.id] = at; });
-      world.lastShift = at;
-      world.pending = [];
-      if (!world.cage) world.nextTrapAt = at + COOP.firstTrapMs;
+    scanCooldown(at) {
+      return Math.max(0, COOP.scanCooldownMs - (at - world.lastScanAt));
     },
 
-    measureCooldown(at) {
-      return Math.max(0, COOP.measureCooldownMs - (at - world.lastMeasureAt));
-    },
-
-    // Operador aperta MEDIR: o QPS mede tudo no raio em volta do explorador.
-    measure(at) {
+    // VARREDURA do operador: cancela a próxima jogada da IA e desfaz a jaula.
+    scan(at) {
       const events = [];
-      if (!world.explorer || api.measureCooldown(at) > 0) return { ok: false, events };
-      world.lastMeasureAt = at;
+      if (!world.explorer || api.scanCooldown(at) > 0) return { ok: false, events };
+      world.lastScanAt = at;
       world.lastNow = at;
-      const { x, z } = world.explorer;
-      const frozen = world.regions.filter((region) => distanceToSector(region, x, z) <= COOP.qpsRadius);
-      frozen.forEach((region) => { world.lastSeen[region.id] = at; });
-      const ids = new Set(frozen.map((region) => region.id));
-      world.pending = world.pending.filter((item) => {
-        if (!ids.has(item.regionId)) return true;
-        if (item.trap) world.nextTrapAt = at + gap();
-        events.push({ type: 'cancelled', label: item.label, reason: 'measured', trap: item.trap });
-        return false;
-      });
-      if (releaseCage()) events.push({ type: 'released', reason: 'measured' });
-      if (!world.measured && doorInRange(COOP.qpsRadius)) collapseDoor(events);
-      events.push({ type: 'measured', regions: frozen.map((region) => region.label) });
+      world.pending.forEach((item) => events.push({ type: 'cancelled', kind: item.kind, label: item.label }));
+      world.pending = [];
+      if (releaseCage()) events.push({ type: 'released', reason: 'scan' });
+      world.nextMoveAt = Math.max(world.nextMoveAt, at + gap());
+      events.push({ type: 'scanned' });
       return { ok: true, events };
     },
 
-    // O explorador chegou na porta: o operador confere e sorteia o próximo andar.
     nextFloor(at) {
-      if (!world.measured || !world.explorer) return false;
-      const door = world.doorCandidates[world.door];
-      if (!door || Math.hypot(world.explorer.x - door.x, world.explorer.z - door.z) > COOP.stairsRadius) return false;
+      const door = doorCell();
+      if (!door || !world.explorer) return false;
+      if (Math.hypot(world.explorer.x - door.x, world.explorer.z - door.z) > COOP.stairsRadius) return false;
       loadFloor(world.floor + 1, drawBits(world.floor + 1) || '010110101100', at);
       world.explorer = null;
       return true;
     },
 
-    // Sanidade zerada: de volta ao andar 1.
     restart(at) {
       loadFloor(1, drawBits(1) || '010110101100', at);
       world.explorer = null;
     },
 
-    // O que vai pela rede: o labirinto inteiro (23 x 23 caracteres) é pequeno o
-    // bastante para mandar a cada mudança, sem risco de os dois lados divergirem.
+    // O labirinto inteiro (23 x 23 caracteres) vai a cada mudança.
     snapshot() {
       return {
         floor: world.floor,
         bits: world.bitstring,
         maze: world.maze.map((row) => row.join('')),
-        superposed: [...world.superposed.entries()].map(([cellKey, offset]) => {
-          const [x, z] = cellKey.split(',').map(Number);
-          return { x, z, offset };
-        }),
-        regionBits: world.regions.map((region) => region.bit).join(''),
+        superposed: [],
+        regionBits: '',
         door: world.door,
-        doorBits: world.doorBits,
+        doorBits: null,
         caged: Boolean(world.cage),
         version: world.version,
       };

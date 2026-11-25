@@ -60,6 +60,7 @@ const START_POSITION = startPosition();
 // O operador, no desktop, é dono do andar; aqui só roda o corpo do jogador.
 const coop = () => (window.quantumCoop?.active ? window.quantumCoop : null);
 let coopRequest = false;
+let coopBlocks = 0;
 const SURVIVAL_TICK_MS = 100;
 // Névoa escura de base (o index.html define a cor); sobe com a loucura.
 const FOG_BASE_DENSITY = 0.085;
@@ -228,7 +229,7 @@ function isActive() {
 function objectiveText() {
   if (coop()) {
     if (transitioning) return 'AGUARDANDO O OPERADOR';
-    return game.current.measured ? 'A PORTA FOI MEDIDA: PEÇA O CAMINHO' : 'OUÇA O OPERADOR: ELE TEM O MAPA';
+    return 'OUÇA O OPERADOR: ELE VÊ A PORTA E A IA';
   }
   if (game.current.floor === LOBBY_FLOOR) {
     return missingGear().length ? 'PEGUE O EQUIPAMENTO NAS 3 ESTAÇÕES' : 'TUTORIAL: A PORTA LEVA AO ANDAR 01';
@@ -779,6 +780,8 @@ function beginCoopGame() {
   // O painel do circuito traz o mini-quadro das regiões (um mapa do andar):
   // no cooperativo o mapa é só do operador.
   elements['phase-telemetry'].hidden = true;
+  // No duo o andar não é quântico: some o painel da string medida.
+  document.getElementById('hud').hidden = true;
   const pending = coop().floor;
   if (pending) enterCoopFloor({ ...pending, reason: 'join' });
   window.quantumPlayer.active = isActive();
@@ -867,16 +870,21 @@ function coopDoorMeasured({ index, bits }) {
 // Efeitos que o operador manda junto com as mudanças do labirinto.
 function coopEffect(kind) {
   const scene = elements['backrooms-scene'];
-  if (kind === 'shift') window.quantumDecoherence?.signal?.();
+  // Duo: a IA adversária fechou um corredor em algum lugar.
+  if (kind === 'blocked') {
+    window.quantumDecoherence?.signal?.();
+    coopBlocks += 1;
+    if (coopBlocks <= 2) setHint('UMA PAREDE SE FECHOU EM ALGUM LUGAR — a IA está cortando caminhos; pergunte ao operador por onde ir');
+  }
   if (kind === 'trapped') {
     window.quantumDecoherence?.signal?.();
     flash('ghost-strike', 700);
     scene.emit('screen-effect', { type: 'flash', color: '#000000', duration: 900, peak: 0.6 });
-    setHint('AS PAREDES FECHARAM EM VOLTA DE VOCÊ — encoste as palmas numa parede para o Salto de Fase (X) ou peça ao operador para medir');
+    setHint('A IA FECHOU AS PAREDES EM VOLTA DE VOCÊ — encoste as palmas numa parede para o Salto de Fase (X) ou peça uma varredura ao operador');
   }
   if (kind === 'released') {
     scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
-    setHint('O OPERADOR MEDIU — as paredes da jaula voltaram ao lugar');
+    setHint('O OPERADOR FEZ UMA VARREDURA — a jaula se desfez');
   }
   if (kind === 'escaped') setHint('VOCÊ ESCAPOU DA JAULA — atrás de você, as paredes já se desfazem');
   if (kind === 'lost') setHint('O OPERADOR CAIU — o labirinto congelou até ele voltar');

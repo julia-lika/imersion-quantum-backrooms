@@ -38,7 +38,7 @@
       #measure-bar { height: 4px; margin-top: 6px; background: rgba(68, 255, 204, 0.15); }
       #measure-bar > div { height: 100%; width: 100%; background: #44ffcc; }
       .row { display: flex; gap: 8px; }
-      #explorer-mic.muted { color: var(--red); font-weight: bold; }
+      #explorer-mic.is-muted { color: var(--red); font-weight: bold; }
       .row button { flex: 1; padding: 8px; border: 1px solid var(--amber-dim); background: transparent; color: var(--amber); }
       #alerts { display: flex; flex-direction: column; gap: 6px; }
       .alert { padding: 8px 10px; border: 1px solid var(--orange); color: var(--orange); font-size: 0.78rem; }
@@ -62,8 +62,8 @@
     </div>
     <aside>
       <div class="card">
-        <h1>QPS // CONSOLE DO OPERADOR</h1>
-        <div class="muted">Você vê o andar inteiro, mas não o corredor. O explorador vê o corredor, mas não tem mapa. Guie-o pela voz até a porta.</div>
+        <h1>CONSOLE DO OPERADOR</h1>
+        <div class="muted">Você vê o andar inteiro, mas não o corredor. O explorador vê o corredor, mas não tem mapa. Guie-o pela voz até a porta. Uma IA adversária acompanha o explorador e fecha corredores no caminho dele, ou tenta cercá-lo: você vê cada jogada dela alguns segundos antes.</div>
       </div>
       <div class="card">
         <h2>CÓDIGO DA SALA</h2>
@@ -77,23 +77,22 @@
         </div>
       </div>
       <div class="card">
-        <div>ANDAR <span id="floor" class="value">--</span> // STRING <span id="bits" class="value">--</span></div>
+        <div>ANDAR <span id="floor" class="value">--</span> // PAREDES DA IA: <span id="ai-walls" class="value">0</span></div>
         <div>PORTA: <span id="door" class="value">--</span></div>
         <div>EXPLORADOR EM: <span id="where" class="value">--</span></div>
-        <button id="measure" type="button" style="margin-top: 8px">MEDIR COM O QPS (ESPAÇO)</button>
+        <button id="measure" type="button" style="margin-top: 8px">VARREDURA (ESPAÇO)</button>
         <div id="measure-bar"><div></div></div>
-        <div class="muted">Mede um raio de 4 células em volta do explorador: congela os trechos (efeito Zeno), cancela colapsos ali, solta quem está preso e, se uma posição possível da porta estiver no raio, a porta colapsa. Recarga de 20 s.</div>
+        <div class="muted">Cancela a próxima jogada da IA e desfaz a jaula se o explorador estiver cercado. Recarga de 20 s: guarde para quando precisar. As paredes que a IA fecha se desfazem sozinhas depois de 45 s.</div>
       </div>
       <div id="alerts"></div>
       <div class="card legend muted">
         <span style="background:#d8bc75"></span>parede
-        <span style="background:#c45cff"></span>superposição
-        <span style="background:#ffd23c"></span>porta possível
-        <span style="background:#44ffcc"></span>porta medida
-        <span style="background:#ff4d5e"></span>colapso / entidade
+        <span style="background:#7a1e26"></span>parede da IA
+        <span style="background:#ff4d5e"></span>próxima jogada da IA / entidade
+        <span style="background:#44ffcc"></span>porta
       </div>
       <ul id="log" class="card"></ul>
     </aside>
-    <script type="module" src="js/coop/operator-console.js?v=20261125-5"></script>
+    <script type="module" src="js/coop/operator-console.js?v=20261125-6"></script>
   </body>
 </html>

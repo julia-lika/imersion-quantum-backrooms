@@ -31,23 +31,26 @@ O conteúdo de desenvolvimento fica em `src/`. Como essa pasta é montada no con
 ## Modo cooperativo (2 jogadores)
 
 Um jogador no desktop é o **operador**: abre `operador.html` (ou o link
-"console do QPS" em MODO COOPERATIVO na tela inicial), vê o andar inteiro, as
-posições possíveis da porta e os trechos que vão se reorganizar, mas não tem
-visão de corredor. O outro, no Quest, é o **explorador**: digita o código de 4
+"console do operador" em MODO COOPERATIVO na tela inicial), vê o andar inteiro, a
+porta e as jogadas da IA, mas não tem visão de corredor. O outro, no Quest ou
+em outro PC, é o **explorador**: digita o código de 4
 letras da sala e entra só com o Q-LINK, sem mapa. Os dois conversam por voz
 pela mesma conexão.
 
 - Conexão navegador a navegador (WebRTC via PeerJS). Não precisa de servidor
   próprio; o serviço público do PeerJS só faz o pareamento pelo código.
-- O operador é o host: ele gera o andar, roda a decoerência, decide a porta e
-  manda o labirinto para o explorador; o explorador manda posição, olhar e onde
-  está a entidade.
-- Armadilhas: de tempos em tempos o trecho onde o explorador está vai colapsar.
-  Só o operador vê o aviso (7 s). Se o explorador não sair, as paredes fecham em
-  volta dele. Ele sai com o Salto de Fase ou quando o operador mede de novo.
-- MEDIR (espaço, no console): congela os trechos num raio de 4 células em volta
-  do explorador, cancela colapsos ali, desfaz a jaula e mede a porta se uma
-  posição possível estiver no raio. Recarga de 20 s.
+- O operador é o host: ele gera o andar, roda a IA e manda o labirinto para o
+  explorador; o explorador manda posição, olhar e onde está a entidade.
+- No duo não há computação quântica (ela fica no modo solo): o andar é sorteado
+  de forma clássica, a porta já começa definida e quem mexe nas paredes é uma
+  **IA adversária**. Ela calcula o caminho mais curto do explorador até a porta
+  e fecha um corredor nele (sempre deixando um desvio), e a cada 3 jogadas tenta
+  cercá-lo com um anel de paredes. O operador vê cada jogada 6–7 s antes; o
+  explorador não. As paredes da IA se desfazem sozinhas depois de 45 s.
+- Cercado, o explorador sai com o Salto de Fase. VARREDURA (espaço, no console)
+  cancela a próxima jogada da IA e desfaz a jaula. Recarga de 20 s.
+- O explorador muta o microfone com V (desktop) ou fazendo a pinça com a outra
+  mão perto do Q-LINK (VR); o console mostra quando ele está mudo.
 - Se o explorador não conectar, a tela diz onde parou. "Sala não encontrada"
   é código errado ou console fechado. "A conexão não fechou" é a rede: as duas
   pontas acham a sala, mas a rede (Wi-Fi da faculdade, isolamento de clientes,

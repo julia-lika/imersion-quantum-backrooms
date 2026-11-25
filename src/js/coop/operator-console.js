@@ -2,7 +2,6 @@
 // (coop-world.js), desenha o mapa completo do QPS e manda as mudanças para o
 // explorador. Não tem visão de corredor: só o mapa, os avisos e a voz.
 import '../map-generator.js';
-import '../quantum-bank.js';
 import { createCoopWorld } from './coop-world.js';
 import { createCoopLink, normalizeRoomCode, randomRoomCode, requestMicrophone } from './coop-net.js?v=20261125-4';
 
@@ -29,8 +28,9 @@ function log(text) {
   while ($('log').children.length > 60) $('log').lastChild.remove();
 }
 
-function drawBits(floor) {
-  return window.drawFloorBitstring?.(floor) || window.sampleQuantumBitstring?.() || '010110101100';
+// No duo o andar é sorteado de forma clássica (o quântico é do modo solo).
+function drawBits() {
+  return Array.from({ length: 12 }, () => (Math.random() < 0.5 ? '0' : '1')).join('');
 }
 
 function send(message) {
@@ -67,25 +67,23 @@ function setAlert(id, text, kind) {
 function describe(event) {
   switch (event.type) {
     case 'warn':
-      return event.trap
-        ? `⚠ ${event.label} VAI COLAPSAR EM ${Math.round(event.ms / 1000)} s — o explorador está nesse trecho: tire-o de lá ou meça`
-        : `${event.label} vai se reorganizar em ${Math.round(event.ms / 1000)} s`;
+      return event.kind === 'cage'
+        ? `⚠ IA VAI CERCAR O EXPLORADOR EM ${Math.round(event.ms / 1000)} s (${event.label}) — faça uma varredura ou prepare o Salto de Fase`
+        : `IA vai fechar um corredor em ${event.label} em ${Math.round(event.ms / 1000)} s (no caminho dele até a porta)`;
     case 'trapped':
-      return `✖ ${event.label} COLAPSOU EM VOLTA DO EXPLORADOR — preso: Salto de Fase (palmas na parede / X) ou meça de novo`;
+      return `✖ A IA CERCOU O EXPLORADOR EM ${event.label} — Salto de Fase (palmas na parede / X) ou varredura`;
+    case 'blocked':
+      return `A IA fechou um corredor em ${event.label}`;
     case 'dodged':
-      return `${event.label} colapsou, mas o explorador saiu a tempo`;
-    case 'collapse':
-      return `${event.label} se reorganizou (${event.changed} células)`;
+      return `A IA tentou fechar ${event.label}, mas o explorador já tinha passado`;
+    case 'expired':
+      return `A parede da IA em ${event.label} se desfez`;
     case 'cancelled':
-      return event.reason === 'measured'
-        ? `${event.label}: colapso cancelado pela medição`
-        : `${event.label}: o explorador estava olhando, nada mudou`;
+      return `Varredura cancelou a jogada da IA em ${event.label}`;
     case 'released':
-      return event.reason === 'measured' ? 'Jaula desfeita pela medição' : 'O explorador saltou para fora da jaula';
-    case 'door':
-      return `PORTA MEDIDA — posição ${event.index + 1}/${event.total} (ciano no mapa)`;
-    case 'measured':
-      return `QPS mediu: ${event.regions.join(', ') || 'nada no raio'}`;
+      return event.reason === 'scan' ? 'Jaula desfeita pela varredura' : 'O explorador saltou para fora da jaula';
+    case 'scanned':
+      return 'Varredura feita: a IA perdeu a vez';
     default:
       return null;
   }
@@ -97,9 +95,8 @@ function handleEvents(events) {
     const text = describe(event);
     if (text) log(text);
     if (event.type === 'trapped') fx.push('trapped');
-    if (event.type === 'collapse' || event.type === 'dodged') fx.push('shift');
-    if (event.type === 'released') fx.push(event.reason === 'measured' ? 'released' : 'escaped');
-    if (event.type === 'door') send({ t: 'door', index: event.index, bits: event.bits });
+    if (event.type === 'blocked') fx.push('blocked');
+    if (event.type === 'released') fx.push(event.reason === 'scan' ? 'released' : 'escaped');
   });
   sendWorld(fx);
 }
@@ -115,7 +112,7 @@ function tick() {
 
 function measure() {
   if (!world || !explorerActive) return;
-  const result = world.measure(performance.now());
+  const result = world.scan(performance.now());
   if (!result.ok) return;
   send({ t: 'fx', kind: 'measure' });
   handleEvents(result.events);
@@ -124,29 +121,42 @@ function measure() {
 function renderPanel(now) {
   const state = world.state;
   $('floor').textContent = String(state.floor).padStart(2, '0');
-  $('bits').textContent = state.bitstring;
-  $('door').textContent = state.measured
-    ? `MEDIDA (${state.door + 1}/${state.doorCandidates.length})`
-    : `EM SUPERPOSIÇÃO ENTRE ${state.doorCandidates.length} POSIÇÕES`;
+  const door = state.doorCandidates[state.door];
+  $('door').textContent = door ? `${nearestRegionLabel(door)} (CIANO NO MAPA)` : '--';
+  $('ai-walls').textContent = String(state.aiWalls.length);
   const explorer = state.explorer;
   const region = explorer && state.regions.find((r) => explorer.x >= r.minX - 0.5 && explorer.x <= r.maxX + 0.5 && explorer.z >= r.minZ - 0.5 && explorer.z <= r.maxZ + 0.5);
   $('where').textContent = explorer ? (region?.label || 'PASSAGEM') : '--';
-  const cooldown = world.measureCooldown(now);
+  const cooldown = world.scanCooldown(now);
   $('measure').disabled = cooldown > 0 || !explorerActive;
-  $('measure').textContent = cooldown > 0 ? `RECARREGANDO ${Math.ceil(cooldown / 1000)} s` : 'MEDIR COM O QPS (ESPAÇO)';
+  $('measure').textContent = cooldown > 0 ? `RECARREGANDO ${Math.ceil(cooldown / 1000)} s` : 'VARREDURA (ESPAÇO)';
   $('measure-bar').firstElementChild.style.width = `${100 - (cooldown / 20000) * 100}%`;
 
   const pendingIds = new Set();
   state.pending.forEach((item) => {
-    const id = `pending-${item.regionId}`;
+    const id = `pending-${item.kind}`;
     pendingIds.add(id);
     const left = Math.max(0, (item.at - now) / 1000).toFixed(1);
-    setAlert(id, item.trap ? `⚠ ${item.label} COLAPSA EM ${left} s — EXPLORADOR DENTRO` : `${item.label} reorganiza em ${left} s`, item.trap ? 'trap' : '');
+    setAlert(id, item.kind === 'cage'
+      ? `⚠ IA VAI CERCAR O EXPLORADOR EM ${left} s`
+      : `IA FECHA CORREDOR EM ${item.label} EM ${left} s (tracejado vermelho)`, item.kind === 'cage' ? 'trap' : '');
   });
   [...alerts.keys()].filter((id) => id.startsWith('pending-') && !pendingIds.has(id)).forEach((id) => setAlert(id, null));
-  setAlert('cage', state.cage ? 'EXPLORADOR PRESO — peça o Salto de Fase (palmas numa parede da jaula) ou meça' : null, 'caged');
+  setAlert('cage', state.cage ? 'EXPLORADOR CERCADO — peça o Salto de Fase (palmas numa parede da jaula) ou faça uma varredura' : null, 'caged');
   $('waiting').hidden = Boolean(link?.connected && explorerActive);
   if (link?.connected && !explorerActive) $('waiting').innerHTML = 'EXPLORADOR CONECTADO<br /><br />ESPERANDO ELE ENTRAR NO JOGO';
+}
+
+function nearestRegionLabel(cell) {
+  const regions = world.state.regions;
+  let best = null;
+  regions.forEach((region) => {
+    const dx = Math.max(region.minX - cell.x, 0, cell.x - region.maxX);
+    const dz = Math.max(region.minZ - cell.z, 0, cell.z - region.maxZ);
+    const d = Math.hypot(dx, dz);
+    if (!best || d < best.d) best = { d, label: region.label };
+  });
+  return best?.label || '?';
 }
 
 // ---------- mapa ----------
@@ -177,15 +187,34 @@ function draw(now) {
     }
   }
 
-  // Colapsos pendentes: o trecho pisca em laranja (ou vermelho, armadilha).
+  // Paredes da IA (já fechadas): vermelho escuro, somem com o tempo.
+  state.aiWalls.forEach((wall) => {
+    wall.cells.forEach(({ x, z }) => {
+      ctx.fillStyle = '#7a1e26';
+      ctx.fillRect(x * cell, z * cell, cell, cell);
+    });
+  });
+  // Próxima jogada da IA: células tracejadas piscando (corte) ou o cerco.
   state.pending.forEach((item) => {
-    const region = state.regions.find((r) => r.id === item.regionId);
-    if (!region) return;
     const total = item.at - item.since;
     const progress = Math.min(1, Math.max(0, 1 - (item.at - performance.now()) / total));
-    const pulse = 0.25 + 0.25 * Math.sin(now / (item.trap ? 90 : 180)) + progress * 0.25;
-    ctx.fillStyle = item.trap ? `rgba(255, 40, 60, ${pulse})` : `rgba(255, 170, 60, ${pulse * 0.6})`;
-    ctx.fillRect(region.minX * cell, region.minZ * cell, (region.maxX - region.minX + 1) * cell, (region.maxZ - region.minZ + 1) * cell);
+    const pulse = 0.35 + 0.3 * Math.sin(now / 110) + progress * 0.3;
+    if (item.kind === 'block') {
+      item.cells.forEach(({ x, z }) => {
+        ctx.fillStyle = `rgba(255, 40, 60, ${pulse})`;
+        ctx.fillRect(x * cell + 2, z * cell + 2, cell - 4, cell - 4);
+        ctx.strokeStyle = '#ff4d5e';
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(x * cell + 1, z * cell + 1, cell - 2, cell - 2);
+        ctx.setLineDash([]);
+      });
+    } else if (state.explorer) {
+      ctx.strokeStyle = `rgba(255, 40, 60, ${pulse})`;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect((Math.round(state.explorer.x) - 2) * cell, (Math.round(state.explorer.z) - 2) * cell, cell * 5, cell * 5);
+      ctx.setLineDash([]);
+    }
   });
 
   // Jaula: contorno vermelho.
@@ -197,7 +226,7 @@ function draw(now) {
     ctx.strokeRect((x - 2) * cell, (z - 2) * cell, cell * 5, cell * 5);
   }
 
-  // Regiões (um qubit cada): rótulo e tipo.
+  // Grade de referência (A1 a C4) para orientar o explorador pela voz.
   ctx.font = `bold ${Math.round(cell * 0.62)}px "Courier New", monospace`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
@@ -209,16 +238,12 @@ function draw(now) {
     ctx.setLineDash([]);
     ctx.fillStyle = 'rgba(57, 255, 136, 0.75)';
     ctx.fillText(region.label, region.minX * cell + 4, region.minZ * cell + 3);
-    ctx.fillStyle = 'rgba(57, 255, 136, 0.4)';
-    ctx.font = `${Math.round(cell * 0.42)}px "Courier New", monospace`;
-    ctx.fillText(region.bit === '1' ? 'q=1 sala' : 'q=0 corr.', region.minX * cell + 4, region.minZ * cell + cell * 0.75);
-    ctx.font = `bold ${Math.round(cell * 0.62)}px "Courier New", monospace`;
   });
 
-  // Porta: posições possíveis (amarelo tracejado) ou a medida (ciano).
+  // Porta (ciano): no duo ela já começa definida.
   state.doorCandidates.forEach((door, index) => {
-    const chosen = state.measured && index === state.door;
-    if (state.measured && !chosen) return;
+    const chosen = index === state.door;
+    if (!chosen) return;
     ctx.strokeStyle = chosen ? '#44ffcc' : '#ffd23c';
     ctx.fillStyle = chosen ? 'rgba(68, 255, 204, 0.35)' : 'rgba(255, 210, 60, 0.12)';
     ctx.lineWidth = chosen ? 3 : 2;
@@ -306,7 +331,7 @@ function handleMessage(message) {
     case 'mute':
       explorerMuted = Boolean(message.muted);
       $('explorer-mic').textContent = explorerMuted ? 'EXPLORADOR: MICROFONE MUDO' : 'EXPLORADOR: MICROFONE ABERTO';
-      $('explorer-mic').classList.toggle('muted', explorerMuted);
+      $('explorer-mic').classList.toggle('is-muted', explorerMuted);
       log(explorerMuted ? 'O explorador mutou o microfone' : 'O explorador abriu o microfone');
       break;
     case 'sanity-lost':
@@ -381,7 +406,6 @@ function bindUi() {
 }
 
 async function start() {
-  await window.quantumBank?.ready;
   world = createCoopWorld({ drawBits, now: performance.now() });
   window.coopOperator = { world: () => world, link: () => link };
   bindUi();
@@ -393,7 +417,7 @@ async function start() {
   }
   const code = normalizeRoomCode(new URLSearchParams(location.search).get('sala'));
   openRoom(code.length === 4 ? code : randomRoomCode());
-  log(`Andar ${String(world.state.floor).padStart(2, '0')} gerado da string ${world.state.bitstring}`);
+  log(`Andar ${String(world.state.floor).padStart(2, '0')} pronto — a IA começa a jogar uns 20 s depois que o explorador entrar`);
   window.setInterval(tick, TICK_MS);
   window.requestAnimationFrame(draw);
 }
