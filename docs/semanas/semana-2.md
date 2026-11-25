@@ -29,7 +29,7 @@ Essa semana tem dois lados. Um é deixar o jogo com cara de Backrooms de verdade
 - [ ] Usar a entropia para decidir quantas paredes ficam em superposição
 - [ ] Fazer gráficos no simulador para mostrar que a distribuição não é uniforme
 - [ ] Ajustar os ângulos do circuito para cada andar ficar diferente
-- [ ] Mandar os jobs dos 5 andares para a IBM
+- [x] Mandar os jobs dos 5 andares para a IBM (ibm_fez, job `dc3e7hmq4uuc73a6pen0`, 25/11)
 - [x] Testes para o banco e para o mapeamento novo
 
 ## Pendências

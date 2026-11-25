@@ -87,8 +87,13 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 ## O que é real e o que é jogo
 
 - **Real:** o circuito de 12 qubits, a amostragem dos seus resultados e a
-  entropia calculada das medições. Hoje o banco vem de simulação exata
-  (statevector, 1024 shots por andar); com `?live` o jogo chama a API.
+  entropia calculada das medições. O banco vem de hardware real: os 5 andares
+  rodaram no `ibm_fez` (IBM Quantum, 156 qubits) num job só, 1024 shots por
+  andar, em 25/11/2026 (job `dc3e7hmq4uuc73a6pen0`). O ruído do hardware
+  aparece nos números: a fidelidade com a distribuição ideal fica entre 0,47 e
+  0,63 (o simulador com o mesmo número de shots dá cerca de 0,7). Para medir de
+  novo: Actions > "Medir no computador quântico (IBM)". Com `?live` o jogo
+  chama a API.
 - **Quântico → mapa:** o interior do andar é uma grade de 3 colunas x 4 linhas,
   uma região por qubit (q0 na entrada, numeração por linha, na ordem da cadeia
   de CX). Bit 1 = sala aberta; bit 0 = corredores. Entre duas regiões vizinhas,
