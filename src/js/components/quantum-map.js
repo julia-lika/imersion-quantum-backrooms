@@ -1,5 +1,5 @@
 import { buildLightPanels, buildWallGeometry } from './level-geometry.js';
-import { buildLobby } from './lobby/lobby-builder.js?v=20261125-1';
+import { buildLobby } from './lobby/lobby-builder.js?v=20261125-2';
 
 const LOBBY_RESPAWN_MS = 10000;
 
