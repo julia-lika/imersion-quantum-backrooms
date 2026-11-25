@@ -381,7 +381,9 @@ function setVisor(next) {
 function toggleVisor() {
   if (!isActive()) return;
   if (!window.quantumPlayer.gear.visor) {
-    setHint('SEM VISOR ZETA — pegue os óculos na ESTAÇÃO 2 do lobby');
+    setHint(coop()
+      ? 'NO COOPERATIVO VOCÊ SÓ TEM O Q-LINK — o operador enxerga por você'
+      : 'SEM VISOR ZETA — pegue os óculos na ESTAÇÃO 2 do lobby');
     return;
   }
   // A pinça do rastreamento de mãos pode tremer (solta e fecha de novo em poucos
@@ -780,7 +782,9 @@ function beginCoopGame() {
   const pending = coop().floor;
   if (pending) enterCoopFloor({ ...pending, reason: 'join' });
   window.quantumPlayer.active = isActive();
-  setHint('MODO COOPERATIVO — você não tem mapa. O operador vê o andar inteiro e sabe onde as paredes vão fechar: ouça e responda');
+  setHint(elements['backrooms-scene'].is('vr-mode')
+    ? 'MODO COOPERATIVO — você não tem mapa. O operador vê o andar inteiro e sabe onde as paredes vão fechar: ouça e responda'
+    : 'MODO COOPERATIVO — WASD anda (Shift corre), arraste o mouse para olhar, H abre o Q-LINK, X é o Salto de Fase. Sem mapa: ouça o operador');
   syncAtmosphere();
   renderTelemetry();
 }

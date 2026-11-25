@@ -205,8 +205,13 @@ AFRAME.registerComponent('qps-map', {
       ctx.fillText('SEM QPS', pad, height / 2 - 40);
       ctx.font = `18px ${MAP_MONO}`;
       ctx.fillStyle = MAP_DIM;
-      ctx.fillText('Pegue o chip na ESTAÇÃO 3', pad, height / 2);
-      ctx.fillText('do lobby (parede esquerda).', pad, height / 2 + 28);
+      if (window.quantumCoop?.active) {
+        ctx.fillText('No cooperativo o QPS e o mapa', pad, height / 2);
+        ctx.fillText('ficam com o operador: pergunte.', pad, height / 2 + 28);
+      } else {
+        ctx.fillText('Pegue o chip na ESTAÇÃO 3', pad, height / 2);
+        ctx.fillText('do lobby (parede esquerda).', pad, height / 2 + 28);
+      }
       this.texture.needsUpdate = true;
       return;
     }
