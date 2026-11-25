@@ -43,7 +43,7 @@ function transportFromUrl() {
 }
 
 // role: 'host' (operador) ou 'guest' (explorador).
-export function createCoopLink({ role, code, transport = transportFromUrl() }) {
+export function createCoopLink({ role, code, transport = transportFromUrl(), stream = null }) {
   const events = emitter();
   const link = {
     role,
@@ -55,6 +55,7 @@ export function createCoopLink({ role, code, transport = transportFromUrl() }) {
     startVoice: async () => false,
     setMuted: () => {},
     close: () => {},
+    stream,
   };
   if (transport === 'local') return localLink(link, events);
   return peerLink(link, events);
@@ -93,31 +94,133 @@ function localLink(link, events) {
   return link;
 }
 
+// Servidores ICE: STUN descobre o endereço público de cada aparelho; TURN
+// retransmite quando a conexão direta não fecha (NAT restrito, rede da
+// faculdade, Wi-Fi com isolamento de clientes). Um TURN próprio pode ser passado
+// pela URL: ?turn=turn:host:3478&turnuser=USUARIO&turnpass=SENHA (nos dois lados).
+export function iceServersFromUrl(search = globalThis.location?.search || '') {
+  const params = new URLSearchParams(search);
+  const servers = [
+    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    // TURN público do próprio PeerJS (gratuito, sem garantia de estar no ar).
+    {
+      urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'],
+      username: 'peerjs',
+      credential: 'peerjsp',
+    },
+  ];
+  const turn = params.get('turn');
+  if (turn) {
+    servers.unshift({ urls: turn.split(','), username: params.get('turnuser') || '', credential: params.get('turnpass') || '' });
+  }
+  return servers;
+}
+
+// Pede o microfone ANTES de abrir a conexão. Além da voz, isso ajuda a conexão
+// na mesma rede: com o microfone liberado, o navegador mostra os endereços
+// locais de verdade em vez de nomes .local, que o Quest nem sempre resolve.
+// Não espera para sempre: sem resposta em `ms`, segue sem microfone.
+export async function requestMicrophone(ms = 8000) {
+  if (!navigator.mediaDevices?.getUserMedia) return null;
+  const ask = navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    video: false,
+  }).catch(() => null);
+  const timer = new Promise((resolve) => { window.setTimeout(() => resolve(null), ms); });
+  return Promise.race([ask, timer]);
+}
+
+// Quanto tempo o explorador espera a conexão abrir antes de desistir.
+export const CONNECT_TIMEOUT_MS = 20000;
+
+const ICE_LABELS = {
+  new: 'iniciando',
+  checking: 'negociando a rota entre os aparelhos',
+  connected: 'rota encontrada',
+  completed: 'rota encontrada',
+  disconnected: 'rota caiu, tentando de novo',
+  failed: 'nenhuma rota entre os aparelhos',
+  closed: 'fechada',
+};
+
 function peerLink(link, events) {
   if (typeof window.Peer !== 'function') {
     window.setTimeout(() => events.emit('error', 'PeerJS não carregou (sem internet?)'), 0);
     return link;
   }
   const hostId = peerIdFor(link.code);
-  const peer = link.role === 'host' ? new window.Peer(hostId) : new window.Peer();
+  const options = { config: { iceServers: iceServersFromUrl(), sdpSemantics: 'unified-plan' }, debug: 1 };
+  // Servidor de pareamento próprio (testes): ?peerserver=localhost:9000/myapp
+  const server = new URLSearchParams(location.search).get('peerserver');
+  if (server) {
+    const [hostPort, ...path] = server.split('/');
+    const [host, port] = hostPort.split(':');
+    Object.assign(options, { host, port: Number(port) || 443, path: `/${path.join('/')}`, secure: location.protocol === 'https:' });
+  }
+  const peer = link.role === 'host' ? new window.Peer(hostId, options) : new window.Peer(options);
   let connection = null;
-  let localStream = null;
+  let localStream = link.stream;
   let call = null;
+  let timeout = null;
   const audio = new Audio();
   audio.autoplay = true;
+
+  // Mostra em que pé está a negociação WebRTC (ajuda a saber se o problema é
+  // o código da sala ou a rede).
+  function watchIce(conn) {
+    let tries = 0;
+    const hook = () => {
+      const pc = conn.peerConnection;
+      if (!pc) {
+        if (tries++ < 50) window.setTimeout(hook, 100);
+        return;
+      }
+      const report = () => {
+        const state = pc.iceConnectionState;
+        events.emit('ice', state);
+        if (!link.connected) {
+          events.emit('status', link.role === 'host'
+            ? `EXPLORADOR TENTANDO CONECTAR — ${ICE_LABELS[state] || state}`
+            : `CHAMANDO A SALA — ${ICE_LABELS[state] || state}`);
+        }
+        if (state === 'failed' && !link.connected) {
+          fail('nenhuma rota entre os aparelhos (a rede bloqueou a conexão direta). Tente os dois no mesmo Wi-Fi, ou o PC no roteador do celular');
+        }
+      };
+      pc.addEventListener('iceconnectionstatechange', report);
+      report();
+    };
+    hook();
+  }
+
+  function fail(reason) {
+    window.clearTimeout(timeout);
+    timeout = null;
+    if (connection && !link.connected) {
+      const stale = connection;
+      connection = null;
+      stale.close();
+    }
+    events.emit('error', reason);
+  }
 
   function attach(conn) {
     if (connection && connection !== conn) connection.close();
     connection = conn;
+    watchIce(conn);
     conn.on('open', () => {
+      window.clearTimeout(timeout);
+      timeout = null;
       link.connected = true;
       events.emit('open');
     });
     conn.on('data', (payload) => events.emit('message', payload));
     conn.on('close', () => {
       if (connection !== conn) return;
+      const was = link.connected;
       link.connected = false;
-      events.emit('close');
+      if (was) events.emit('close');
     });
     conn.on('error', (error) => events.emit('error', String(error?.type || error)));
   }
@@ -141,9 +244,22 @@ function peerLink(link, events) {
     return localStream;
   }
 
+  // O explorador fica esperando no máximo CONNECT_TIMEOUT_MS, contados desde o
+  // pedido ao servidor de pareamento.
+  if (link.role === 'guest') {
+    timeout = window.setTimeout(() => {
+      if (link.connected) return;
+      fail(peer.open
+        ? 'a sala respondeu, mas a conexão não fechou em 20 s (rede bloqueando). Tente os dois no mesmo Wi-Fi, ou o PC no roteador do celular'
+        : 'o servidor de pareamento não respondeu em 20 s (sem internet ou bloqueado nesta rede)');
+    }, CONNECT_TIMEOUT_MS);
+  }
+
   peer.on('open', () => {
     events.emit('status', link.role === 'host' ? 'SALA ABERTA — ESPERANDO O EXPLORADOR' : 'PROCURANDO A SALA');
-    if (link.role === 'guest') attach(peer.connect(hostId, { reliable: true }));
+    // JSON puro: as mensagens já são objetos simples; evita o empacotamento
+    // binário, que dá problema em alguns navegadores.
+    if (link.role === 'guest' && !connection) attach(peer.connect(hostId, { reliable: true, serialization: 'json' }));
   });
   peer.on('connection', (conn) => {
     if (link.role === 'host') attach(conn);
@@ -161,7 +277,8 @@ function peerLink(link, events) {
   peer.on('error', (error) => {
     const type = error?.type || String(error);
     if (type === 'unavailable-id') events.emit('error', 'código de sala em uso');
-    else if (type === 'peer-unavailable') events.emit('error', 'sala não encontrada: confira o código');
+    else if (type === 'peer-unavailable') fail('sala não encontrada: confira o código e se o console do operador continua aberto');
+    else if (type === 'network' || type === 'server-error' || type === 'socket-error') fail('sem contato com o servidor de pareamento (internet ou rede bloqueando)');
     else events.emit('error', type);
   });
   peer.on('disconnected', () => peer.reconnect?.());
@@ -185,6 +302,7 @@ function peerLink(link, events) {
     localStream?.getAudioTracks().forEach((track) => { track.enabled = !muted; });
   };
   link.close = () => {
+    window.clearTimeout(timeout);
     call?.close();
     connection?.close();
     peer.destroy();

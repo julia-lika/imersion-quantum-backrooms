@@ -48,6 +48,13 @@ pela mesma conexão.
 - MEDIR (espaço, no console): congela os trechos num raio de 4 células em volta
   do explorador, cancela colapsos ali, desfaz a jaula e mede a porta se uma
   posição possível estiver no raio. Recarga de 20 s.
+- Se o explorador não conectar, a tela diz onde parou. "Sala não encontrada"
+  é código errado ou console fechado. "A conexão não fechou" é a rede: as duas
+  pontas acham a sala, mas a rede (Wi-Fi da faculdade, isolamento de clientes,
+  NAT restrito) bloqueia a conexão direta. Permita o microfone nas duas pontas,
+  ponha os dois no mesmo Wi-Fi ou no roteador do celular, ou use um servidor
+  TURN próprio nos dois links:
+  `?turn=turn:SERVIDOR:3478&turnuser=USUARIO&turnpass=SENHA`.
 - Para testar sem rede, em duas abas do mesmo navegador:
   `operador.html?transporte=local&sala=TEST` e `index.html?transporte=local&sala=TEST`
   (sem voz).
