@@ -34,6 +34,8 @@ AFRAME.registerComponent('maze-decoherence', {
       stats: () => ({ shifts: this.shifts, unseen: this.unseenSeconds() }),
       // Para testes: força a troca do setor mais esquecido, se puder.
       forceShift: (id) => this.shiftOne(performance.now(), true, id),
+      // Modo cooperativo: o aviso (luz e zumbido) quando o operador muda um trecho.
+      signal: () => this.signal(),
     };
   },
 
@@ -77,6 +79,8 @@ AFRAME.registerComponent('maze-decoherence', {
     const player = window.quantumPlayer;
     // Lobby é fixo; pausa, menu e transição também congelam o labirinto.
     if (!world || !player?.active || !player.floor) return;
+    // Modo cooperativo: quem reorganiza o labirinto é o operador (host).
+    if (window.quantumCoop?.active) return;
 
     const viewer = this.viewer();
     if (!viewer) return;
