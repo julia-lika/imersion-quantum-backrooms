@@ -17,6 +17,7 @@ let explorerActive = false;
 let lastSentVersion = -1;
 let lastPosAt = 0;
 let muted = false;
+let explorerMuted = false;
 const alerts = new Map();
 
 function log(text) {
@@ -301,6 +302,12 @@ function handleMessage(message) {
         log(`O explorador desceu: ANDAR ${String(world.state.floor).padStart(2, '0')}`);
         sendFloor('stairs');
       }
+      break;
+    case 'mute':
+      explorerMuted = Boolean(message.muted);
+      $('explorer-mic').textContent = explorerMuted ? 'EXPLORADOR: MICROFONE MUDO' : 'EXPLORADOR: MICROFONE ABERTO';
+      $('explorer-mic').classList.toggle('muted', explorerMuted);
+      log(explorerMuted ? 'O explorador mutou o microfone' : 'O explorador abriu o microfone');
       break;
     case 'sanity-lost':
       world.restart(now);

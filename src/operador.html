@@ -38,6 +38,7 @@
       #measure-bar { height: 4px; margin-top: 6px; background: rgba(68, 255, 204, 0.15); }
       #measure-bar > div { height: 100%; width: 100%; background: #44ffcc; }
       .row { display: flex; gap: 8px; }
+      #explorer-mic.muted { color: var(--red); font-weight: bold; }
       .row button { flex: 1; padding: 8px; border: 1px solid var(--amber-dim); background: transparent; color: var(--amber); }
       #alerts { display: flex; flex-direction: column; gap: 6px; }
       .alert { padding: 8px 10px; border: 1px solid var(--orange); color: var(--orange); font-size: 0.78rem; }
@@ -69,6 +70,7 @@
         <div id="room-code">----</div>
         <div id="link-status" class="muted">ABRINDO A SALA...</div>
         <div id="voice-status" class="muted">VOZ: DESLIGADA</div>
+        <div id="explorer-mic" class="muted">EXPLORADOR: MICROFONE ABERTO</div>
         <div class="row" style="margin-top: 6px">
           <button id="mic" type="button">LIGAR MICROFONE</button>
           <button id="mute" type="button" disabled>MUTAR (V)</button>
@@ -92,6 +94,6 @@
       </div>
       <ul id="log" class="card"></ul>
     </aside>
-    <script type="module" src="js/coop/operator-console.js?v=20261125-4"></script>
+    <script type="module" src="js/coop/operator-console.js?v=20261125-5"></script>
   </body>
 </html>

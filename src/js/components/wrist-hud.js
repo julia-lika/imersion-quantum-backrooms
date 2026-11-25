@@ -77,12 +77,29 @@ AFRAME.registerComponent('wrist-hud', {
       this.desktopOpen = !this.desktopOpen;
       if (this.desktopOpen) this.draw();
     };
+    // Cooperativo: com o Q-LINK à vista, aproximar a outra mão do painel e
+    // fazer a pinça (ou apertar o gatilho) muta/desmuta o microfone.
+    this.panelWorld = new THREE.Vector3();
+    this.onPinch = ({ detail }) => {
+      if (!window.quantumCoop?.active || this.opacity < 0.5 || detail?.hand === this.data.hand) return;
+      const tracker = this.el.parentEl?.components['xr-hands'];
+      const other = tracker?.hands[detail.hand];
+      if (!tracker?.inVr || !other?.tracked) return;
+      this.el.object3D.getWorldPosition(this.panelWorld);
+      if (other.world.distanceTo(this.panelWorld) > 0.25) return;
+      window.quantumCoop.toggleMute?.();
+    };
+    this.onMute = () => this.draw();
     this.el.sceneEl.addEventListener('survival-updated', this.onSurvival);
+    this.el.sceneEl.addEventListener('coop-mute-changed', this.onMute);
+    this.el.parentEl?.addEventListener('hand-pinchstart', this.onPinch);
     window.addEventListener('keydown', this.onKey);
   },
 
   remove() {
     this.el.sceneEl.removeEventListener('survival-updated', this.onSurvival);
+    this.el.sceneEl.removeEventListener('coop-mute-changed', this.onMute);
+    this.el.parentEl?.removeEventListener('hand-pinchstart', this.onPinch);
     window.removeEventListener('keydown', this.onKey);
     this.el.removeObject3D('mesh');
     this.panel.geometry.dispose();
@@ -190,7 +207,20 @@ AFRAME.registerComponent('wrist-hud', {
       ctx.fillText(value, x, y + 22);
       ctx.shadowBlur = 0;
     };
-    chip('VISOR ZETA', visor ? '● ATIVO' : '○ DESLIG.', visor, pad, pad + 224, '#c9a3ff');
+    const coop = window.quantumCoop?.active ? window.quantumCoop : null;
+    if (coop) {
+      // No cooperativo não há visor: o espaço vira o botão do microfone.
+      const muted = Boolean(coop.muted);
+      roundRect(ctx, pad - 8, pad + 216, column + 4, 60, 8);
+      ctx.fillStyle = muted ? 'rgba(255, 90, 110, 0.18)' : 'rgba(255, 154, 60, 0.08)';
+      ctx.fill();
+      ctx.strokeStyle = muted ? RED : ORANGE_DIM;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      chip('MICROFONE', muted ? '✕ MUDO' : '● ABERTO', true, pad, pad + 224, muted ? RED : ORANGE);
+    } else {
+      chip('VISOR ZETA', visor ? '● ATIVO' : '○ DESLIG.', visor, pad, pad + 224, '#c9a3ff');
+    }
     const distance = Number.isFinite(ghost.distance) ? `${(ghost.distance * 1.05).toFixed(1)} M` : '--';
     const entity = Number(floor) === 0
       ? 'AUSENTE'
@@ -220,7 +250,7 @@ AFRAME.registerComponent('wrist-hud', {
     ctx.fillStyle = ORANGE_DIM;
     const stamp = new Date().toTimeString().slice(0, 8);
     spacedText(ctx, `LINK ATIVO // ${stamp}`, pad, height - pad - 14, 2);
-    const hint = '[H] FECHA NO DESKTOP';
+    const hint = window.quantumCoop?.active ? '[V] OU PINÇA AQUI: MUDO' : '[H] FECHA NO DESKTOP';
     const hintWidth = ctx.measureText(hint).width + hint.length * 2;
     spacedText(ctx, hint, width - pad - hintWidth, height - pad - 14, 2);
 

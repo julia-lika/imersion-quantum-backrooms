@@ -784,7 +784,7 @@ function beginCoopGame() {
   window.quantumPlayer.active = isActive();
   setHint(elements['backrooms-scene'].is('vr-mode')
     ? 'MODO COOPERATIVO — você não tem mapa. O operador vê o andar inteiro e sabe onde as paredes vão fechar: ouça e responda'
-    : 'MODO COOPERATIVO — WASD anda (Shift corre), arraste o mouse para olhar, H abre o Q-LINK, X é o Salto de Fase. Sem mapa: ouça o operador');
+    : 'MODO COOPERATIVO — WASD anda (Shift corre), arraste o mouse para olhar, H abre o Q-LINK, X é o Salto de Fase, V muta o microfone. Sem mapa: ouça o operador');
   syncAtmosphere();
   renderTelemetry();
 }

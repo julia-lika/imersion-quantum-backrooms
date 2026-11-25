@@ -107,7 +107,9 @@ async function connect() {
     role: 'explorer',
     code,
     floor: null,
+    muted: false,
     send: (message) => link.send(message),
+    toggleMute,
   };
   $('continue-game').hidden = true;
   link.on('status', setStatus);
@@ -133,7 +135,30 @@ async function connect() {
   });
 }
 
+// Mutar o microfone do explorador: tecla V no desktop, pinça no Q-LINK no VR.
+function toggleMute() {
+  const coop = window.quantumCoop;
+  if (!coop?.active || !link) return;
+  coop.muted = !coop.muted;
+  link.setMuted(coop.muted);
+  link.send({ t: 'mute', muted: coop.muted });
+  const scene = document.querySelector('a-scene');
+  scene?.emit('coop-mute-changed', { muted: coop.muted });
+  if (window.quantumPlayer?.active) {
+    scene?.emit('interaction-hint', {
+      text: coop.muted ? 'MICROFONE MUDO — o operador não ouve você (V ou pinça no Q-LINK desmuta)' : 'MICROFONE ABERTO — o operador ouve você',
+    });
+  }
+  const voice = $('coop-voice');
+  if (voice) voice.textContent = coop.muted ? 'VOZ: MICROFONE MUDO' : 'VOZ: MICROFONE ABERTO';
+}
+
 function bind() {
+  document.addEventListener('keydown', (event) => {
+    if (event.code !== 'KeyV' || event.repeat || !window.quantumCoop?.active) return;
+    if (event.target instanceof HTMLInputElement) return;
+    toggleMute();
+  });
   const panel = $('coop-panel');
   $('coop-open').addEventListener('click', () => {
     panel.hidden = !panel.hidden;
