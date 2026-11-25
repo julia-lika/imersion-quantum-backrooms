@@ -5,11 +5,10 @@
 // e os trechos que evoluíram e se reorganizaram desde então aparecem chiando
 // com "?". Basta voltar ao raio para medir de novo.
 //
-// VR: aparece ao olhar para o pulso direito. Desktop: M abre/fecha.
+// VR: aparece ao trazer o pulso direito ao rosto, girado para os olhos, e
+// segurar um instante (xr-hands.wristLook). Desktop: M abre/fecha.
 const MAP_PANEL_WIDTH = 0.2;
 const MAP_PANEL_HEIGHT = 0.24;
-const MAP_LOOK_ANGLE = THREE.MathUtils.degToRad(28);
-const MAP_LOOK_DISTANCE = 0.7;
 const MAP_REDRAW_MS = 180;
 const MAP_GREEN = '#39ff88';
 const MAP_DIM = 'rgba(57, 255, 136, 0.45)';
@@ -29,7 +28,6 @@ AFRAME.registerComponent('qps-map', {
     this.desktopOpen = false;
     this.lastDraw = 0;
     this.target = new THREE.Vector3();
-    this.toPanel = new THREE.Vector3();
     this.forward = new THREE.Vector3();
 
     this.canvas = document.createElement('canvas');
@@ -365,9 +363,7 @@ AFRAME.registerComponent('qps-map', {
     if (tracker.inVr) {
       if (hand?.tracked) {
         this.el.object3D.position.copy(hand.position).add({ x: 0, y: 0.09, z: 0 });
-        this.el.object3D.getWorldPosition(this.target);
-        this.toPanel.subVectors(this.target, head.world);
-        show = this.toPanel.length() < MAP_LOOK_DISTANCE && this.toPanel.angleTo(head.forward) < MAP_LOOK_ANGLE;
+        show = tracker.wristLook(this.data.hand, Math.min(0.1, delta / 1000));
         this.el.object3D.lookAt(head.world);
       }
     } else if (this.desktopOpen) {

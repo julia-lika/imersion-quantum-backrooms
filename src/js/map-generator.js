@@ -157,10 +157,13 @@ export const LOBBY = {
   ],
   items: {
     almondWater: { x: 9, z: 10 },
-    // Equipamentos, cada um na mesa da sua estação, perto da borda de quem pega.
-    qlink: { x: 1.09, z: 8.2, y: 0.765 },
-    visor: { x: 1.09, z: 11.2, y: 0.765 },
-    qps: { x: 1.09, z: 15.2, y: 0.765 },
+    // Equipamentos, cada um na mesa da sua estação, na borda da frente (a mesa
+    // termina em x ≈ 1,49 célula; o centro fica para dentro o bastante para o
+    // item girar sem sair do tampo). y = tampo (0,726 m) + 2 mm: apoiado, sem
+    // atravessar a mesa.
+    qlink: { x: 1.36, z: 8.2, y: 0.728 },
+    visor: { x: 1.3, z: 11.2, y: 0.728 },
+    qps: { x: 1.34, z: 15.2, y: 0.728 },
   },
   // Sala de treino atrás da parede direita (x 13..15, z 12..16). A parede em
   // (12, 12..13) é sólida, para testar o salto de fase (tunelamento); a de

@@ -4,6 +4,33 @@ const HAND_SIDES = ['left', 'right'];
 const PALM_JOINT = 'middle-finger-metacarpal';
 const SNAP_TURN_DEGREES = 30;
 
+// Gesto de olhar o pulso (Q-LINK no esquerdo, mapa do QPS no direito). Precisa
+// ser deliberado: pulso perto do rosto, girado para os olhos, mão parada e longe
+// dos itens, segurado por um instante. Estender a mão para pegar algo não abre.
+// Os limites "keep" são mais folgados, para o painel não piscar depois de aberto.
+const WRIST_LOOK = {
+  showAngle: THREE.MathUtils.degToRad(22),
+  keepAngle: THREE.MathUtils.degToRad(34),
+  showDistance: 0.48,
+  keepDistance: 0.6,
+  // Distância horizontal cabeça-mão: braço esticado passa disso.
+  showReach: 0.4,
+  keepReach: 0.5,
+  // Altura da mão em relação aos olhos (abaixo do queixo até a altura dos olhos).
+  minHeight: -0.55,
+  maxHeight: 0.05,
+  // |cos| entre a normal da palma e a direção mão→olhos: pulso girado para o rosto.
+  showFacing: 0.6,
+  keepFacing: 0.4,
+  showSpeed: 0.45,
+  keepSpeed: 0.9,
+  // Mão rápida = estendendo o braço: bloqueia o gesto por um tempo.
+  reachSpeed: 1.0,
+  reachBlockSeconds: 0.6,
+  itemClearance: 0.4,
+  holdSeconds: 0.3,
+};
+
 function createHandState() {
   return {
     tracked: false,
@@ -11,6 +38,10 @@ function createHandState() {
     isHand: false,
     pinching: false,
     position: new THREE.Vector3(),
+    quaternion: new THREE.Quaternion(),
+    // Eixo perpendicular à palma: Y nas juntas do hand tracking, X no grip dos controles.
+    palmAxis: new THREE.Vector3(0, 1, 0),
+    look: { hold: 0, shown: false, block: 0, speed: 0 },
     previous: new THREE.Vector3(),
     world: new THREE.Vector3(),
     velocity: new THREE.Vector3(),
@@ -37,6 +68,10 @@ AFRAME.registerComponent('xr-hands', {
     this.inVr = false;
     this.snapReady = true;
     this.markers = {};
+    this.lookToHead = new THREE.Vector3();
+    this.lookNormal = new THREE.Vector3();
+    this.lookItem = new THREE.Vector3();
+    this.lookQuat = new THREE.Quaternion();
 
     HAND_SIDES.forEach((side) => {
       const marker = document.createElement('a-sphere');
@@ -158,6 +193,10 @@ AFRAME.registerComponent('xr-hands', {
     if (!pose) return;
 
     const { x, y, z } = pose.transform.position;
+    const o = pose.transform.orientation;
+    hand.quaternion.set(o.x, o.y, o.z, o.w);
+    if (source.hand) hand.palmAxis.set(0, 1, 0);
+    else hand.palmAxis.set(1, 0, 0);
     if (!hand.wasTracked) hand.position.set(x, y, z);
     hand.previous.copy(hand.position);
     hand.position.set(x, y, z);
@@ -168,6 +207,68 @@ AFRAME.registerComponent('xr-hands', {
     const axes = source.gamepad?.axes || [];
     hand.thumbstick.x = axes[2] ?? 0;
     hand.thumbstick.y = axes[3] ?? 0;
+  },
+
+  // true enquanto o jogador faz o gesto de olhar o pulso `side`. Chamado uma vez
+  // por quadro pelo painel daquele pulso (dt em segundos).
+  wristLook(side, dt) {
+    const hand = this.hands[side];
+    const look = hand?.look;
+    if (!look) return false;
+    look.block = Math.max(0, look.block - dt);
+
+    const reset = () => {
+      look.hold = 0;
+      look.shown = false;
+      return false;
+    };
+    if (!this.inVr || !hand.tracked) {
+      look.speed = 0;
+      return reset();
+    }
+
+    // Velocidade suavizada: o tremor do hand tracking não conta como movimento.
+    look.speed += (hand.velocity.length() - look.speed) * Math.min(1, dt * 10);
+    const { speed } = look;
+    if (speed > WRIST_LOOK.reachSpeed) look.block = WRIST_LOOK.reachBlockSeconds;
+    if (look.block > 0 || hand.pinching) return reset();
+
+    const gestures = this.el.components['hand-gestures'];
+    if (gestures?.held?.[side] || gestures?.isBusy?.()) return reset();
+    if (this.itemNear(hand.world, WRIST_LOOK.itemClearance)) return reset();
+
+    const keep = look.shown;
+    const toHead = this.lookToHead.subVectors(this.head.world, hand.world);
+    const distance = toHead.length();
+    const reach = Math.hypot(toHead.x, toHead.z);
+    const height = hand.world.y - this.head.world.y;
+    // Ângulo entre o olhar e a mão (toHead aponta ao contrário).
+    const angle = Math.PI - toHead.angleTo(this.head.forward);
+    this.lookQuat.copy(this.el.object3D.quaternion).multiply(hand.quaternion);
+    const normal = this.lookNormal.copy(hand.palmAxis).applyQuaternion(this.lookQuat);
+    const facing = distance > 0.001 ? Math.abs(normal.dot(toHead) / distance) : 0;
+
+    const ok = distance < (keep ? WRIST_LOOK.keepDistance : WRIST_LOOK.showDistance) &&
+      reach < (keep ? WRIST_LOOK.keepReach : WRIST_LOOK.showReach) &&
+      height > WRIST_LOOK.minHeight && height < WRIST_LOOK.maxHeight &&
+      angle < (keep ? WRIST_LOOK.keepAngle : WRIST_LOOK.showAngle) &&
+      facing > (keep ? WRIST_LOOK.keepFacing : WRIST_LOOK.showFacing) &&
+      speed < (keep ? WRIST_LOOK.keepSpeed : WRIST_LOOK.showSpeed);
+    if (!ok) return reset();
+
+    look.hold = Math.min(WRIST_LOOK.holdSeconds, look.hold + dt);
+    look.shown = look.shown || look.hold >= WRIST_LOOK.holdSeconds;
+    return look.shown;
+  },
+
+  itemNear(position, radius) {
+    let near = false;
+    this.el.sceneEl.querySelectorAll('[data-item]').forEach((item) => {
+      if (near || item.dataset.consumed || !item.object3D.visible) return;
+      item.object3D.getWorldPosition(this.lookItem);
+      near = this.lookItem.distanceTo(position) < radius;
+    });
+    return near;
   },
 
   // Controles com analógico ganham snap turn; com as mãos o giro é físico.

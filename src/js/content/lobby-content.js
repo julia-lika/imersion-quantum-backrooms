@@ -13,9 +13,11 @@ export const LOBBY_FURNITURE = [
   { piece: 'terminal', wall: 'right', inset: 0.6, cellZ: 7.5, y: 0.75, rotation: 90 },
   { piece: 'blueChair', cellX: 10, cellZ: 7.5, rotation: -90 },
   // Estações de equipamento: uma mesa menor (o mesmo modelo) para cada item.
-  { piece: 'desk', wall: 'left', inset: 0.42, cellZ: 8.2, rotation: 90, scale: [0.6, 1, 0.75] },
-  { piece: 'desk', wall: 'left', inset: 0.42, cellZ: 11.2, rotation: 90, scale: [0.6, 1, 0.75] },
-  { piece: 'desk', wall: 'left', inset: 0.42, cellZ: 15.2, rotation: 90, scale: [0.6, 1, 0.75] },
+  // Afastadas da parede: a borda da frente fica no limite da célula bloqueada,
+  // onde o jogador consegue encostar e alcançar os itens no VR.
+  { piece: 'desk', wall: 'left', inset: 0.62, cellZ: 8.2, rotation: 90, scale: [0.6, 1, 0.75] },
+  { piece: 'desk', wall: 'left', inset: 0.62, cellZ: 11.2, rotation: 90, scale: [0.6, 1, 0.75] },
+  { piece: 'desk', wall: 'left', inset: 0.62, cellZ: 15.2, rotation: 90, scale: [0.6, 1, 0.75] },
 ];
 
 // Notebook do briefing perto da borda da mesa, do lado em que o jogador fica.
@@ -33,12 +35,12 @@ export const LOBBY_SIGNS = [
     // para +X): é a primeira coisa que ele vê.
     cellX: 3.4, cellZ: 1.2, y: 1.6, rotation: -90,
     title: 'FASE 0 // LOBBY', subtitle: 'TREINAMENTO',
-    body: 'Bem-vindo, agente. Este é o lobby de treinamento.\n\nANDAR: balance os braços (VR) ou WASD/setas, olhando com o mouse.\n\nLeia as estações ao longo do salão e abra o COMPUTADOR na mesa: toque com a mão (VR), clique ou aperte E. No fundo do salão, o telão explica a física do jogo.',
+    body: 'Bem-vindo, agente. Este é o lobby de treinamento.\n\nANDAR: balance os braços e marche no lugar (VR) ou WASD/setas, olhando com o mouse. Shift corre.\n\nLeia as estações ao longo do salão e abra o COMPUTADOR na mesa: toque com a mão (VR), clique ou aperte E. No fundo do salão, o telão explica a física do jogo.',
   },
   {
     wall: 'left', cellZ: 8.2, y: 1.85,
     title: 'ESTAÇÃO 1: Q-LINK', subtitle: 'O RELÓGIO',
-    body: 'O relógio é o Q-LINK, o painel do pulso esquerdo. Mostra ANDAR, SANIDADE, ENERGIA, VISOR ZETA, a distância da ENTIDADE e o OBJETIVO.\n\nPegue o relógio na mesa (encoste a mão; desktop: Q). Depois, olhe para o pulso esquerdo (desktop: H).',
+    body: 'O relógio é o Q-LINK, o painel do pulso esquerdo. Mostra ANDAR, SANIDADE, ENERGIA, VISOR ZETA, a distância da ENTIDADE e o OBJETIVO.\n\nPegue o relógio na mesa (encoste a mão; desktop: Q). Para ver o painel: traga o pulso esquerdo para perto do rosto, gire o pulso para os olhos e segure um instante (desktop: H).',
   },
   {
     wall: 'right', cellZ: 10.5,
@@ -63,7 +65,7 @@ export const LOBBY_SIGNS = [
   {
     wall: 'left', cellZ: 15.2, y: 1.85, height: 0.95,
     title: 'ESTAÇÃO 3: QPS', subtitle: 'O CHIP QUÂNTICO',
-    body: 'O chip é o QPS. Ele mede sem parar tudo num raio de ~4 m e desenha o mapa (pulso direito; desktop: M). O que é medido o tempo todo não muda: efeito Zeno.\n\nLonge de você ninguém mede e o labirinto evolui (no mapa: ?). A porta fica entre algumas posições possíveis; quando uma entra no raio, o QPS mede e sorteia onde ela aparece. Pegue o chip (desktop: Q).',
+    body: 'O chip é o QPS. Ele mede sem parar tudo num raio de ~4 m e desenha o mapa (traga o pulso direito ao rosto e gire; desktop: M). O que é medido o tempo todo não muda: efeito Zeno.\n\nLonge de você ninguém mede e o labirinto evolui (no mapa: ?). A porta fica entre algumas posições possíveis; quando uma entra no raio, o QPS mede e sorteia onde ela aparece. Pegue o chip (desktop: Q).',
   },
   {
     wall: 'far', cellX: 8.6, height: 0.6,
