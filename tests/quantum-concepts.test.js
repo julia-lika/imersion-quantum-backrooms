@@ -49,9 +49,14 @@ test('parede fechada não é medida ao encostar', () => {
 test('a sala de treino do lobby é alcançável pelas duas paredes', () => {
   const { maze } = generateLobbyMap();
   const room = LOBBY.trainingRoom;
-  assert.equal(maze[12][12], '#', 'parede sólida do salto de fase');
+  const wallX = room.minX - 1;
+  assert.equal(maze[room.minZ][wallX], '#', 'parede sólida do salto de fase');
+  assert.equal(maze[room.minZ][wallX - 1], '.', 'salão na frente da parede do salto');
   assert.equal(maze[room.minZ][room.minX], '.');
-  assert.equal(maze[16][13], '.', 'sala atrás da parede em superposição');
+  const wall = LOBBY.superposed[0];
+  assert.equal(wall.x, wallX);
+  assert.equal(maze[wall.z][wall.x + 1], '.', 'sala atrás da parede em superposição');
+  assert.equal(maze[wall.z][wall.x - 1], '.', 'salão na frente da parede em superposição');
 });
 
 test('os slides explicam do bit ao jogo e as imagens existem', () => {

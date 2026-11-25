@@ -7,7 +7,10 @@ import {
   LOBBY_SLIDES,
   LOBBY_TRAINING_WALLS,
   LOBBY_TV,
-} from '../../content/lobby-content.js?v=20261125-2';
+} from '../../content/lobby-content.js?v=20261125-4';
+
+// Tamanho do salão (map-generator.js publica o layout em window.LOBBY_LAYOUT).
+const LOBBY_SIZE = () => window.LOBBY_LAYOUT || { maxX: 7, maxZ: 11 };
 
 // Rotação de uma peça presa a cada parede, com a frente virada para o salão.
 const WALL_ROTATION = { left: 90, right: -90, far: 180 };
@@ -20,8 +23,8 @@ function lobbyFrame(origin, cellSize) {
     cellSize,
     walls: {
       left: at(0) + half + 0.02,
-      right: at(11) + half - 0.02,
-      far: at(17) + half - 0.02,
+      right: at(LOBBY_SIZE().maxX) + half - 0.02,
+      far: at(LOBBY_SIZE().maxZ) + half - 0.02,
     },
   };
 }
@@ -50,7 +53,7 @@ function addFurniture(parent, frame) {
 }
 
 function addComputer(parent, frame) {
-  const { cellX, cellZ, edgeOffset, y, rotation } = LOBBY_COMPUTER;
+  const { cellX, cellZ, edgeOffset = 0, y, rotation } = LOBBY_COMPUTER;
   append(parent, {
     position: `${frame.at(cellX)} ${y} ${frame.at(cellZ) + edgeOffset}`,
     rotation: `0 ${rotation} 0`,

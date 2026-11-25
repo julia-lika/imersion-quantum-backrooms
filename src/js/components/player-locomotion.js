@@ -17,7 +17,7 @@ const KEY_DIRECTIONS = {
 const TURN_KEYS = {};
 
 // Placa de boas-vindas do lobby (painel solto à frente do spawn, em lobby-content.js).
-const LOBBY_WELCOME_CELL = { x: 3.4, z: 1.2 };
+const LOBBY_WELCOME_CELL = { x: 3.15, z: 1.35 };
 
 AFRAME.registerComponent('player-locomotion', {
   schema: {

@@ -137,40 +137,41 @@ export function pickDoorCandidate(candidates, measuredBits) {
   return { index: value % candidates.length, cell: candidates[value % candidates.length] };
 }
 
-// Fase 0: lobby fixo de treinamento. Um salão de 11 x 17 células a partir da
+// Fase 0: lobby fixo de treinamento. Um salão de 7 x 11 células a partir da
 // entrada, com as estações do tutorial e a porta para o FLOOR 01 no fundo.
+// O jogador nasce em (1, 1) olhando para +X, de frente para o balcão com o
+// computador do briefing.
 export const LOBBY = {
   minX: 1,
-  maxX: 11,
+  maxX: 7,
   minZ: 1,
-  maxZ: 17,
-  door: { x: 6, z: 17, wall: { dx: 0, dz: 1 } },
+  maxZ: 11,
+  door: { x: 5, z: 11, wall: { dx: 0, dz: 1 } },
   // Células ocupadas por móveis (bloqueiam o jogador).
   furniture: [
-    [1, 4], [1, 5], [1, 6], // sofá
-    [5, 4], [6, 4], // mesa com o computador
-    [11, 7], [11, 8], // mesa de metal com o terminal
-    [3, 5], // poltrona
-    [1, 8], [1, 9], // estação do Q-LINK
-    [1, 11], [1, 12], // estação do Visor Zeta
-    [1, 15], [1, 16], // estação do QPS
+    [3, 1], [3, 2], // balcão com o computador, à frente do spawn
+    [4, 1], // cadeira atrás do balcão
+    [7, 1], [7, 2], // mesa de metal com o terminal
+    [1, 4], [1, 5], // estação do Q-LINK
+    [1, 6], [1, 7], // estação do Visor Zeta
+    [1, 9], [1, 10], // estação do QPS
   ],
   items: {
-    almondWater: { x: 9, z: 10 },
+    almondWater: { x: 6, z: 4 },
     // Equipamentos, cada um na mesa da sua estação, na borda da frente (a mesa
     // termina em x ≈ 1,49 célula; o centro fica para dentro o bastante para o
     // item girar sem sair do tampo). y = tampo (0,726 m) + 2 mm: apoiado, sem
     // atravessar a mesa.
-    qlink: { x: 1.36, z: 8.2, y: 0.728 },
-    visor: { x: 1.3, z: 11.2, y: 0.728 },
-    qps: { x: 1.34, z: 15.2, y: 0.728 },
+    qlink: { x: 1.36, z: 4.2, y: 0.728 },
+    visor: { x: 1.3, z: 6.7, y: 0.728 },
+    qps: { x: 1.34, z: 9.2, y: 0.728 },
   },
-  // Sala de treino atrás da parede direita (x 13..15, z 12..16). A parede em
-  // (12, 12..13) é sólida, para testar o salto de fase (tunelamento); a de
-  // (12, 16) fica em superposição, para testar o visor zeta. As duas dão para a
+  // Sala de treino atrás da parede direita (x 9..11, z 6..10). A parede em
+  // (8, 6..7) é sólida, para testar o salto de fase (tunelamento); a de
+  // (8, 10) fica em superposição, para testar o visor zeta. As duas dão para a
   // mesma sala, e a parede em superposição abre sozinha: ninguém fica preso.
-  trainingRoom: { minX: 13, maxX: 15, minZ: 12, maxZ: 16 },
-  superposed: [{ x: 12, z: 16, offset: 0 }],
+  trainingRoom: { minX: 9, maxX: 11, minZ: 6, maxZ: 10 },
+  superposed: [{ x: 8, z: 10, offset: 0 }],
 };
 
 export function generateLobbyMap(size = MAZE_SIZE) {
