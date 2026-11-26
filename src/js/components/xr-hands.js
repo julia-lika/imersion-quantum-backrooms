@@ -13,8 +13,11 @@ const SNAP_TURN_DEGREES = 30;
 // abrir quando se levanta a mão para a pinça do visor.
 const WRIST_BROW = new THREE.Vector3(0, 0.09, -0.06);
 const WRIST_LOOK = {
-  showAngle: THREE.MathUtils.degToRad(30),
-  keepAngle: THREE.MathUtils.degToRad(42),
+  // Ângulo entre a direção da cabeça e a mão. No headset a gente olha o pulso
+  // mais com os olhos do que virando a cabeça: com um limite apertado (22°) o
+  // gesto só passava com a mão erguida na altura da testa (a pose do visor).
+  showAngle: THREE.MathUtils.degToRad(55),
+  keepAngle: THREE.MathUtils.degToRad(65),
   showDistance: 0.55,
   keepDistance: 0.68,
   // Distância horizontal cabeça-mão: braço esticado passa disso.
