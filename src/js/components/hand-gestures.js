@@ -8,10 +8,10 @@
 // O ponto rastreado é o centro da palma: com os dedos na têmpora ele fica uns
 // 10 cm para fora.
 const TEMPLE_OFFSET = new THREE.Vector3(0.12, 0.02, -0.01);
-const TEMPLE_RADIUS = 0.1;
+const TEMPLE_RADIUS = 0.14;
 // Para contar um toque novo a mão precisa se afastar um pouco antes.
-const TEMPLE_RELEASE = 0.14;
-const DOUBLE_TAP_SECONDS = 0.7;
+const TEMPLE_RELEASE = 0.18;
+const DOUBLE_TAP_SECONDS = 1;
 const VISOR_TAP_COOLDOWN = 1;
 const EYES_OFFSET = new THREE.Vector3(0, 0, -0.08);
 const MOUTH_OFFSET = new THREE.Vector3(0, -0.09, -0.07);
