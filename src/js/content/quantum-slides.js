@@ -239,7 +239,7 @@ export const QUANTUM_SLIDES = [
     cards: [
       {
         heading: 'Parede ou passagem?',
-        text: 'Algumas paredes estão "parede e passagem" ao mesmo tempo e ficam piscando, como a moeda girando. O Visor Zeta (Z ou pinça na testa) mostra quais são: no mapa, elas aparecem em lilás.\n\nEla só deixa passar quando abre. Entrou nessa hora? Você a mediu: ela vira passagem e só volta a piscar quando você sai. O salto de fase não funciona nela.',
+        text: 'Algumas paredes estão "parede e passagem" ao mesmo tempo e ficam piscando, como a moeda girando. O Visor Zeta (Z ou dois toques na lateral direita do rosto) mostra quais são: no mapa, elas aparecem em lilás.\n\nEla só deixa passar quando abre. Entrou nessa hora? Você a mediu: ela vira passagem e só volta a piscar quando você sai. O salto de fase não funciona nela.',
       },
       { diagram: 'superposedWall', caption: 'Teste na parede roxa de treino, no fundo do salão à direita.' },
     ],
