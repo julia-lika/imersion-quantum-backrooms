@@ -163,6 +163,8 @@ function peerLink(link, events) {
   let localStream = link.stream;
   let call = null;
   let timeout = null;
+  let iceState = null;
+  let extended = false;
   const audio = new Audio();
   audio.autoplay = true;
 
@@ -178,6 +180,7 @@ function peerLink(link, events) {
       }
       const report = () => {
         const state = pc.iceConnectionState;
+        iceState = state;
         events.emit('ice', state);
         if (!link.connected) {
           events.emit('status', link.role === 'host'
@@ -247,12 +250,24 @@ function peerLink(link, events) {
   // O explorador fica esperando no máximo CONNECT_TIMEOUT_MS, contados desde o
   // pedido ao servidor de pareamento.
   if (link.role === 'guest') {
-    timeout = window.setTimeout(() => {
+    const onTimeout = () => {
       if (link.connected) return;
-      fail(peer.open
-        ? 'a sala respondeu, mas a conexão não fechou em 20 s (rede bloqueando). Tente os dois no mesmo Wi-Fi, ou o PC no roteador do celular'
-        : 'o servidor de pareamento não respondeu em 20 s (sem internet ou bloqueado nesta rede)');
-    }, CONNECT_TIMEOUT_MS);
+      // Ainda negociando a rota (às vezes o TURN demora): espera mais 20 s, uma vez.
+      if (iceState === 'checking' && !extended) {
+        extended = true;
+        events.emit('status', 'CHAMANDO A SALA — a rota está demorando, esperando mais 20 s');
+        timeout = window.setTimeout(onTimeout, CONNECT_TIMEOUT_MS);
+        return;
+      }
+      let reason = 'o servidor de pareamento não respondeu em 20 s (sem internet ou bloqueado nesta rede)';
+      if (peer.open && (!iceState || iceState === 'new')) {
+        reason = 'o operador não respondeu: confira se ele clicou em SER O OPERADOR e está com a sala aberta, e recarregue as duas páginas (Ctrl+Shift+R)';
+      } else if (peer.open) {
+        reason = 'a sala respondeu, mas a rede não deixou a conexão fechar (Wi-Fi bloqueando WebRTC). Tente os dois no mesmo Wi-Fi ou o PC no roteador do celular. No mesmo navegador, use duas abas com ?transporte=local';
+      }
+      fail(reason);
+    };
+    timeout = window.setTimeout(onTimeout, CONNECT_TIMEOUT_MS);
   }
 
   peer.on('open', () => {

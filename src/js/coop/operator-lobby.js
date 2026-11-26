@@ -3,9 +3,9 @@
 // do explorador, a IA e a sala; a VARREDURA é um botão no fundo do salão: é
 // preciso correr até lá para apertar (E, clique ou encostar a mão no VR).
 // A lógica de rede e do mundo fica em coop-host.js.
-import { createCoopHost } from './coop-host.js?v=20261125-op1';
+import { createCoopHost } from './coop-host.js?v=20261126-net5';
 import { drawOperatorMap } from './operator-map.js?v=20261125-op1';
-import { normalizeRoomCode } from './coop-net.js?v=20261125-4';
+import { normalizeRoomCode } from './coop-net.js?v=20261126-5';
 import { COOP } from './coop-world.js?v=20261125-ai2';
 
 const PEERJS_URL = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
@@ -13,7 +13,8 @@ const $ = (id) => document.getElementById(id);
 
 // Monitor no lugar da placa de boas-vindas (sobre o balcão, de frente para o
 // spawn). Botão da varredura no fundo do salão, perto da estação do QPS.
-const MONITOR = { cellX: 3.15, cellZ: 1.35, y: 1.74, width: 2.0, rotation: -90 };
+// Telão: 2,4 m de largura, preso à frente do balcão, de frente para o spawn.
+const MONITOR = { cellX: 3.15, cellZ: 1.95, y: 1.72, width: 2.4, rotation: -90 };
 const STATION = { x: 3, z: 10 };
 const CANVAS_W = 1280;
 const CANVAS_H = 800;
@@ -206,12 +207,14 @@ AFRAME.registerComponent('operator-lobby', {
     this.hideWelcomeSign();
   },
 
-  // A placa de boas-vindas (FASE 0 // LOBBY) dá lugar ao monitor.
+  // A placa de boas-vindas (FASE 0 // LOBBY) dá lugar ao telão. O Q-LINK e o
+  // Visor Zeta não servem para o operador: somem as mesas desses dois e as placas.
   hideWelcomeSign() {
     document.querySelectorAll('[terminal-panel]').forEach((el) => {
       const title = el.getAttribute('terminal-panel')?.title || '';
-      if (title.includes('FASE 0')) el.object3D.visible = false;
+      if (/FASE 0|ESTAÇÃO 1|ESTAÇÃO 2/.test(title)) el.object3D.visible = false;
     });
+    document.querySelectorAll('[data-item="qlink"], [data-item="visor"]').forEach((el) => el.remove());
   },
 
   distanceToButton() {
@@ -339,8 +342,8 @@ AFRAME.registerComponent('operator-lobby', {
     let y = 50;
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ffe69b';
-    ctx.font = 'bold 30px "Courier New", monospace';
-    ctx.fillText('CONSOLE DO OPERADOR', x, y);
+    ctx.font = 'bold 25px "Courier New", monospace';
+    ctx.fillText('QPS // MAPA DO EXPLORADOR', x, y);
     y += 42;
     ctx.font = '24px "Courier New", monospace';
     ctx.fillStyle = '#d8bc75';

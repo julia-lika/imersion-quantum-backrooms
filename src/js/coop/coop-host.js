@@ -3,7 +3,7 @@
 // (registro, avisos, recarga da varredura). Não desenha nada: o monitor do
 // lobby (operator-lobby.js) lê o estado daqui.
 import { createCoopWorld } from './coop-world.js?v=20261125-ai2';
-import { createCoopLink, randomRoomCode, requestMicrophone } from './coop-net.js?v=20261125-4';
+import { createCoopLink, randomRoomCode, requestMicrophone } from './coop-net.js?v=20261126-5';
 
 const TICK_MS = 200;
 

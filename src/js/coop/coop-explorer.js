@@ -1,7 +1,7 @@
 // Modo cooperativo, lado do EXPLORADOR (VR ou desktop). Liga a tela inicial ao
 // operador: digita o código da sala, conecta, liga a voz e, dentro do jogo,
 // manda a posição 10 vezes por segundo e aplica o que o operador decide.
-import { createCoopLink, normalizeRoomCode, requestMicrophone } from './coop-net.js?v=20261125-4';
+import { createCoopLink, normalizeRoomCode, requestMicrophone } from './coop-net.js?v=20261126-5';
 
 const PEERJS_URL = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
 const POS_MS = 100;
