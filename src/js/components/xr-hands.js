@@ -8,27 +8,33 @@ const SNAP_TURN_DEGREES = 30;
 // ser deliberado: pulso perto do rosto, girado para os olhos, mão parada e longe
 // dos itens, segurado por um instante. Estender a mão para pegar algo não abre.
 // Os limites "keep" são mais folgados, para o painel não piscar depois de aberto.
+// Meio-termo: mais fácil que a primeira versão (que quase nunca abria no
+// Quest), mas a mão precisa ficar ABAIXO dos olhos e longe da testa, para não
+// abrir quando se levanta a mão para a pinça do visor.
+const WRIST_BROW = new THREE.Vector3(0, 0.09, -0.06);
 const WRIST_LOOK = {
-  showAngle: THREE.MathUtils.degToRad(22),
-  keepAngle: THREE.MathUtils.degToRad(34),
-  showDistance: 0.48,
-  keepDistance: 0.6,
+  showAngle: THREE.MathUtils.degToRad(30),
+  keepAngle: THREE.MathUtils.degToRad(42),
+  showDistance: 0.55,
+  keepDistance: 0.68,
   // Distância horizontal cabeça-mão: braço esticado passa disso.
-  showReach: 0.4,
-  keepReach: 0.5,
-  // Altura da mão em relação aos olhos (abaixo do queixo até a altura dos olhos).
-  minHeight: -0.55,
-  maxHeight: 0.05,
+  showReach: 0.45,
+  keepReach: 0.55,
+  // Altura da mão em relação aos olhos: do peito até um pouco abaixo dos olhos.
+  minHeight: -0.65,
+  maxHeight: -0.04,
   // |cos| entre a normal da palma e a direção mão→olhos: pulso girado para o rosto.
-  showFacing: 0.6,
-  keepFacing: 0.4,
-  showSpeed: 0.45,
-  keepSpeed: 0.9,
+  showFacing: 0.45,
+  keepFacing: 0.3,
+  showSpeed: 0.6,
+  keepSpeed: 1.1,
   // Mão rápida = estendendo o braço: bloqueia o gesto por um tempo.
-  reachSpeed: 1.0,
-  reachBlockSeconds: 0.6,
-  itemClearance: 0.4,
-  holdSeconds: 0.3,
+  reachSpeed: 1.3,
+  reachBlockSeconds: 0.5,
+  itemClearance: 0.3,
+  holdSeconds: 0.25,
+  // Perto da testa é a pinça do visor, não o pulso.
+  browClearance: 0.22,
 };
 
 function createHandState() {
@@ -254,6 +260,7 @@ AFRAME.registerComponent('xr-hands', {
     const gestures = this.el.components['hand-gestures'];
     if (gestures?.held?.[side] || gestures?.isBusy?.()) return reset();
     if (this.itemNear(hand.world, WRIST_LOOK.itemClearance)) return reset();
+    if (gestures?.distanceToFace?.(side, WRIST_BROW) < WRIST_LOOK.browClearance) return reset();
 
     const keep = look.shown;
     const toHead = this.lookToHead.subVectors(this.head.world, hand.world);
