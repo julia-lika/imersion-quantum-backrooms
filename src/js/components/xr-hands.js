@@ -8,30 +8,27 @@ const SNAP_TURN_DEGREES = 30;
 // ser deliberado: pulso perto do rosto, girado para os olhos, mão parada e longe
 // dos itens, segurado por um instante. Estender a mão para pegar algo não abre.
 // Os limites "keep" são mais folgados, para o painel não piscar depois de aberto.
-// Mais tolerante que a primeira versão (que quase nunca disparava no Quest):
-// basta trazer o pulso para a frente do rosto, girado para os olhos, e parar
-// um instante. Braço esticado ou mão em movimento rápido continuam não contando.
 const WRIST_LOOK = {
-  showAngle: THREE.MathUtils.degToRad(35),
-  keepAngle: THREE.MathUtils.degToRad(48),
-  showDistance: 0.6,
-  keepDistance: 0.72,
+  showAngle: THREE.MathUtils.degToRad(22),
+  keepAngle: THREE.MathUtils.degToRad(34),
+  showDistance: 0.48,
+  keepDistance: 0.6,
   // Distância horizontal cabeça-mão: braço esticado passa disso.
-  showReach: 0.5,
-  keepReach: 0.6,
-  // Altura da mão em relação aos olhos (do peito até um pouco acima dos olhos).
-  minHeight: -0.7,
-  maxHeight: 0.15,
+  showReach: 0.4,
+  keepReach: 0.5,
+  // Altura da mão em relação aos olhos (abaixo do queixo até a altura dos olhos).
+  minHeight: -0.55,
+  maxHeight: 0.05,
   // |cos| entre a normal da palma e a direção mão→olhos: pulso girado para o rosto.
-  showFacing: 0.35,
-  keepFacing: 0.2,
-  showSpeed: 0.8,
-  keepSpeed: 1.4,
+  showFacing: 0.6,
+  keepFacing: 0.4,
+  showSpeed: 0.45,
+  keepSpeed: 0.9,
   // Mão rápida = estendendo o braço: bloqueia o gesto por um tempo.
-  reachSpeed: 1.6,
-  reachBlockSeconds: 0.4,
-  itemClearance: 0.2,
-  holdSeconds: 0.2,
+  reachSpeed: 1.0,
+  reachBlockSeconds: 0.6,
+  itemClearance: 0.4,
+  holdSeconds: 0.3,
 };
 
 function createHandState() {
