@@ -8,27 +8,30 @@ const SNAP_TURN_DEGREES = 30;
 // ser deliberado: pulso perto do rosto, girado para os olhos, mão parada e longe
 // dos itens, segurado por um instante. Estender a mão para pegar algo não abre.
 // Os limites "keep" são mais folgados, para o painel não piscar depois de aberto.
+// Mais tolerante que a primeira versão (que quase nunca disparava no Quest):
+// basta trazer o pulso para a frente do rosto, girado para os olhos, e parar
+// um instante. Braço esticado ou mão em movimento rápido continuam não contando.
 const WRIST_LOOK = {
-  showAngle: THREE.MathUtils.degToRad(22),
-  keepAngle: THREE.MathUtils.degToRad(34),
-  showDistance: 0.48,
-  keepDistance: 0.6,
+  showAngle: THREE.MathUtils.degToRad(35),
+  keepAngle: THREE.MathUtils.degToRad(48),
+  showDistance: 0.6,
+  keepDistance: 0.72,
   // Distância horizontal cabeça-mão: braço esticado passa disso.
-  showReach: 0.4,
-  keepReach: 0.5,
-  // Altura da mão em relação aos olhos (abaixo do queixo até a altura dos olhos).
-  minHeight: -0.55,
-  maxHeight: 0.05,
+  showReach: 0.5,
+  keepReach: 0.6,
+  // Altura da mão em relação aos olhos (do peito até um pouco acima dos olhos).
+  minHeight: -0.7,
+  maxHeight: 0.15,
   // |cos| entre a normal da palma e a direção mão→olhos: pulso girado para o rosto.
-  showFacing: 0.6,
-  keepFacing: 0.4,
-  showSpeed: 0.45,
-  keepSpeed: 0.9,
+  showFacing: 0.35,
+  keepFacing: 0.2,
+  showSpeed: 0.8,
+  keepSpeed: 1.4,
   // Mão rápida = estendendo o braço: bloqueia o gesto por um tempo.
-  reachSpeed: 1.0,
-  reachBlockSeconds: 0.6,
-  itemClearance: 0.4,
-  holdSeconds: 0.3,
+  reachSpeed: 1.6,
+  reachBlockSeconds: 0.4,
+  itemClearance: 0.2,
+  holdSeconds: 0.2,
 };
 
 function createHandState() {
@@ -186,6 +189,8 @@ AFRAME.registerComponent('xr-hands', {
   readInputSource(source, frame, referenceSpace, dt) {
     const hand = this.hands[source.handedness];
     if (!hand) return;
+    // Mão e controle do mesmo lado ao mesmo tempo: vale a mão.
+    if (hand.tracked && hand.isHand && !source.hand) return;
 
     const rayPose = source.targetRaySpace ? frame.getPose(source.targetRaySpace, referenceSpace) : null;
     if (rayPose) {
@@ -214,6 +219,9 @@ AFRAME.registerComponent('xr-hands', {
     hand.previous.copy(hand.position);
     hand.position.set(x, y, z);
     hand.velocity.subVectors(hand.position, hand.previous).divideScalar(dt);
+    // Salto grande num quadro (mão e controle do mesmo lado se alternando, ou
+    // o tracking voltando) não é movimento de verdade: não bloqueia o gesto.
+    if (!Number.isFinite(hand.velocity.x) || hand.position.distanceTo(hand.previous) > 0.25) hand.velocity.set(0, 0, 0);
     hand.tracked = true;
     hand.isHand = Boolean(source.hand);
 

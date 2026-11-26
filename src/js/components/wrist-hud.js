@@ -268,6 +268,12 @@ AFRAME.registerComponent('wrist-hud', {
 
     if (!enabled) {
       show = false;
+      // No VR, olhar o pulso sem ter pegado o relógio não mostrava nada: avisa.
+      if (tracker.inVr && hand?.tracked && tracker.wristLook(this.data.hand, Math.min(0.1, delta / 1000)) &&
+        time - (this.lastNoGearHint || -1e9) > 5000) {
+        this.lastNoGearHint = time;
+        this.el.sceneEl.emit('interaction-hint', { text: 'SEM Q-LINK — pegue o relógio na mesa da ESTAÇÃO 1 do lobby (encoste a mão)' });
+      }
     } else if (tracker.inVr) {
       if (hand?.tracked) {
         // Só com o gesto deliberado de olhar o pulso (ver xr-hands.wristLook).
