@@ -50,7 +50,7 @@ export const LOBBY_SIGNS = [
   {
     wall: 'left', cellZ: 6.7, y: 1.85,
     title: 'ESTAÇÃO 2: VISOR ZETA', subtitle: 'OS ÓCULOS',
-    body: 'Os óculos são o Visor Zeta. Com ele ligado, você enxerga as paredes em SUPERPOSIÇÃO (roxas), que abrem e fecham. Entre quando abrir: você a mede e ela fica aberta. O salto de fase (X) não passa por ela.\n\nPegue os óculos na mesa (desktop: Q). Ligar e desligar: dois toques com a mão direita na lateral direita do rosto (desktop: Z). Gasta energia.',
+    body: 'Os óculos são o Visor Zeta. Com ele ligado, você enxerga as paredes em SUPERPOSIÇÃO (roxas), que abrem e fecham. Entre quando abrir: você a mede e ela fica aberta. O salto de fase (X) não passa por ela.\n\nPegue os óculos na mesa (desktop: Q). Ligar e desligar: pinça na testa (desktop: Z). Gasta energia.',
   },
   {
     wall: 'right', cellZ: 6.5, y: 2.32, height: 0.62,
@@ -60,7 +60,7 @@ export const LOBBY_SIGNS = [
   {
     wall: 'right', cellZ: 8.6,
     title: 'ENTIDADE', subtitle: 'PERIGO',
-    body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nVISOR ZETA: dois toques na lateral direita do rosto (Z) revela paredes em superposição.\nSALTO DE FASE: palmas na parede (X) para atravessar.\nTeste os dois na parede de treino ao lado.',
+    body: 'Ela persegue você pelo labirinto. Não a encare: cubra os olhos com as duas mãos.\n\nVISOR ZETA: pinça na testa (Z) revela paredes em superposição.\nSALTO DE FASE: palmas na parede (X) para atravessar.\nTeste os dois na parede de treino ao lado.',
   },
   {
     wall: 'left', cellZ: 9.2, y: 1.85, height: 0.95,

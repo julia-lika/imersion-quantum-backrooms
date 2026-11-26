@@ -408,7 +408,7 @@ function toggleVisor() {
   renderTelemetry();
   setHint(survival.visor
     ? 'VISOR ZETA ATIVO — paredes roxas oscilam; atravesse quando estiverem abertas'
-    : 'VISOR ZETA DESLIGADO — dois toques na lateral direita do rosto (ou Z) ligam de novo');
+    : 'VISOR ZETA DESLIGADO — pinça na testa (ou Z) liga de novo');
 }
 
 function requestPhaseShift() {
@@ -689,7 +689,7 @@ function bindGameEvents() {
     scene.emit('screen-effect', { type: 'flash', color: '#44ffcc', duration: 500, peak: 0.3 });
     const next = {
       qlink: 'Q-LINK HABILITADO — traga o pulso esquerdo ao rosto e gire (desktop: H)',
-      visor: 'VISOR ZETA HABILITADO — dois toques com a mão direita na lateral direita do rosto (desktop: Z) ligam e desligam',
+      visor: 'VISOR ZETA HABILITADO — pinça na testa (desktop: Z) liga e desliga',
       qps: 'QPS HABILITADO — mede tudo num raio de ~4 m e desenha o mapa (pulso direito ao rosto ou M)',
     }[gear];
     const missing = lobbyMissing();

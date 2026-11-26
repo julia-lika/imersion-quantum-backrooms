@@ -1,21 +1,14 @@
 // Gestos com as mãos:
-// - dois toques com a mão direita na lateral direita do rosto: liga/desliga o Zeta Visor;
+// - pinça na testa: liga/desliga o Zeta Visor;
 // - mãos sobre os olhos: protege da exposição ao fantasma;
 // - duas palmas empurrando a parede: phase shift;
 // - pinça perto de um item: pega o QPS ou a Água de Amêndoa (beber = levar à boca);
 // - estender a mão até um item também pega: o QPS é coletado e a garrafa fica na mão.
-// Lateral direita do rosto (têmpora), no referencial da cabeça (x para a direita).
-// O ponto rastreado é o centro da palma: com os dedos na têmpora ele fica uns
-// 10 cm para fora.
-const TEMPLE_OFFSET = new THREE.Vector3(0.12, 0.02, -0.01);
-const TEMPLE_RADIUS = 0.14;
-// Para contar um toque novo a mão precisa se afastar um pouco antes.
-const TEMPLE_RELEASE = 0.18;
-const DOUBLE_TAP_SECONDS = 1;
-const VISOR_TAP_COOLDOWN = 1;
+const BROW_OFFSET = new THREE.Vector3(0, 0.09, -0.06);
 const EYES_OFFSET = new THREE.Vector3(0, 0, -0.08);
 const MOUTH_OFFSET = new THREE.Vector3(0, -0.09, -0.07);
 // O ponto rastreado é o centro da palma, não a ponta dos dedos.
+const BROW_RADIUS = 0.18;
 const EYES_RADIUS = 0.15;
 const MOUTH_RADIUS = 0.16;
 const PHASE_HOLD_SECONDS = 1.1;
@@ -44,10 +37,6 @@ AFRAME.registerComponent('hand-gestures', {
     this.phaseCharge = 0;
     this.phaseCooldown = 0;
     this.eyesCovered = false;
-    this.templeTouching = false;
-    this.lastTempleTap = -Infinity;
-    this.visorTapCooldown = 0;
-    this.clock = 0;
     this.headLocal = new THREE.Vector3();
     this.inverseHead = new THREE.Quaternion();
     this.itemWorld = new THREE.Vector3();
@@ -92,35 +81,17 @@ AFRAME.registerComponent('hand-gestures', {
     const hand = this.tracker?.hands[side];
     if (!hand?.tracked) return;
 
+    if (this.distanceToFace(side, BROW_OFFSET) < BROW_RADIUS) {
+      this.el.sceneEl.emit('visor-toggle-request', { source: `${side}-hand` });
+      return;
+    }
+
     if (this.held[side]) return;
     const item = window.quantumPlayer?.active && this.findNearestItem(hand.world, GRAB_RADIUS);
     if (!item) return;
 
     this.grab(side, item, 'pinch');
     if (GEAR_TYPES.has(item.dataset.item)) this.collectGear(item, 1200);
-  },
-
-  // Dois toques da mão direita na lateral direita do rosto ligam/desligam o visor.
-  updateTempleTaps(dt, right) {
-    this.clock += dt;
-    this.visorTapCooldown = Math.max(0, this.visorTapCooldown - dt);
-    if (!right.tracked || this.eyesCovered || this.held.right) {
-      this.templeTouching = false;
-      return;
-    }
-    const distance = this.distanceToFace('right', TEMPLE_OFFSET);
-    if (!this.templeTouching && distance < TEMPLE_RADIUS) {
-      this.templeTouching = true;
-      if (this.clock - this.lastTempleTap < DOUBLE_TAP_SECONDS && this.visorTapCooldown === 0) {
-        this.lastTempleTap = -Infinity;
-        this.visorTapCooldown = VISOR_TAP_COOLDOWN;
-        this.el.sceneEl.emit('visor-toggle-request', { source: 'right-temple' });
-      } else {
-        this.lastTempleTap = this.clock;
-      }
-    } else if (this.templeTouching && distance > TEMPLE_RELEASE) {
-      this.templeTouching = false;
-    }
   },
 
   grab(side, item, mode) {
@@ -206,7 +177,6 @@ AFRAME.registerComponent('hand-gestures', {
       this.distanceToFace('right', EYES_OFFSET) < EYES_RADIUS
     );
 
-    this.updateTempleTaps(dt, right);
     this.updateHeldItems();
     this.touchCollectItems();
     this.updatePhasePress(dt, bothTracked);
