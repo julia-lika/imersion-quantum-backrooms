@@ -82,7 +82,7 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 | Efeito Zeno | Medir sem parar impede a evolução do estado | O raio do QPS congela o labirinto; fora dele, setores sem medição por 18 s evoluem e são medidos de novo |
 | Entropia | Shannon dos `counts` (`shannonEntropy`), 0 a 12 bits | Andares gravados ficam entre ~7 e 8 bits |
 | Tunelamento | Metáfora | Salto de fase: atravessa até 2 células de parede comum (azul no mapa), 92% de sucesso, custa 25 de energia e 3 de sanidade; não passa por parede em superposição |
-| Superposição de parede | Metáfora (`isSuperposedOpen` oscila no tempo) | Visor Zeta mostra o estado; ela só deixa passar quando abre: entrar nessa hora a mede e ela fica aberta até você sair (`observeSuperposedWalls`). O salto de fase é barrado (`phaseBlocker`) |
+| Superposição de parede | Simulação quântica de verdade: cada parede é um qubit num simulador de vetor de estado no navegador (`src/js/wall-quantum.js`), \|0⟩ = parede, \|1⟩ = passagem. Paredes vêm em pares emaranhados (RY → CX → X: exatamente uma é passagem) e evoluem no tempo (a passagem "pula" de uma para a outra; parede sozinha faz oscilação de Rabi) | O Visor Zeta mostra a chance de passagem (transparência). Encostar mede pela regra de Born: deu passagem, abre até você sair; deu parede, fica sólida. Medir uma parede do par decide a outra. Enquanto você encosta ela não evolui (Zeno). O salto de fase é barrado (`phaseBlocker`) |
 
 ## O que é real e o que é jogo
 
@@ -109,8 +109,11 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 - **Inspirado na física:** o labirinto que só evolui longe do QPS segue a
   ideia do efeito Zeno quântico; o raio, os 18 s e os setores são regras de
   jogo.
-- **Mecânica de jogo:** entidade, sanidade, energia e a oscilação das paredes
-  em superposição.
+- **Simulado (quântico de verdade, mas no simulador):** as paredes em
+  superposição. O estado de cada uma é um vetor complexo que evolui com portas
+  e só vira parede ou passagem quando é medido. O Visor Zeta mostrar a
+  probabilidade sem medir é licença de jogo: no mundo real, olhar já é medir.
+- **Mecânica de jogo:** entidade, sanidade e energia.
 - **HUD do desktop:** à esquerda, a string medida do andar e de onde ela veio
   (simulador exato, hardware ou sorteio clássico); à direita, o desenho do
   circuito de 12 qubits, o quadro qubit → região, o estado da porta e quantos
@@ -126,7 +129,8 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 | `src/js/qubit-regions.js` | Grade 3x4: cada qubit decide sua região (sala aberta ou corredores) e as fronteiras |
 | `src/js/map-generator.js` | Monta o andar a partir das regiões, posições possíveis da porta e sorteio na medição, lobby fixo |
 | `src/js/qubit-board.js` | Mini-quadro do HUD: qual bit gerou cada região |
-| `src/js/maze-physics.js` | Grade, colisão, salto de fase, paredes em superposição |
+| `src/js/maze-physics.js` | Grade, colisão, salto de fase, medição das paredes em superposição |
+| `src/js/wall-quantum.js` | Simulador de vetor de estado das paredes: portas, pares emaranhados, evolução e medição |
 | `src/js/quantum-bank.js` | Leitura do banco, amostragem, entropia |
 | `src/js/quantum-measurement.js` | Medição ao pegar o QPS e HUD |
 | `src/js/decoherence.js` | Setores, observação, reorganização de um setor (testado em `tests/decoherence.test.js`) |
