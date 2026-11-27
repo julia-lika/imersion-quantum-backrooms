@@ -84,3 +84,15 @@ test('o jogo carrega o corpo da agente e liga a campanha só no modo solo', () =
   assert.match(read('src/js/components/quantum-ghost.js'), /shared\.difficulty/);
   assert.match(read('src/js/components/vr-effects.js'), /difficulty\?\.enraged/);
 });
+
+test('o último andar já mostra a SAÍDA e o final tem frases, créditos e volta ao lobby', () => {
+  const phase = read('src/js/phase-zero.js');
+  assert.match(phase, /function revealFinalExit\(\)/);
+  assert.match(phase, /emit\('door-measured'\)/);
+  assert.match(phase, /const ENDING_STEPS = \[/);
+  assert.match(phase, /obrigada por jogar/);
+  assert.match(phase, /createGameState\(initialBits, LOBBY_FLOOR\)/);
+  const map = read('src/js/components/quantum-map.js');
+  assert.match(map, /window\.quantumPlayer\?\.finalExit/);
+  assert.match(map, /value: 'SAÍDA'/);
+});

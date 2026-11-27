@@ -449,6 +449,22 @@ AFRAME.registerComponent('quantum-map', {
     trigger.setAttribute('floor-transition', 'target: #player-head; radius: 0.75');
     stairs.appendChild(trigger);
 
+    // Último andar do modo história: a porta é a SAÍDA. Placa verde acesa em
+    // cima e luz branca forte, para dar para achar de longe mesmo na névoa vermelha.
+    if (window.quantumPlayer?.finalExit && this.data.floor > 0) {
+      glow.setAttribute('light', 'type: point; color: #ffffff; intensity: 1.6; distance: 7');
+      glow.setAttribute('animation', 'property: light.intensity; from: 1.0; to: 2.2; dir: alternate; loop: true; dur: 700');
+      const sign = document.createElement('a-entity');
+      sign.setAttribute('position', '0 2.45 0.06');
+      // O texto do canvas-text tem fonte fixa: a placa fica grande pela escala.
+      sign.setAttribute('scale', '2.4 2.4 1');
+      sign.setAttribute('canvas-text', { value: 'SAÍDA', align: 'center', color: '#3dff7a', width: 0.32, overlay: false, style: 'terminal' });
+      sign.setAttribute('id', 'exit-sign');
+      stairs.appendChild(sign);
+      // Do outro lado da porta, em vez de escuridão, luz forte.
+      darkness.setAttribute('material', 'shader: flat; color: #fff6dc; side: back; fog: false');
+    }
+
     this.el.appendChild(stairs);
   },
 

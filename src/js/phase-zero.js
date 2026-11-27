@@ -252,6 +252,9 @@ function objectiveText() {
   if (game.current.floor === CAMPAIGN.agentFloor && !game.current.agentFound) {
     return 'ACHE A AGENTE DESAPARECIDA: A PORTA SÓ ABRE DEPOIS';
   }
+  if (soloCampaign() && isFinalFloor(game.current.floor)) {
+    return game.current.measured ? 'ÚLTIMO ANDAR: CORRA ATÉ A SAÍDA' : 'ÚLTIMO ANDAR: O QPS ESTÁ ACHANDO A SAÍDA';
+  }
   if (isEnraged()) {
     return game.current.measured ? 'CORRA ATÉ A PORTA' : 'CORRA: ACHE A PORTA ANTES DELA';
   }
@@ -281,6 +284,8 @@ function syncCampaign() {
     found: Boolean(game.current.agentFound),
   };
   document.body.classList.toggle('enraged', pace.enraged);
+  // A porta do último andar vira a SAÍDA (placa e luz branca, quantum-map.js).
+  window.quantumPlayer.finalExit = solo && isFinalFloor(floor);
 }
 
 function floorLabel(floor = game.current.floor) {
@@ -289,7 +294,7 @@ function floorLabel(floor = game.current.floor) {
 
 // Frase grande no meio da visão (texto 3D preso à câmera: aparece no desktop e no VR).
 let scareTimer = 0;
-function showScare(message, { color = '#ff3b30', duration = 7000 } = {}) {
+function showScare(message, { color = '#ff3b30', duration = 7000, credits = false } = {}) {
   window.clearTimeout(scareTimer);
   // Desktop: texto em HTML por cima de tudo (os painéis cobririam o texto 3D).
   if (!elements['backrooms-scene'].is('vr-mode')) {
@@ -297,13 +302,14 @@ function showScare(message, { color = '#ff3b30', duration = 7000 } = {}) {
     if (!overlay) return;
     overlay.textContent = message;
     overlay.style.color = color;
+    overlay.classList.toggle('credits', credits);
     overlay.classList.add('visible');
     scareTimer = window.setTimeout(() => overlay.classList.remove('visible'), duration);
     return;
   }
   const el = document.getElementById('scare-text');
   if (!el) return;
-  el.setAttribute('canvas-text', { value: message, align: 'center', color, width: 1.05, style: 'horror' });
+  el.setAttribute('canvas-text', { value: message, align: 'center', color, width: credits ? 1.2 : 1.05, style: credits ? 'sans' : 'horror' });
   el.object3D.visible = true;
   // Por cima do véu dos clarões do VR (vr-effects usa 1000).
   const mesh = el.getObject3D('canvas-text');
@@ -319,6 +325,9 @@ function enterFloorHint() {
   const floor = game.current.floor;
   if (soloCampaign() && floor === CAMPAIGN.agentFloor && !game.current.agentFound) {
     return `${floorLabel()} — o Q-LINK capta um sinal fraco: é a agente que desceu antes de você e nunca voltou. Ache a agente: a porta deste andar não abre sem ela`;
+  }
+  if (soloCampaign() && isFinalFloor(floor)) {
+    return `${floorLabel()} — O ÚLTIMO. A saída está neste andar: o QPS já está medindo onde ela fica. Siga a seta e a luz branca`;
   }
   if (soloCampaign() && isHardFloor(floor)) {
     return `${floorLabel()} de ${CAMPAIGN.finalFloor} — ela está furiosa e mais rápida, e a sua sanidade escorre. Ache a porta e não pare`;
@@ -346,15 +355,51 @@ function onAgentFound() {
   renderTelemetry();
 }
 
-// Porta do andar 10: o jogador escapou. Volta ao lobby para um jogo novo.
+// Último andar: a SAÍDA não fica em superposição. O QPS mede a porta assim
+// que o andar abre, para ela aparecer (com placa e luz branca) e a seta
+// apontar para ela desde o começo.
+function revealFinalExit() {
+  if (!soloCampaign() || !isFinalFloor(game.current.floor) || game.current.measured) return;
+  window.setTimeout(() => {
+    if (!isFinalFloor(game.current.floor) || game.current.measured || doorMeasuring) return;
+    doorMeasuring = true;
+    elements['backrooms-scene'].emit('door-measured');
+  }, 700);
+}
+
+// Final do modo história: a porta do andar 10 leva para fora. Cena em
+// etapas (frases e créditos) e depois o lobby, para um jogo novo.
+const ENDING_STEPS = [
+  { text: 'A PORTA SE ABRE.\nDO OUTRO LADO, LUZ DE VERDADE.', color: '#fff4d6', ms: 4000 },
+  { text: 'VOCÊ ESCAPOU DAS BACKROOMS.', color: '#fff4d6', ms: 4000 },
+  { text: 'A AGENTE NÃO TEVE A MESMA SORTE.\nELA AINDA ESTÁ LÁ EMBAIXO.\nE A ENTIDADE AGORA SABE O SEU NOME.', color: '#ff5a4f', ms: 5500 },
+  {
+    text: 'QUANTUM BACKROOMS\num jogo de Júlia Lika Ishikawa\n\nos andares nasceram de medições reais do ibm_fez\nmodelos 3D: OHR3D, peter.griffin, CrZ, PSX Liminal Kit, Oxygen\ntexturas: Yasu\n\nobrigada por jogar',
+    color: '#f4dda1',
+    ms: 7500,
+    credits: true,
+  },
+];
+
 function escapeBackrooms() {
   transitioning = true;
   window.quantumPlayer.active = false;
   game.current = markStairsReached(game.current);
-  document.body.classList.add('escaped');
-  setHint('A ÚLTIMA PORTA SE ABRE PARA UMA LUZ QUE VOCÊ NÃO VIA HÁ DIAS', true);
-  elements['backrooms-scene'].emit('screen-effect', { type: 'flash', color: '#fff4d6', duration: 3500, peak: 0.8 });
-  showScare('VOCÊ ESCAPOU.\nELA AINDA ESTÁ LÁ EMBAIXO.\nE AGORA SABE O SEU NOME.', { color: '#f4dda1', duration: 8500 });
+  persistProgress();
+  const scene = elements['backrooms-scene'];
+  const total = ENDING_STEPS.reduce((sum, step) => sum + step.ms, 0);
+  setHint('A ÚLTIMA PORTA SE ABRE', true);
+  elements['desktop-hint'].object3D.visible = false;
+  document.body.classList.add('ending');
+  // Clarão branco e depois tudo escurece: as frases ficam sozinhas na tela.
+  scene.emit('screen-effect', { type: 'flash', color: '#ffffff', duration: 1800, peak: 1 });
+  window.setTimeout(() => scene.emit('screen-effect', { type: 'fade', color: '#000000', duration: (total - 1200) * 1.3 }), 1200);
+
+  let elapsed = 0;
+  ENDING_STEPS.forEach((step) => {
+    window.setTimeout(() => showScare(step.text, { color: step.color, duration: step.ms - 300, credits: step.credits }), elapsed);
+    elapsed += step.ms;
+  });
 
   window.setTimeout(() => {
     game.current = createGameState(initialBits, LOBBY_FLOOR);
@@ -364,13 +409,14 @@ function escapeBackrooms() {
     syncMap();
     syncAtmosphere();
     persistProgress();
-    document.body.classList.remove('escaped');
+    document.body.classList.remove('ending');
+    elements['desktop-hint'].object3D.visible = true;
     setHint('DE VOLTA AO LOBBY — você sobreviveu aos 10 andares. A porta amarela começa tudo de novo');
     transitioning = false;
     window.quantumPlayer.active = isActive();
     renderTelemetry();
-    elements['backrooms-scene'].emit('lobby-entered');
-  }, 9000);
+    scene.emit('lobby-entered');
+  }, total + 1500);
 }
 
 
@@ -490,7 +536,7 @@ function renderTelemetry() {
   const lobby = game.current.floor === LOBBY_FLOOR;
   elements['hud-floor'].textContent = lobby
     ? 'QUANTUM BACKROOMS // LOBBY'
-    : `QUANTUM BACKROOMS // ANDAR ${String(game.current.floor).padStart(2, '0')}`;
+    : `QUANTUM BACKROOMS // ANDAR ${String(game.current.floor).padStart(2, '0')}${soloCampaign() && isFinalFloor(game.current.floor) ? ' // ÚLTIMO — A SAÍDA' : ''}`;
   elements['hud-bits'].textContent = formatBits(game.current.currentBitstring);
   elements['hud-origin'].textContent = floorOrigin();
   drawCircuit();
@@ -644,6 +690,7 @@ function transitionToNextFloor() {
     syncAtmosphere();
     setHint(enterFloorHint());
     transitioning = false;
+    revealFinalExit();
     window.quantumPlayer.active = isActive();
     renderTelemetry();
   }, 900);
@@ -795,6 +842,7 @@ function bindGameEvents() {
       scene.emit('lobby-entered');
     } else if (mode === 'continue') {
       setHint(`${floorLabel()} — jogo retomado. ${objectiveText()}`);
+      revealFinalExit();
     }
     syncMap();
     syncAtmosphere();
@@ -932,6 +980,12 @@ function bindGameEvents() {
       (head.z - world.origin) / world.cellSize - map.stairs.z,
     ) <= QPS_RADIUS_CELLS + 1;
     const chanceText = doorChance !== null ? ` (tinha ${doorChance}% de chance)` : '';
+    if (soloCampaign() && isFinalFloor(game.current.floor)) {
+      setHint('A SAÍDA APARECEU — siga a seta até a placa SAÍDA e a luz branca. É a última porta: ela vai tentar te impedir', true);
+      persistProgress();
+      renderTelemetry();
+      return;
+    }
     setHint(near
       ? `PORTA MEDIDA — de ${candidates.length} posições possíveis, ela colapsou aqui perto${chanceText}`
       : `PORTA MEDIDA — de ${candidates.length} posições possíveis, ela colapsou em outro ponto do andar${chanceText}: veja no mapa (M ou pulso direito)`);

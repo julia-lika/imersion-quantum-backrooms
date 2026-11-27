@@ -397,6 +397,34 @@
         100% { transform: translate(-2px, 1px); }
       }
 
+      #scare-overlay.credits {
+        font: 600 clamp(0.9rem, 1.9vw, 1.35rem)/1.7 "Courier New", monospace;
+        letter-spacing: 0.08em;
+        text-shadow: 0 0 10px rgba(244, 221, 161, 0.4);
+      }
+
+      /* Final do modo história: a cena some e ficam só as frases e os créditos. */
+      body.ending::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        pointer-events: none;
+        background: #000;
+        animation: ending-fade 2.4s ease-in forwards;
+      }
+
+      body.ending #hud,
+      body.ending #phase-telemetry {
+        visibility: hidden;
+      }
+
+      @keyframes ending-fade {
+        0% { opacity: 0; background: #fff; }
+        30% { opacity: 1; background: #fff; }
+        100% { opacity: 1; background: #000; }
+      }
+
       body.agent-found::after {
         content: "";
         position: fixed;
@@ -464,7 +492,7 @@
     <script type="module" src="js/map-generator.js?v=20261125-4"></script>
     <script type="module" src="js/quantum-bank.js?v=20261124-13"></script>
     <script type="module" src="js/components/backrooms-wall.js"></script>
-    <script type="module" src="js/phase-zero.js?v=20261127-campaign2"></script>
+    <script type="module" src="js/phase-zero.js?v=20261127-ending1"></script>
     <script src="js/components/xr-hands.js?v=wrist5-20261126-1"></script>
     <script src="js/components/hand-gestures.js?v=20261125-1"></script>
     <script src="js/components/player-locomotion.js?v=20261127-1"></script>
@@ -488,7 +516,7 @@
     <script src="js/components/light-flicker.js"></script>
     <script src="js/components/fixture-lights.js?v=20261123-1"></script>
     <script src="js/components/floor-transition.js"></script>
-    <script type="module" src="js/components/quantum-map.js?v=20261127-2"></script>
+    <script type="module" src="js/components/quantum-map.js?v=20261127-ending1"></script>
     <script type="module" src="js/components/maze-decoherence.js?v=20261125-coop1"></script>
     <script src="js/qubit-board.js?v=20261124-1"></script>
     <script src="js/components/scatter-props.js?v=20261124-1"></script>
