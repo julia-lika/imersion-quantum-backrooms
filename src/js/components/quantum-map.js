@@ -101,9 +101,10 @@ AFRAME.registerComponent('quantum-map', {
     const origin = -((cellSize * size) / 2) + cellSize / 2;
     const superposed = lobby
       ? window.LOBBY_LAYOUT.superposed.map((wall) => ({ ...wall }))
-      : physics.findSuperposedWalls(map.maze, map.bitstring);
+      : this.withHardwareAmplitudes(physics.findSuperposedWalls(map.maze, map.bitstring), map);
 
     window.quantumWorld = physics.createMazeWorld(map.maze, { cellSize, superposed });
+    if (!lobby) this.prepareDoorSuperposition(map);
 
     if (!lobby) map.stairs = this.doorCell(map.doorCandidates, map.stairs);
     this.mapInfo = {
@@ -171,6 +172,57 @@ AFRAME.registerComponent('quantum-map', {
     this.addStaticMesh('baseboards', baseboards, this.materials.baseboard);
   },
 
+  // HÍBRIDO COM O HARDWARE. As medições do computador quântico da IBM para este
+  // andar (banco gravado) dão a chance de cada qubit valer 1. Cada parede em
+  // superposição nasce com essa chance de ser passagem: o ângulo RY é escolhido
+  // para que sin²(θ/2) = P(qubit da região dela = 1).
+  hardwareEntry() {
+    const bank = window.quantumBank?.data;
+    return bank ? window.quantumBank.pickEntry(bank, this.data.floor) : null;
+  },
+
+  withHardwareAmplitudes(walls, map) {
+    const entry = this.hardwareEntry();
+    const regions = map.regions || [];
+    if (!entry || !regions.length || !window.quantumBank?.qubitMarginals) return walls;
+    const marginals = window.quantumBank.qubitMarginals(entry.counts);
+    const inside = (x, z) => regions.find((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ);
+    return walls.map((wall) => {
+      // Parede na fronteira: usa a região vizinha.
+      const region = inside(wall.x, wall.z) || inside(wall.x - 1, wall.z) || inside(wall.x + 1, wall.z)
+        || inside(wall.x, wall.z - 1) || inside(wall.x, wall.z + 1);
+      if (!region) return wall;
+      const p = marginals[region.qubit];
+      return { ...wall, offset: Number((2 * Math.asin(Math.sqrt(Math.min(1, Math.max(0, p))))).toFixed(4)), qubit: region.qubit };
+    });
+  },
+
+  // A porta vira 2 qubits no simulador, com as amplitudes iniciais tiradas das
+  // frequências do hardware (mesma regra do sorteio: valor do bitstring módulo
+  // o número de posições). Ela só colapsa quando o QPS mede.
+  prepareDoorSuperposition(map) {
+    const physics = window.quantumPhysics;
+    const n = map.doorCandidates?.length || 0;
+    if (!n || !physics?.setDoorSuperposition) return;
+    const entry = this.hardwareEntry();
+    const probs = Array(n).fill(0);
+    let total = 0;
+    Object.entries(entry?.counts || {}).forEach(([bits, count]) => {
+      probs[(Number.parseInt(bits, 2) || 0) % n] += count;
+      total += count;
+    });
+    const door = physics.setDoorSuperposition(window.quantumWorld, total ? probs.map((c) => c / total) : Array(n).fill(1 / n));
+    door.source = entry?.source || 'uniforme';
+    door.backend = entry?.backend || null;
+    // Porta já medida (andar retomado do salvamento): estado colapsado nela.
+    if (this.data.door >= 0) {
+      door.reg.re.fill(0);
+      door.reg.im.fill(0);
+      door.reg.re[this.data.door] = 1;
+      door.measured = this.data.door;
+    }
+  },
+
   addSuperposedWall({ x, z, offset }) {
     const { origin, cellSize, height } = this.mapInfo;
     const wall = document.createElement('a-box');
@@ -190,6 +242,7 @@ AFRAME.registerComponent('quantum-map', {
   applySectorChange(sector, superposed = []) {
     const world = window.quantumWorld;
     if (!world || !this.mapInfo) return;
+    superposed = this.withHardwareAmplitudes(superposed, { regions: this.mapInfo.regions, maze: world.maze });
     [...this.superposedEls.entries()].forEach(([key, el]) => {
       const [x, z] = key.split(',').map(Number);
       if (x < sector.minX || x > sector.maxX || z < sector.minZ || z > sector.maxZ) return;

@@ -310,13 +310,24 @@ AFRAME.registerComponent('qps-map', {
       ctx.lineWidth = 2;
       ctx.strokeRect(left + stairs.x * cell - 2, top + stairs.z * cell - 2, cell + 3, cell + 3);
     } else if (mapInfo?.mapInfo?.doorCandidates?.length) {
-      // Porta ainda em superposição: as posições possíveis piscam tracejadas.
+      // Porta ainda em superposição (2 qubits no simulador): cada posição
+      // possível pisca tracejada, mais forte quanto maior a chance, com o %.
+      const chances = window.quantumPhysics?.doorPositionProbabilities?.(world) || [];
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 300);
       ctx.save();
-      ctx.strokeStyle = `rgba(227, 204, 75, ${(0.45 + 0.35 * Math.sin(performance.now() / 300)).toFixed(2)})`;
       ctx.lineWidth = 2;
       ctx.setLineDash([3, 3]);
-      mapInfo.mapInfo.doorCandidates.forEach((door) => {
+      ctx.font = `bold ${Math.max(9, Math.round(cell * 0.9))}px monospace`;
+      ctx.textAlign = 'center';
+      mapInfo.mapInfo.doorCandidates.forEach((door, index) => {
+        const chance = chances.length === mapInfo.mapInfo.doorCandidates.length ? chances[index] : null;
+        const strength = chance === null ? 0.6 : 0.15 + 0.85 * Math.min(1, chance * 1.6);
+        ctx.strokeStyle = `rgba(227, 204, 75, ${(strength * (0.55 + 0.45 * pulse)).toFixed(2)})`;
         ctx.strokeRect(left + door.x * cell - 1, top + door.z * cell - 1, cell + 1, cell + 1);
+        if (chance !== null) {
+          ctx.fillStyle = `rgba(227, 204, 75, ${Math.max(0.5, strength).toFixed(2)})`;
+          ctx.fillText(`${Math.round(chance * 100)}%`, left + (door.x + 0.5) * cell, top + door.z * cell - 3);
+        }
       });
       ctx.restore();
     }

@@ -1,4 +1,4 @@
-import { MAZE_SIZE } from './maze-physics.js?v=20261127-1';
+import { MAZE_SIZE } from './maze-physics.js?v=20261127-2';
 import { buildRegionMaze } from './qubit-regions.js?v=20261124-13';
 
 // Cada andar é decidido por uma medição de 12 qubits (um bitstring de 12 bits).

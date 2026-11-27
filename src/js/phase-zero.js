@@ -20,7 +20,7 @@ import {
   tickSurvival,
   toggleVisor as toggleVisorState,
 } from './survival-state.js?v=20261123-2';
-import { startPosition } from './maze-physics.js?v=20261127-1';
+import { startPosition } from './maze-physics.js?v=20261127-2';
 
 const initialBits = '010110101100';
 const GEAR_STORAGE_KEY = 'quantum-backrooms-gear-v1';
@@ -741,12 +741,20 @@ function bindGameEvents() {
     );
 
     // A medição não refaz o labirinto: colapsa a porta numa das posições
-    // possíveis, escolhida pelo bitstring medido. O andar continua o mesmo.
+    // possíveis. A porta é um registrador de 2 qubits vivo no simulador, com
+    // amplitudes iniciais vindas do hardware; o QPS mede esse estado (regra de
+    // Born). Sem ele, cai no sorteio antigo pelo bitstring medido.
     doorMeasuring = false;
     const floorBits = game.current.currentBitstring;
     const candidates = doorCandidates();
-    const picked = window.pickDoorCandidate?.(candidates, detail.result.bitstring)
+    const doorChances = window.quantumPhysics?.doorPositionProbabilities?.(window.quantumWorld) || [];
+    const doorIndex = doorChances.length === candidates.length
+      ? window.quantumPhysics.measureDoorPosition(window.quantumWorld)
+      : null;
+    const picked = (doorIndex !== null && candidates[doorIndex] ? { index: doorIndex, cell: candidates[doorIndex] } : null)
+      || window.pickDoorCandidate?.(candidates, detail.result.bitstring)
       || { index: 0, cell: window.generateQuantumMap(floorBits).stairs };
+    const doorChance = doorIndex !== null ? Math.round((doorChances[doorIndex] || 0) * 100) : null;
     const map = { stairs: picked.cell };
     game.current = recordMeasurement(game.current, {
       bitstring: floorBits,
@@ -769,9 +777,10 @@ function bindGameEvents() {
       (head.x - world.origin) / world.cellSize - map.stairs.x,
       (head.z - world.origin) / world.cellSize - map.stairs.z,
     ) <= QPS_RADIUS_CELLS + 1;
+    const chanceText = doorChance !== null ? ` (tinha ${doorChance}% de chance)` : '';
     setHint(near
-      ? `PORTA MEDIDA — de ${candidates.length} posições possíveis, ela colapsou aqui perto`
-      : `PORTA MEDIDA — de ${candidates.length} posições possíveis, ela colapsou em outro ponto do andar: veja no mapa (M ou pulso direito)`);
+      ? `PORTA MEDIDA — de ${candidates.length} posições possíveis, ela colapsou aqui perto${chanceText}`
+      : `PORTA MEDIDA — de ${candidates.length} posições possíveis, ela colapsou em outro ponto do andar${chanceText}: veja no mapa (M ou pulso direito)`);
     persistProgress();
     renderTelemetry();
   });
