@@ -28,7 +28,7 @@ import {
   difficulty,
   isFinalFloor,
   isHardFloor,
-} from './campaign.js?v=20261127-1';
+} from './campaign.js?v=20261127-2';
 
 const initialBits = '010110101100';
 const GEAR_STORAGE_KEY = 'quantum-backrooms-gear-v1';

@@ -44,8 +44,8 @@ export function difficulty(floor, agentFound) {
   const t = hardProgress(floor);
   return {
     enraged: true,
-    // Sanidade cai de 2,5x (andar 6) a 4x (andar 10) mais rápido.
-    drainMultiplier: 2.5 + 1.5 * t,
+    // Sanidade cai de 1,5x (andar 6) a 2,5x (andar 10) mais rápido.
+    drainMultiplier: 1.5 + 1 * t,
     chaseMs: Math.round(640 - 60 * t),
     huntMs: Math.round(520 - 45 * t),
     huntRadius: 8,

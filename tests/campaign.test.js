@@ -40,7 +40,7 @@ test('furiosa, a entidade anda mais rápido e a sanidade cai mais, piorando até
 
   assert.ok(first.huntMs < normal.huntMs && first.chaseMs < normal.chaseMs);
   assert.ok(last.huntMs < first.huntMs && last.chaseMs < first.chaseMs);
-  assert.ok(first.drainMultiplier >= 2.5);
+  assert.ok(first.drainMultiplier >= 1.5);
   assert.ok(last.drainMultiplier > first.drainMultiplier);
   // Ainda dá para fugir: caçando, ela não passa da velocidade de caminhada (~2,2 m/s).
   assert.ok(1.05 / (last.huntMs / 1000) <= 2.25);
