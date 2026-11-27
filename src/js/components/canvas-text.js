@@ -4,6 +4,8 @@
 const CANVAS_TEXT_PX_PER_METER = 900;
 const CANVAS_TEXT_FONT_PX = 30;
 const CANVAS_TEXT_LINE_PX = 38;
+const CANVAS_TEXT_HORROR_FONT_PX = 44;
+const CANVAS_TEXT_HORROR_LINE_PX = 60;
 
 AFRAME.registerComponent('canvas-text', {
   schema: {
@@ -36,15 +38,21 @@ AFRAME.registerComponent('canvas-text', {
   update() {
     const { value, align, color, width, style } = this.data;
     const terminal = style === 'terminal';
+    // 'horror' = frase grande de susto: serifada, sem fundo, com brilho vermelho.
+    const horror = style === 'horror';
+    const fontPx = horror ? CANVAS_TEXT_HORROR_FONT_PX : CANVAS_TEXT_FONT_PX;
+    const linePx = horror ? CANVAS_TEXT_HORROR_LINE_PX : CANVAS_TEXT_LINE_PX;
     const canvasWidth = Math.round(width * CANVAS_TEXT_PX_PER_METER);
     const ctx = this.canvas.getContext('2d');
     const font = terminal
       ? `bold ${CANVAS_TEXT_FONT_PX}px "Courier New", monospace`
-      : `600 ${CANVAS_TEXT_FONT_PX}px system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      : horror
+        ? `bold ${fontPx}px Georgia, "Times New Roman", serif`
+        : `600 ${CANVAS_TEXT_FONT_PX}px system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
     ctx.font = font;
 
     const lines = this.wrap(ctx, value.replace(/\\n/g, '\n'), canvasWidth - 24);
-    const canvasHeight = Math.max(1, lines.length) * CANVAS_TEXT_LINE_PX + 16;
+    const canvasHeight = Math.max(1, lines.length) * linePx + 16;
     // O three.js aloca a textura com tamanho fixo: se o canvas muda de tamanho,
     // a textura antiga precisa ser descartada, senão sobra texto velho nela.
     if (this.canvas.width !== canvasWidth || this.canvas.height !== canvasHeight) this.texture.dispose();
@@ -66,11 +74,11 @@ AFRAME.registerComponent('canvas-text', {
     ctx.textBaseline = 'middle';
     ctx.textAlign = align === 'left' ? 'left' : align === 'right' ? 'right' : 'center';
     const x = align === 'left' ? 12 : align === 'right' ? canvasWidth - 12 : canvasWidth / 2;
-    ctx.shadowColor = terminal ? 'rgba(57, 255, 136, 0.45)' : 'rgba(0, 0, 0, 0.9)';
-    ctx.shadowBlur = terminal ? 4 : 6;
+    ctx.shadowColor = terminal ? 'rgba(57, 255, 136, 0.45)' : horror ? 'rgba(160, 0, 12, 0.95)' : 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = terminal ? 4 : horror ? 14 : 6;
     ctx.fillStyle = color;
     lines.forEach((line, index) => {
-      ctx.fillText(line, x, 8 + CANVAS_TEXT_LINE_PX * (index + 0.5));
+      ctx.fillText(line, x, 8 + linePx * (index + 0.5));
     });
 
     this.texture.needsUpdate = true;

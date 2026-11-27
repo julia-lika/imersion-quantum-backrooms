@@ -28,6 +28,8 @@ export function createGameState(bitstring = DEFAULT_BITSTRING, floor = 1) {
     sanity: 100,
     qps: null,
     measured: false,
+    // Campanha solo: a agente morta do andar 5 já foi encontrada?
+    agentFound: false,
     currentBitstring: normalized,
     floors: {
       [floor]: {
@@ -75,6 +77,10 @@ export function markStairsReached(state) {
       },
     },
   };
+}
+
+export function markAgentFound(state) {
+  return { ...state, agentFound: true };
 }
 
 export function advanceFloor(state, bitstring = DEFAULT_BITSTRING) {

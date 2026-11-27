@@ -78,3 +78,15 @@ models, licensed CC BY 4.0. It furnishes the phase 0 lobby (sofa, armchair,
 desk, chairs, metal table and CRT terminal).
 
 Source: https://sketchfab.com/3d-models/furniture-pack-497aaaef39ff470f8438aadf6369c149
+
+## Dead Hazmat Female
+
+`models/dead-hazmat-agent.glb` is "Dead Hazmat Female" by OHR3D, licensed
+CC BY 4.0. It is the missing agent found on floor 5 of the solo campaign. The
+glass and wall placeholders were removed, the specular-glossiness material
+(not supported by the three.js in A-Frame 1.8) was converted to
+metallic-roughness, and the textures were resized to 1024 (normal map 512),
+cutting the file from 4.9 MB to 1.9 MB.
+
+Attribution: OHR3D (https://sketchfab.com/ohrtg)
+Source: https://sketchfab.com/3d-models/dead-hazmat-female-2e879c914d6b4e15a05f8496977854fd

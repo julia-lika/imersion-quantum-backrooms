@@ -3,10 +3,11 @@ import {
   advanceFloor,
   createGameState,
   loadGameState,
+  markAgentFound,
   markStairsReached,
   recordMeasurement,
   saveGameState,
-} from './game-state.js';
+} from './game-state.js?v=20261127-campaign1';
 import {
   advanceQuantumStream,
   collapseQuantumState,
@@ -19,8 +20,15 @@ import {
   drinkAlmondWater,
   tickSurvival,
   toggleVisor as toggleVisorState,
-} from './survival-state.js?v=20261123-2';
+} from './survival-state.js?v=20261127-campaign1';
 import { startPosition } from './maze-physics.js?v=20261127-2';
+import {
+  AGENT_MESSAGE,
+  CAMPAIGN,
+  difficulty,
+  isFinalFloor,
+  isHardFloor,
+} from './campaign.js?v=20261127-1';
 
 const initialBits = '010110101100';
 const GEAR_STORAGE_KEY = 'quantum-backrooms-gear-v1';
@@ -67,6 +75,8 @@ let coopBlocks = 0;
 const SURVIVAL_TICK_MS = 100;
 // Névoa escura de base (o index.html define a cor); sobe com a loucura.
 const FOG_BASE_DENSITY = 0.085;
+const FOG_BASE_COLOR = '#0a0805';
+const FOG_ENRAGED_COLOR = '#2a0204';
 
 // Estado compartilhado com os componentes A-Frame (fantasma, paredes superpostas).
 window.quantumPlayer = {
@@ -239,7 +249,128 @@ function objectiveText() {
   if (game.current.floor === LOBBY_FLOOR) {
     return missingGear().length ? 'PEGUE O EQUIPAMENTO NAS 3 ESTAÇÕES' : 'TUTORIAL: A PORTA LEVA AO ANDAR 01';
   }
+  if (game.current.floor === CAMPAIGN.agentFloor && !game.current.agentFound) {
+    return 'ACHE A AGENTE DESAPARECIDA: A PORTA SÓ ABRE DEPOIS';
+  }
+  if (isEnraged()) {
+    return game.current.measured ? 'CORRA ATÉ A PORTA' : 'CORRA: ACHE A PORTA ANTES DELA';
+  }
   return game.current.measured ? 'DESÇA: A PORTA FOI MEDIDA' : 'ACHE A PORTA: O QPS MEDE AO REDOR';
+}
+
+// ---------- Campanha solo (campaign.js) ----------
+// Andares 1-5 normais; no 5 está a agente morta. Achar o corpo deixa a entidade
+// furiosa: sanidade cai mais rápido, ela anda mais rápido e a tela fica
+// avermelhada até o andar 10. Passar a porta do 10 = escapar.
+// O duo não entra na campanha (o operador é dono do andar).
+function soloCampaign() {
+  return !coop() && !operatorMode();
+}
+
+function isEnraged() {
+  return Boolean(window.quantumPlayer.difficulty?.enraged);
+}
+
+function syncCampaign() {
+  const solo = soloCampaign();
+  const floor = game.current.floor;
+  const pace = difficulty(solo ? floor : 0, solo && game.current.agentFound);
+  window.quantumPlayer.difficulty = pace;
+  window.quantumPlayer.agent = {
+    show: solo && floor === CAMPAIGN.agentFloor,
+    found: Boolean(game.current.agentFound),
+  };
+  document.body.classList.toggle('enraged', pace.enraged);
+}
+
+function floorLabel(floor = game.current.floor) {
+  return `ANDAR ${String(floor).padStart(2, '0')}`;
+}
+
+// Frase grande no meio da visão (texto 3D preso à câmera: aparece no desktop e no VR).
+let scareTimer = 0;
+function showScare(message, { color = '#ff3b30', duration = 7000 } = {}) {
+  window.clearTimeout(scareTimer);
+  // Desktop: texto em HTML por cima de tudo (os painéis cobririam o texto 3D).
+  if (!elements['backrooms-scene'].is('vr-mode')) {
+    const overlay = document.getElementById('scare-overlay');
+    if (!overlay) return;
+    overlay.textContent = message;
+    overlay.style.color = color;
+    overlay.classList.add('visible');
+    scareTimer = window.setTimeout(() => overlay.classList.remove('visible'), duration);
+    return;
+  }
+  const el = document.getElementById('scare-text');
+  if (!el) return;
+  el.setAttribute('canvas-text', { value: message, align: 'center', color, width: 1.05, style: 'horror' });
+  el.object3D.visible = true;
+  // Por cima do véu dos clarões do VR (vr-effects usa 1000).
+  const mesh = el.getObject3D('canvas-text');
+  if (mesh) mesh.renderOrder = 1001;
+  el.setAttribute('animation__pulse', 'property: scale; from: 1 1 1; to: 1.04 1.04 1; dir: alternate; loop: true; dur: 380; easing: easeInOutSine');
+  scareTimer = window.setTimeout(() => {
+    el.object3D.visible = false;
+    el.removeAttribute('animation__pulse');
+  }, duration);
+}
+
+function enterFloorHint() {
+  const floor = game.current.floor;
+  if (soloCampaign() && floor === CAMPAIGN.agentFloor && !game.current.agentFound) {
+    return `${floorLabel()} — o Q-LINK capta um sinal fraco: é a agente que desceu antes de você e nunca voltou. Ache a agente: a porta deste andar não abre sem ela`;
+  }
+  if (soloCampaign() && isHardFloor(floor)) {
+    return `${floorLabel()} de ${CAMPAIGN.finalFloor} — ela está furiosa e mais rápida, e a sua sanidade escorre. Ache a porta e não pare`;
+  }
+  return `${floorLabel()} — a porta está em superposição entre algumas posições (amarelo tracejado no mapa); o QPS mede quando uma delas entra no raio`;
+}
+
+function onAgentFound() {
+  if (!soloCampaign() || game.current.agentFound || game.current.floor !== CAMPAIGN.agentFloor) return;
+  game.current = markAgentFound(game.current);
+  syncCampaign();
+  syncAtmosphere();
+  persistProgress();
+  const scene = elements['backrooms-scene'];
+  flash('agent-found', 2600);
+  scene.emit('screen-effect', { type: 'flash', color: '#c4001a', duration: 2600, peak: 0.85 });
+  scene.emit('entity-enraged');
+  showScare(AGENT_MESSAGE);
+  setHint(game.current.measured
+    ? 'CORRA — volte para a porta amarela (mapa: M ou pulso direito)'
+    : 'CORRA — ache a porta: o QPS mede quando ela entra no raio', true);
+  window.setTimeout(() => {
+    if (isEnraged()) setHint(`CORRA — ela está atrás de você. Depois desta porta ainda faltam ${CAMPAIGN.finalFloor - CAMPAIGN.agentFloor} andares`);
+  }, 7500);
+  renderTelemetry();
+}
+
+// Porta do andar 10: o jogador escapou. Volta ao lobby para um jogo novo.
+function escapeBackrooms() {
+  transitioning = true;
+  window.quantumPlayer.active = false;
+  game.current = markStairsReached(game.current);
+  document.body.classList.add('escaped');
+  setHint('A ÚLTIMA PORTA SE ABRE PARA UMA LUZ QUE VOCÊ NÃO VIA HÁ DIAS', true);
+  elements['backrooms-scene'].emit('screen-effect', { type: 'flash', color: '#fff4d6', duration: 3500, peak: 0.8 });
+  showScare('VOCÊ ESCAPOU.\nELA AINDA ESTÁ LÁ EMBAIXO.\nE AGORA SABE O SEU NOME.', { color: '#f4dda1', duration: 8500 });
+
+  window.setTimeout(() => {
+    game.current = createGameState(initialBits, LOBBY_FLOOR);
+    state.current = createPhaseState(initialBits);
+    setVisor(createSurvivalState());
+    resetPlayerPosition();
+    syncMap();
+    syncAtmosphere();
+    persistProgress();
+    document.body.classList.remove('escaped');
+    setHint('DE VOLTA AO LOBBY — você sobreviveu aos 10 andares. A porta amarela começa tudo de novo');
+    transitioning = false;
+    window.quantumPlayer.active = isActive();
+    renderTelemetry();
+    elements['backrooms-scene'].emit('lobby-entered');
+  }, 9000);
 }
 
 
@@ -248,11 +379,15 @@ function syncAtmosphere() {
   const madness = 1 - game.current.sanity / 100;
   // Perto da entidade a névoa engrossa: em VR é o substituto do blur (CSS não aparece).
   const contact = window.quantumPlayer?.effects?.contact ?? 0;
-  elements['backrooms-scene'].setAttribute('fog', 'density', FOG_BASE_DENSITY + madness * 0.08 + contact * 0.12);
+  const fog = { density: FOG_BASE_DENSITY + madness * 0.08 + contact * 0.12 };
+  // Entidade furiosa: a névoa fica cor de sangue (no desktop e no VR).
+  fog.color = isEnraged() ? FOG_ENRAGED_COLOR : FOG_BASE_COLOR;
+  elements['backrooms-scene'].setAttribute('fog', fog);
 }
 
 function syncMap() {
   window.quantumPlayer.floor = game.current.floor;
+  syncCampaign();
   const floor = game.current.floors[game.current.floor];
   elements['quantum-map'].setAttribute('quantum-map', {
     bitstring: game.current.currentBitstring,
@@ -479,6 +614,16 @@ function transitionToNextFloor() {
     return;
   }
 
+  if (game.current.floor === CAMPAIGN.agentFloor && !game.current.agentFound) {
+    setHint('A PORTA NÃO ABRE — alguma coisa neste andar não deixa você sair. A agente desaparecida está por aqui: ache o corpo');
+    window.setTimeout(() => document.querySelector('[floor-transition]')?.components['floor-transition']?.reset(), 2500);
+    return;
+  }
+  if (isFinalFloor(game.current.floor)) {
+    escapeBackrooms();
+    return;
+  }
+
   transitioning = true;
   window.quantumPlayer.active = false;
   game.current = markStairsReached(game.current);
@@ -496,7 +641,8 @@ function transitionToNextFloor() {
     syncMap();
     persistProgress();
     document.body.classList.remove('floor-transition');
-    setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — a porta está em superposição entre algumas posições (amarelo tracejado no mapa); o QPS mede quando uma delas entra no raio`);
+    syncAtmosphere();
+    setHint(enterFloorHint());
     transitioning = false;
     window.quantumPlayer.active = isActive();
     renderTelemetry();
@@ -524,9 +670,14 @@ function loseSanity() {
   document.body.classList.add('sanity-lost');
   elements['backrooms-scene'].emit('screen-effect', { type: 'fade', color: '#000000', duration: 2400 });
 
+  // Depois de achar a agente, perder a sanidade volta ao primeiro andar difícil.
+  const hard = Boolean(game.current.agentFound);
+  const restartFloor = hard ? CAMPAIGN.hardRestartFloor : 1;
   window.setTimeout(() => {
-    const nextBits = window.drawFloorBitstring?.(1) || initialBits;
-    game.current = createGameState(nextBits);
+    const nextBits = window.drawFloorBitstring?.(restartFloor) || initialBits;
+    game.current = hard
+      ? markAgentFound(createGameState(nextBits, restartFloor))
+      : createGameState(nextBits);
     state.current = createPhaseState(nextBits);
     setVisor(createSurvivalState());
     resetPlayerPosition();
@@ -534,7 +685,9 @@ function loseSanity() {
     syncAtmosphere();
     persistProgress();
     document.body.classList.remove('sanity-lost');
-    setHint('VOCÊ SE PERDEU — de volta ao ANDAR 01');
+    setHint(hard
+      ? `ELA TE ALCANÇOU — você acorda no ${floorLabel()}. Ela ainda está furiosa`
+      : 'VOCÊ SE PERDEU — de volta ao ANDAR 01');
     transitioning = false;
     window.quantumPlayer.active = isActive();
     renderTelemetry();
@@ -555,6 +708,7 @@ function updateSurvival() {
     floor: game.current.floor,
     ghostDistance: ghost.distance,
     ghostInView: ghost.inView,
+    drainMultiplier: window.quantumPlayer.difficulty?.drainMultiplier ?? 1,
   });
 
   setVisor(result.state);
@@ -640,7 +794,7 @@ function bindGameEvents() {
       setHint(lobbyHint(), true);
       scene.emit('lobby-entered');
     } else if (mode === 'continue') {
-      setHint(`ANDAR ${String(game.current.floor).padStart(2, '0')} — jogo retomado`);
+      setHint(`${floorLabel()} — jogo retomado. ${objectiveText()}`);
     }
     syncMap();
     syncAtmosphere();
@@ -786,6 +940,7 @@ function bindGameEvents() {
   });
 
   elements['backrooms-scene'].addEventListener('stairs-reached', transitionToNextFloor);
+  elements['backrooms-scene'].addEventListener('agent-found', onAgentFound);
 }
 
 // ---------- Modo cooperativo (explorador) ----------

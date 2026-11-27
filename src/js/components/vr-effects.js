@@ -4,6 +4,7 @@
 // desenha o equivalente dentro da cena, preso à cabeça: vinhetas e um véu.
 //
 // Leitura contínua: window.quantumPlayer.effects = { contact, visor, madness }
+//   e window.quantumPlayer.difficulty.enraged (andares difíceis: tela avermelhada)
 //   contact 0..1 (proximidade da entidade), visor boolean, madness 0..1 (1 - sanidade)
 // Eventos pontuais na cena: 'screen-effect' { type: 'flash' | 'fade' | 'blink', color, duration, peak }
 // O Quest tem ~50° de meio-campo por olho. Com o plano a 0,35 m, 1,1 de lado cobre
@@ -61,11 +62,19 @@ AFRAME.registerComponent('vr-effects', {
     this.contactTint = createOverlay(this.sphere, 0x8a0016, null, THREE.BackSide);
     this.el.object3D.add(this.contactTint);
 
+    // Entidade furiosa (andares difíceis): véu vermelho fraco o tempo todo e
+    // bordas cor de sangue. No desktop o mesmo efeito é o #enraged-tint (CSS).
+    this.enragedTint = createOverlay(this.sphere, 0x9a0010, null, THREE.BackSide);
+    this.enragedVignette = createOverlay(this.plane, 0x6a0008, this.texture);
+    this.enragedVignette.position.z = -0.38;
+    this.el.object3D.add(this.enragedTint);
+    this.el.object3D.add(this.enragedVignette);
+
     // Véu de tela cheia para clarões e fades (uma esfera ao redor da cabeça).
     this.veil = createOverlay(this.sphere, 0x000000, null, THREE.BackSide);
     this.el.object3D.add(this.veil);
 
-    this.levels = { contact: 0, visor: 0, madness: 0 };
+    this.levels = { contact: 0, visor: 0, madness: 0, enraged: 0 };
     this.timed = null;
 
     this.onEffect = ({ detail }) => {
@@ -77,7 +86,7 @@ AFRAME.registerComponent('vr-effects', {
 
   remove() {
     this.el.sceneEl.removeEventListener('screen-effect', this.onEffect);
-    [...Object.values(this.vignettes), this.contactTint, this.veil].forEach((mesh) => {
+    [...Object.values(this.vignettes), this.contactTint, this.enragedTint, this.enragedVignette, this.veil].forEach((mesh) => {
       this.el.object3D.remove(mesh);
       mesh.material.dispose();
     });
@@ -95,8 +104,9 @@ AFRAME.registerComponent('vr-effects', {
         visor: fx.visor ? 0.4 : 0,
         // Só incomoda de verdade quando a sanidade fica baixa.
         madness: Math.max(0, ((fx.madness ?? 0) - 0.3) / 0.7),
+        enraged: window.quantumPlayer?.difficulty?.enraged ? 1 : 0,
       }
-      : { contact: 0, visor: 0, madness: 0 };
+      : { contact: 0, visor: 0, madness: 0, enraged: 0 };
 
     const smoothing = Math.min(1, (delta / 1000) * 6);
     Object.keys(this.levels).forEach((key) => {
@@ -109,6 +119,10 @@ AFRAME.registerComponent('vr-effects', {
     this.setOpacity(this.contactTint, this.levels.contact * 0.4 * pulse);
     this.setOpacity(this.vignettes.visor, this.levels.visor);
     this.setOpacity(this.vignettes.madness, this.levels.madness * 0.7);
+    // Pulso lento de batimento (~1 Hz) por cima de um vermelho constante.
+    const heartbeat = 0.88 + 0.12 * Math.sin(time * 0.0063);
+    this.setOpacity(this.enragedTint, this.levels.enraged * 0.26 * heartbeat);
+    this.setOpacity(this.enragedVignette, this.levels.enraged * 0.75 * heartbeat);
     this.setOpacity(this.veil, inVr ? this.timedOpacity() : 0);
   },
 

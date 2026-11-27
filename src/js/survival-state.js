@@ -43,6 +43,8 @@ export function tickSurvival(state, sanity, {
   floor = 1,
   ghostDistance = Infinity,
   ghostInView = false,
+  // Andares difíceis (entidade furiosa): a sanidade cai várias vezes mais rápido.
+  drainMultiplier = 1,
 }) {
   const events = [];
   let energy = state.visor
@@ -59,6 +61,8 @@ export function tickSurvival(state, sanity, {
   // No lobby (andar 0) a sanidade não cai: é a área segura do tutorial.
   let drain = floor <= 0 ? 0 : SURVIVAL.ambientDrain + SURVIVAL.ambientDrainPerFloor * (floor - 1);
   if (ghostDistance <= 1) drain += SURVIVAL.ghostRadiationDrain;
+  // O contato já é quase fatal: o multiplicador vale só para a queda contínua.
+  drain *= drainMultiplier;
   if (ghostDistance <= SURVIVAL.ghostContactRadiusCells) {
     drain += SURVIVAL.ghostContactDrainPerSecond;
   }

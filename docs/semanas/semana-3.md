@@ -17,7 +17,7 @@ Aqui eu quero implementar o que decidir na Semana 2: o mapa passa a nascer dos d
 - [ ] Mostrar no painel do pulso de onde vieram os dados
 - [ ] Testes para ter certeza de que todo mapa tem saída
 - [ ] Cada andar com uma cara um pouco diferente
-- [ ] Vitória no andar 5
+- [x] Clímax no andar 5 (a agente morta deixa a entidade furiosa), mais 5 andares difíceis e fuga no andar 10
 - [ ] Derrota quando a sanidade zera, com reinício simples
 - [ ] Jogar do andar 1 ao 3 no Quest sem precisar recarregar
 - [ ] Devlog da semana

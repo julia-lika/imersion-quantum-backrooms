@@ -6,6 +6,7 @@
 const CHASE_INTERVAL_MS = 900;
 const HUNT_INTERVAL_MS = 650;
 const HUNT_RADIUS_CELLS = 5;
+const ENRAGED_HOLD_MS = 3500;
 const MAX_GHOST_MESH_EXTENT = 30;
 const VIEW_HALF_ANGLE = THREE.MathUtils.degToRad(37.5);
 
@@ -63,6 +64,15 @@ AFRAME.registerComponent('quantum-ghost', {
 
     this.onWorldUpdated = () => this.spawnFarFromPlayer();
     this.onStrike = () => this.spawnFarFromPlayer();
+    // Achar a agente acorda a entidade a uma distância média: perto o bastante
+    // para assustar, longe o bastante para dar tempo de correr. Ela fica parada
+    // alguns segundos (o tempo de ler a frase) e então arranca.
+    this.holdUntil = 0;
+    this.onEnraged = () => {
+      this.spawnNearPlayer(12);
+      this.holdUntil = this.el.sceneEl.time + ENRAGED_HOLD_MS;
+    };
+    this.el.sceneEl.addEventListener('entity-enraged', this.onEnraged);
     this.el.sceneEl.addEventListener('maze-world-updated', this.onWorldUpdated);
     this.el.sceneEl.addEventListener('ghost-strike', this.onStrike);
     // Se um trecho se reorganizou e a entidade ficou dentro de parede, ela reaparece longe.
@@ -79,6 +89,7 @@ AFRAME.registerComponent('quantum-ghost', {
   remove() {
     this.el.sceneEl.removeEventListener('maze-world-updated', this.onWorldUpdated);
     this.el.sceneEl.removeEventListener('ghost-strike', this.onStrike);
+    this.el.sceneEl.removeEventListener('entity-enraged', this.onEnraged);
     this.el.sceneEl.removeEventListener('maze-region-shifted', this.onShift);
   },
 
@@ -112,6 +123,43 @@ AFRAME.registerComponent('quantum-ghost', {
     if (!farthest) return;
     this.cell = { x: farthest.x, z: farthest.z };
     this.previousCell = null;
+    const position = window.quantumPhysics.cellToWorld(world, this.cell.x, this.cell.z);
+    this.el.object3D.position.set(position.x, 0, position.z);
+  },
+
+  // Reaparece numa célula livre a cerca de `cells` passos do jogador (pelo
+  // caminho do labirinto), para a perseguição começar já.
+  spawnNearPlayer(cells) {
+    const world = window.quantumWorld;
+    const player = this.playerCell();
+    if (!world || !player) return;
+
+    const seen = new Set([`${player.x},${player.z}`]);
+    let frontier = [player];
+    let best = player;
+    for (let depth = 0; depth < cells && frontier.length; depth += 1) {
+      const next = [];
+      frontier.forEach((cell) => {
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dz]) => {
+          const x = cell.x + dx;
+          const z = cell.z + dz;
+          const key = `${x},${z}`;
+          if (seen.has(key) || world.maze[z]?.[x] !== '.') return;
+          seen.add(key);
+          next.push({ x, z });
+        });
+      });
+      if (next.length) best = next[Math.floor(Math.random() * next.length)];
+      frontier = next;
+    }
+
+    if (best === player) {
+      this.spawnFarFromPlayer();
+      return;
+    }
+    this.cell = { x: best.x, z: best.z };
+    this.previousCell = null;
+    this.lastStep = this.el.sceneEl.time;
     const position = window.quantumPhysics.cellToWorld(world, this.cell.x, this.cell.z);
     this.el.object3D.position.set(position.x, 0, position.z);
   },
@@ -153,9 +201,12 @@ AFRAME.registerComponent('quantum-ghost', {
     if (!this.cell) this.spawnFarFromPlayer();
     if (!this.cell) return;
 
-    const hunting = window.quantumPhysics.cellDistance(this.cell, player) <= HUNT_RADIUS_CELLS;
-    const interval = hunting ? HUNT_INTERVAL_MS : CHASE_INTERVAL_MS;
-    if (shared.active && time - this.lastStep > interval) {
+    // Campanha solo: depois que a agente morta é achada a entidade fica furiosa
+    // (anda mais rápido e caça de mais longe). phase-zero.js define o ritmo.
+    const pace = shared.difficulty || {};
+    const hunting = window.quantumPhysics.cellDistance(this.cell, player) <= (pace.huntRadius ?? HUNT_RADIUS_CELLS);
+    const interval = hunting ? (pace.huntMs ?? HUNT_INTERVAL_MS) : (pace.chaseMs ?? CHASE_INTERVAL_MS);
+    if (shared.active && time > this.holdUntil && time - this.lastStep > interval) {
       this.lastStep = time;
       this.step(player);
     }
