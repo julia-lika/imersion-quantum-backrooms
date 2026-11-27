@@ -5,44 +5,49 @@ import {
   createMazeWorld,
   cellToWorld,
   isCellSolid,
-  isSuperposedOpen,
+  superposedOpenProbability,
   observeSuperposedWalls,
 } from '../src/js/maze-physics.js';
 import { generateLobbyMap, LOBBY } from '../src/js/map-generator.js';
 import { QUANTUM_SLIDES, SLIDE_IMAGES } from '../src/js/content/quantum-slides.js';
 
-function openTime(offset) {
-  for (let t = 0; t < 20; t += 0.05) if (isSuperposedOpen(offset, t)) return t;
-  throw new Error('nunca abre');
-}
-function closedTime(offset, after) {
-  for (let t = after; t < after + 20; t += 0.05) if (!isSuperposedOpen(offset, t)) return t;
-  throw new Error('nunca fecha');
-}
+// Sorteio fixo para os testes: 0 mede sempre passagem quando P>0; 0.999 quase sempre parede.
+const always = (value) => () => value;
 
-test('entrar numa parede em superposição aberta a mede: fica aberta até sair', () => {
+test('encostar numa parede em superposição a mede: deu passagem, fica aberta até sair', () => {
   const map = generateLobbyMap();
-  const world = createMazeWorld(map.maze, { superposed: LOBBY.superposed });
+  const world = createMazeWorld(map.maze, { superposed: LOBBY.superposed, random: always(0) });
   const wall = LOBBY.superposed[0];
   const center = cellToWorld(world, wall.x, wall.z);
-  const open = openTime(wall.offset);
-  const closed = closedTime(wall.offset, open);
+  // Antes de medir, colisão trata como parede; o visor mostra só a chance.
+  observeSuperposedWalls(world, center.x - 5, center.z, 0.24, 0);
+  observeSuperposedWalls(world, center.x - 5, center.z, 0.24, 1.5);
+  const chance = superposedOpenProbability(world, wall.x, wall.z);
+  assert.ok(chance > 0 && chance < 1, `em superposição (${chance})`);
+  assert.equal(isCellSolid(world, wall.x, wall.z, 1.5), true);
 
-  observeSuperposedWalls(world, center.x, center.z, 0.24, open);
-  assert.equal(isCellSolid(world, wall.x, wall.z, closed), false, 'colapsada em passagem');
+  const [result] = observeSuperposedWalls(world, center.x - world.cellSize / 2 - 0.3, center.z, 0.24, 1.6);
+  assert.equal(result.open, true);
+  assert.equal(isCellSolid(world, wall.x, wall.z, 1.6), false, 'colapsada em passagem');
+  assert.equal(superposedOpenProbability(world, wall.x, wall.z), 1);
 
-  const outside = cellToWorld(world, wall.x - 2, wall.z);
-  observeSuperposedWalls(world, outside.x, outside.z, 0.24, closed);
-  assert.equal(isCellSolid(world, wall.x, wall.z, closed), true, 'volta a oscilar quando o jogador sai');
+  const outside = cellToWorld(world, wall.x - 3, wall.z);
+  observeSuperposedWalls(world, outside.x, outside.z, 0.24, 1.7);
+  assert.equal(isCellSolid(world, wall.x, wall.z, 1.7), true, 'sai e ela volta a ser um qubit');
 });
 
-test('parede fechada não é medida ao encostar', () => {
+test('medição que dá parede deixa sólida enquanto encosta (Zeno) e não é refeita', () => {
   const map = generateLobbyMap();
-  const world = createMazeWorld(map.maze, { superposed: LOBBY.superposed });
+  const world = createMazeWorld(map.maze, { superposed: LOBBY.superposed, random: always(0.999999) });
   const wall = LOBBY.superposed[0];
   const center = cellToWorld(world, wall.x, wall.z);
-  const closed = closedTime(wall.offset, 0);
-  observeSuperposedWalls(world, center.x, center.z, 0.24, closed);
+  const touching = { x: center.x - world.cellSize / 2 - 0.3, z: center.z };
+  const first = observeSuperposedWalls(world, touching.x, touching.z, 0.24, 0);
+  assert.equal(first.length, 1);
+  assert.equal(first[0].open, false);
+  assert.equal(isCellSolid(world, wall.x, wall.z, 0), true);
+  // Continua encostado: nenhuma medição nova e o estado não evolui.
+  assert.equal(observeSuperposedWalls(world, touching.x, touching.z, 0.24, 3).length, 0);
   assert.equal(world.collapsed.size, 0);
 });
 

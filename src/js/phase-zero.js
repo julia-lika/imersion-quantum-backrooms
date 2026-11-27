@@ -20,7 +20,7 @@ import {
   tickSurvival,
   toggleVisor as toggleVisorState,
 } from './survival-state.js?v=20261123-2';
-import { startPosition } from './maze-physics.js?v=20261124-12';
+import { startPosition } from './maze-physics.js?v=20261127-1';
 
 const initialBits = '010110101100';
 const GEAR_STORAGE_KEY = 'quantum-backrooms-gear-v1';
@@ -713,7 +713,7 @@ function bindGameEvents() {
   scene.addEventListener('phase-shift-blocked', ({ detail }) => {
     if (!isActive()) return;
     setHint(detail?.reason === 'superposed'
-      ? 'PAREDE EM SUPERPOSIÇÃO — o salto de fase não passa por ela: ligue o visor (Z) e entre quando ela abrir'
+      ? 'PAREDE EM SUPERPOSIÇÃO — o salto de fase não passa por ela: ligue o visor (Z) e encoste quando ela estiver bem transparente (alta chance de passagem)'
       : 'NADA PARA ATRAVESSAR — encoste as palmas numa parede');
   });
   scene.addEventListener('eyes-covered', ({ detail }) => {

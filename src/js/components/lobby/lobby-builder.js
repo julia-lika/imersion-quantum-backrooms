@@ -7,7 +7,7 @@ import {
   LOBBY_SLIDES,
   LOBBY_TRAINING_WALLS,
   LOBBY_TV,
-} from '../../content/lobby-content.js?v=20261125-4';
+} from '../../content/lobby-content.js?v=20261127-1';
 
 // Tamanho do salão (map-generator.js publica o layout em window.LOBBY_LAYOUT).
 const LOBBY_SIZE = () => window.LOBBY_LAYOUT || { maxX: 7, maxZ: 11 };

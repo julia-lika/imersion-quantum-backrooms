@@ -288,8 +288,18 @@ AFRAME.registerComponent('player-locomotion', {
 
     if (!this.lastValid) this.lastValid = { x: head.x, z: head.z };
 
-    // Encostar numa parede em superposição aberta a "mede" e a mantém aberta.
-    physics.observeSuperposedWalls(world, this.lastValid.x, this.lastValid.z, physics.PLAYER_RADIUS, this.sceneTime);
+    // Encostar numa parede em superposição a MEDE (qubit simulado, regra de Born).
+    const measured = physics.observeSuperposedWalls(world, this.lastValid.x, this.lastValid.z, physics.PLAYER_RADIUS, this.sceneTime);
+    (measured || []).forEach((result) => {
+      const chance = Math.round(result.probability * 100);
+      const partner = result.partner ? ' — a parede emaranhada com ela acabou de virar o oposto' : '';
+      this.el.sceneEl.emit('wall-measured', result);
+      this.el.sceneEl.emit('interaction-hint', {
+        text: result.open
+          ? `MEDIU A PAREDE: PASSAGEM (a chance era ${chance}%)${partner}`
+          : `MEDIU A PAREDE: PAREDE (a chance de passagem era ${chance}%) — afaste-se e espere a amplitude voltar${partner}`,
+      });
+    });
 
     // O movimento físico da cabeça também passa pela colisão (room-scale).
     const desired = { x: head.x + move.x, z: head.z + move.z };

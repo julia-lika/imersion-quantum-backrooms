@@ -1,7 +1,8 @@
-// Parede em superposição: alterna entre sólida e aberta. A olho nu parece uma
-// parede comum; o Visor Zeta revela o estado e quando dá para atravessar.
-// Se o jogador entra nela aberta, o estado colapsa em passagem (medição) e ela
-// fica aberta, em ciano, até ele sair.
+// Parede em superposição: um qubit simulado (ver js/wall-quantum.js).
+// A olho nu parece uma parede comum. Com o Visor Zeta, você vê a chance de ela
+// dar PASSAGEM se for medida agora: quanto mais transparente, mais provável.
+// Encostar mede: deu passagem, ela fica ciano e aberta até você sair; deu
+// parede, fica vermelha e sólida enquanto você encostar.
 AFRAME.registerComponent('superposed-wall', {
   schema: {
     offset: { type: 'number', default: 0 },
@@ -12,25 +13,31 @@ AFRAME.registerComponent('superposed-wall', {
   tick() {
     const mesh = this.el.getObject3D('mesh');
     const physics = window.quantumPhysics;
-    if (!mesh?.material || !physics) return;
+    const world = window.quantumWorld;
+    if (!mesh?.material || !physics || !world) return;
 
-    const collapsed = physics.isSuperposedCollapsed(window.quantumWorld, this.data.x, this.data.z);
-    const open = collapsed || physics.isSuperposedOpen(this.data.offset, this.el.sceneEl.time / 1000);
+    const key = `${this.data.x},${this.data.z}`;
+    const open = world.collapsed?.has(key);
+    const closed = world.measuredClosed?.has(key);
     const visor = Boolean(window.quantumPlayer?.visor);
-    const key = `${open}:${visor}:${collapsed}`;
-    if (key === this.stateKey) return;
+    // Probabilidade em passos de 5% para não refazer o material a cada quadro.
+    const probability = visor ? Math.round(physics.superposedOpenProbability(world, this.data.x, this.data.z) * 20) / 20 : 0;
+    const state = `${open}:${closed}:${visor}:${probability}`;
+    if (state === this.stateKey) return;
 
-    this.stateKey = key;
+    this.stateKey = state;
     const material = mesh.material;
-    // Colapsada (medida), ela fica translúcida mesmo sem o visor: o jogador está dentro.
-    const seeThrough = visor || collapsed;
+    const seeThrough = visor || open;
     material.transparent = seeThrough;
-    material.opacity = seeThrough ? (open ? 0.12 : 0.7) : 1;
+    material.opacity = open ? 0.12 : (visor ? 0.85 - 0.75 * probability : 1);
     material.depthWrite = !seeThrough;
-    material.color.set(collapsed ? '#7fffe0' : (visor ? '#c9a3ff' : '#ffffff'));
-    if (material.emissive) {
-      material.emissive.set(collapsed ? '#0f6b5a' : (visor ? '#5a1a99' : '#000000'));
-    }
+    let color = '#ffffff';
+    let emissive = '#000000';
+    if (open) { color = '#7fffe0'; emissive = '#0f6b5a'; }
+    else if (closed && visor) { color = '#ff8a7a'; emissive = '#6b1a10'; }
+    else if (visor) { color = '#c9a3ff'; emissive = '#5a1a99'; }
+    material.color.set(color);
+    if (material.emissive) material.emissive.set(emissive);
     material.needsUpdate = true;
   },
 });

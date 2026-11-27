@@ -50,12 +50,12 @@ export const LOBBY_SIGNS = [
   {
     wall: 'left', cellZ: 6.7, y: 1.85,
     title: 'ESTAÇÃO 2: VISOR ZETA', subtitle: 'OS ÓCULOS',
-    body: 'Os óculos são o Visor Zeta. Com ele ligado, você enxerga as paredes em SUPERPOSIÇÃO (roxas), que abrem e fecham. Entre quando abrir: você a mede e ela fica aberta. O salto de fase (X) não passa por ela.\n\nPegue os óculos na mesa (desktop: Q). Ligar e desligar: pinça na testa (desktop: Z). Gasta energia.',
+    body: 'Os óculos são o Visor Zeta. Com ele ligado, você enxerga as paredes em SUPERPOSIÇÃO (roxas): quanto mais transparente, maior a chance de dar passagem. Encostar MEDE a parede: deu passagem, ela abre; deu parede, afaste-se e tente de novo. O salto de fase (X) não passa por ela.\n\nPegue os óculos na mesa (desktop: Q). Ligar e desligar: pinça na testa (desktop: Z). Gasta energia.',
   },
   {
     wall: 'right', cellZ: 6.5, y: 2.32, height: 0.62,
     title: 'PAREDE DE TREINO', subtitle: 'TUNELAMENTO + SUPERPOSIÇÃO',
-    body: 'SALTO DE FASE (tunelamento): olhe para a parede ciano e aperte X (VR: palmas). VISOR ZETA (Z): a parede roxa abre e fecha; entre quando abrir e ela fica aberta. As duas levam à mesma sala.',
+    body: 'SALTO DE FASE (tunelamento): olhe para a parede ciano e aperte X (VR: palmas). VISOR ZETA (Z): a parede roxa é um qubit; encoste quando ela estiver bem transparente para medir e, com sorte, passar. As duas levam à mesma sala.',
   },
   {
     wall: 'right', cellZ: 8.6,
@@ -83,7 +83,7 @@ export const LOBBY_TRAINING_WALLS = [
   },
   {
     cellZ: 10, cells: 1, color: '#b46bff',
-    title: 'VISOR ZETA', floorText: 'APERTE Z — ENTRE QUANDO ABRIR',
-    hint: 'PAREDE EM SUPERPOSIÇÃO — ligue o visor (Z) e entre quando ela abrir: ao entrar você a mede e ela fica aberta',
+    title: 'VISOR ZETA', floorText: 'APERTE Z — ENCOSTE PARA MEDIR',
+    hint: 'PAREDE EM SUPERPOSIÇÃO — ligue o visor (Z): quanto mais transparente, maior a chance de passagem. Encoste para medir',
   },
 ];

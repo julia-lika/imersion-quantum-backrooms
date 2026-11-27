@@ -37,11 +37,12 @@ test('bloqueia o movimento contra uma parede e permite deslizar no outro eixo', 
   assert.ok(Math.abs(moved.z - (start.z + 0.3)) < 1e-9);
 });
 
-test('paredes superpostas ficam atravessáveis apenas na fase aberta', () => {
+test('paredes superpostas só ficam atravessáveis depois de medidas como passagem', () => {
   const world = createMazeWorld(corridor, { superposed: [{ x: 2, z: 1, offset: 0 }] });
 
   assert.equal(isCellSolid(world, 2, 1, 0), true);
-  assert.equal(isCellSolid(world, 2, 1, (Math.PI / 2) / 0.7), false);
+  world.collapsed.add('2,1');
+  assert.equal(isCellSolid(world, 2, 1, 0), false);
   assert.equal(isCellSolid(world, 2, 2, 0), true);
 });
 

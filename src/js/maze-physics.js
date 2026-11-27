@@ -1,3 +1,12 @@
+import {
+  createWallQuantum,
+  syncWalls,
+  evolveWalls,
+  measureWall,
+  openProbability,
+  partnerOf,
+} from './wall-quantum.js?v=20261127-1';
+
 export const CELL_SIZE = 1.05;
 export const PLAYER_RADIUS = 0.24;
 // Grade do Level 0: 23 x 23 células (~24 m de lado) para caber salas grandes.
@@ -11,8 +20,11 @@ export function startPosition(size = MAZE_SIZE, cellSize = CELL_SIZE) {
   return { x: origin + START_CELL.x * cellSize, z: origin + START_CELL.z * cellSize };
 }
 
-const SUPERPOSED_SPEED = 0.7;
-const SUPERPOSED_OPEN_THRESHOLD = 0.35;
+// Folga para considerar que o jogador está encostando (e, portanto, medindo)
+// uma parede em superposição que ainda é sólida para a colisão.
+const CONTACT_MARGIN = 0.12;
+// Passo máximo de evolução entre dois quadros (pausas não viram saltos enormes).
+const MAX_EVOLVE_DT = 0.25;
 const CARDINALS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 function seededRandom(bitstring) {
@@ -27,7 +39,7 @@ function cellKey(x, z) {
   return `${x},${z}`;
 }
 
-export function createMazeWorld(maze, { cellSize = CELL_SIZE, superposed = [] } = {}) {
+export function createMazeWorld(maze, { cellSize = CELL_SIZE, superposed = [], random = Math.random } = {}) {
   const size = maze.length;
 
   return {
@@ -36,9 +48,12 @@ export function createMazeWorld(maze, { cellSize = CELL_SIZE, superposed = [] } 
     cellSize,
     origin: -((cellSize * size) / 2) + cellSize / 2,
     superposed: new Map(superposed.map(({ x, z, offset }) => [cellKey(x, z), offset])),
-    // Paredes em superposição "medidas" pelo jogador: ficam abertas enquanto ele
-    // estiver dentro delas (o estado colapsou em passagem).
+    // Paredes medidas em PASSAGEM: ficam abertas enquanto o jogador estiver nelas.
     collapsed: new Set(),
+    // Paredes medidas em PAREDE: ficam sólidas enquanto o jogador encostar.
+    measuredClosed: new Set(),
+    // Um qubit simulado por parede em superposição (ver wall-quantum.js).
+    quantum: createWallQuantum({ random }),
   };
 }
 
@@ -56,8 +71,20 @@ export function cellToWorld(world, x, z) {
   };
 }
 
-export function isSuperposedOpen(offset, timeSeconds) {
-  return Math.sin(timeSeconds * SUPERPOSED_SPEED + offset) > SUPERPOSED_OPEN_THRESHOLD;
+function wallQuantum(world) {
+  if (!world.quantum) world.quantum = createWallQuantum();
+  if (!world.measuredClosed) world.measuredClosed = new Set();
+  syncWalls(world.quantum, world.superposed);
+  return world.quantum;
+}
+
+// Chance de a parede dar PASSAGEM se for medida agora (|amplitude de |1>|²).
+export function superposedOpenProbability(world, x, z) {
+  const key = cellKey(x, z);
+  if (!world?.superposed?.has(key)) return 0;
+  if (world.collapsed?.has(key)) return 1;
+  if (world.measuredClosed?.has(key)) return 0;
+  return openProbability(wallQuantum(world), key);
 }
 
 export function isCellSolid(world, x, z, timeSeconds = 0) {
@@ -67,22 +94,27 @@ export function isCellSolid(world, x, z, timeSeconds = 0) {
   // 'F' = móvel do lobby: bloqueia como parede, mas não é desenhado como parede.
   if (cell !== '#') return true;
 
+  // Parede em superposição sem medição é sólida para a colisão: só uma medição
+  // que dá PASSAGEM a abre (ninguém atravessa uma parede "meio aberta").
   const key = cellKey(x, z);
-  const offset = world.superposed.get(key);
-  if (offset === undefined) return true;
-  if (world.collapsed?.has(key)) return false;
-  return !isSuperposedOpen(offset, timeSeconds);
+  if (!world.superposed.has(key)) return true;
+  return !world.collapsed?.has(key);
 }
 
-// Parede em superposição = célula no estado (parede + passagem). Entrar nela
-// enquanto está aberta é uma medição: o estado colapsa em "passagem" e fica
-// assim até o jogador sair da célula. Depois ela volta a oscilar.
+// Parede em superposição = um qubit simulado no estado a|parede> + b|passagem>.
+// A cada quadro: as paredes que ninguém toca evoluem (a amplitude gira) e as que
+// o jogador encosta são MEDIDAS uma vez por contato, pela regra de Born. Deu
+// passagem: abre e fica aberta enquanto ele estiver nela. Deu parede: fica
+// sólida enquanto ele encostar. Tocar é medir sem parar, então nada que está
+// sendo tocado evolui (efeito Zeno). Devolve as medições feitas neste quadro.
 export function observeSuperposedWalls(world, x, z, radius = PLAYER_RADIUS, timeSeconds = 0) {
-  if (!world.superposed?.size) return;
+  if (!world.superposed?.size) return [];
+  const system = wallQuantum(world);
   const touching = new Set();
   const half = world.cellSize / 2;
-  const min = worldToCell(world, x - radius, z - radius);
-  const max = worldToCell(world, x + radius, z + radius);
+  const reach = radius + CONTACT_MARGIN;
+  const min = worldToCell(world, x - reach, z - reach);
+  const max = worldToCell(world, x + reach, z + reach);
 
   for (let cz = min.z; cz <= max.z; cz += 1) {
     for (let cx = min.x; cx <= max.x; cx += 1) {
@@ -91,17 +123,29 @@ export function observeSuperposedWalls(world, x, z, radius = PLAYER_RADIUS, time
       const center = cellToWorld(world, cx, cz);
       const nearestX = Math.max(center.x - half, Math.min(x, center.x + half));
       const nearestZ = Math.max(center.z - half, Math.min(z, center.z + half));
-      if ((x - nearestX) ** 2 + (z - nearestZ) ** 2 < radius ** 2) touching.add(key);
+      if ((x - nearestX) ** 2 + (z - nearestZ) ** 2 < reach ** 2) touching.add(key);
     }
   }
 
+  // Quem saiu do contato volta a evoluir a partir do estado medido.
+  [...world.collapsed].forEach((key) => { if (!touching.has(key)) world.collapsed.delete(key); });
+  [...world.measuredClosed].forEach((key) => { if (!touching.has(key)) world.measuredClosed.delete(key); });
+
+  const dt = system.time === null ? 0 : Math.min(MAX_EVOLVE_DT, Math.max(0, timeSeconds - system.time));
+  system.time = timeSeconds;
+  evolveWalls(system, dt, touching);
+
+  const measured = [];
   touching.forEach((key) => {
-    if (world.collapsed.has(key)) return;
-    if (isSuperposedOpen(world.superposed.get(key), timeSeconds)) world.collapsed.add(key);
+    if (world.collapsed.has(key) || world.measuredClosed.has(key)) return;
+    const probability = openProbability(system, key);
+    const bit = measureWall(system, key);
+    if (bit === 1) world.collapsed.add(key);
+    else world.measuredClosed.add(key);
+    const [cx, cz] = key.split(',').map(Number);
+    measured.push({ x: cx, z: cz, open: bit === 1, probability, partner: partnerOf(system, key) });
   });
-  [...world.collapsed].forEach((key) => {
-    if (!touching.has(key)) world.collapsed.delete(key);
-  });
+  return measured;
 }
 
 export function isSuperposedCollapsed(world, x, z) {
@@ -298,7 +342,7 @@ if (typeof window !== 'undefined') {
     worldToCell,
     cellToWorld,
     isCellSolid,
-    isSuperposedOpen,
+    superposedOpenProbability,
     observeSuperposedWalls,
     isSuperposedCollapsed,
     resolveMove,
