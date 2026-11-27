@@ -79,7 +79,11 @@ export function cx(reg, control, target) {
 
 // Rotação XY entre |01> e |10> (troca a passagem de parede): exp(-iθ(XX+YY)/2).
 export function hop(reg, theta) {
-  const a = 0b01; const b = 0b10;
+  basisHop(reg, 0b01, 0b10, theta);
+}
+
+// Mesma rotação entre dois estados da base quaisquer, |a> e |b>.
+export function basisHop(reg, a, b, theta) {
   const c = Math.cos(theta); const s = Math.sin(theta);
   const ra = reg.re[a]; const ia = reg.im[a];
   const rb = reg.re[b]; const ib = reg.im[b];
@@ -207,4 +211,78 @@ export function measureWall(system, key) {
 
 export function partnerOf(system, key) {
   return system.walls.get(key)?.partner ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// A porta de saída: 2 qubits = 4 posições possíveis (|00>, |01>, |10>, |11>).
+//
+// HÍBRIDO COM O HARDWARE: as amplitudes iniciais vêm das frequências que o
+// computador quântico da IBM mediu para o andar (banco de medições). A posição
+// i começa com amplitude raiz(P_i), então medir a porta logo no início dá a
+// mesma distribuição do hardware. Depois o estado continua vivo no jogo: ele
+// evolui devagar (passeio quântico num anel: a amplitude escorre de uma
+// posição para as vizinhas) e só colapsa quando o QPS mede.
+
+export const DOOR_OMEGA = 0.22;
+// Anel de posições na ordem dos índices: 0 -> 1 -> 3 -> 2 -> 0 (vizinhos diferem em 1 bit).
+const DOOR_RING = [[0, 1], [1, 3], [3, 2], [2, 0]];
+
+export function createDoor(probabilities) {
+  const n = Math.max(1, Math.min(4, probabilities.length));
+  const total = probabilities.slice(0, n).reduce((sum, p) => sum + Math.max(0, p), 0);
+  const reg = createRegister(2);
+  reg.re[0] = 0;
+  for (let i = 0; i < n; i += 1) {
+    reg.re[i] = total > 0 ? Math.sqrt(Math.max(0, probabilities[i]) / total) : Math.sqrt(1 / n);
+  }
+  return { reg, n, initial: probabilities.slice(0, n), measured: null };
+}
+
+export function evolveDoor(door, dt) {
+  if (!door || door.measured !== null || !(dt > 0)) return;
+  DOOR_RING.forEach(([a, b]) => {
+    if (a < door.n && b < door.n) basisHop(door.reg, a, b, DOOR_OMEGA * dt);
+  });
+}
+
+export function doorProbabilities(door) {
+  if (!door) return [];
+  return Array.from({ length: door.n }, (_, i) => door.reg.re[i] ** 2 + door.reg.im[i] ** 2);
+}
+
+// Medição da porta (os 2 qubits de uma vez): devolve o índice da posição.
+export function measureDoor(door, random = Math.random) {
+  if (!door) return null;
+  if (door.measured !== null) return door.measured;
+  const probs = doorProbabilities(door);
+  const total = probs.reduce((sum, p) => sum + p, 0) || 1;
+  let target = random() * total;
+  let index = probs.length - 1;
+  for (let i = 0; i < probs.length; i += 1) {
+    target -= probs[i];
+    if (target < 0) { index = i; break; }
+  }
+  for (let i = 0; i < door.reg.re.length; i += 1) {
+    door.reg.re[i] = i === index ? 1 : 0;
+    door.reg.im[i] = 0;
+  }
+  door.measured = index;
+  return index;
+}
+
+// Distribuição das posições da porta segundo as medições do hardware:
+// a mesma regra do jogo (valor do bitstring módulo o número de posições).
+export function doorDistributionFromCounts(counts, n) {
+  const probs = Array(n).fill(0);
+  let total = 0;
+  Object.entries(counts || {}).forEach(([bits, count]) => {
+    probs[(Number.parseInt(bits, 2) || 0) % n] += count;
+    total += count;
+  });
+  return total > 0 ? probs.map((c) => c / total) : Array(n).fill(1 / n);
+}
+
+// Ângulo RY que dá probabilidade p de passagem: p = sin²(θ/2).
+export function thetaForProbability(p) {
+  return 2 * Math.asin(Math.sqrt(Math.min(1, Math.max(0, p))));
 }

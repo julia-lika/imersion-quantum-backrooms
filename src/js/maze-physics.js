@@ -5,7 +5,11 @@ import {
   measureWall,
   openProbability,
   partnerOf,
-} from './wall-quantum.js?v=20261127-1';
+  createDoor,
+  evolveDoor,
+  measureDoor,
+  doorProbabilities,
+} from './wall-quantum.js?v=20261127-2';
 
 export const CELL_SIZE = 1.05;
 export const PLAYER_RADIUS = 0.24;
@@ -108,8 +112,12 @@ export function isCellSolid(world, x, z, timeSeconds = 0) {
 // sólida enquanto ele encostar. Tocar é medir sem parar, então nada que está
 // sendo tocado evolui (efeito Zeno). Devolve as medições feitas neste quadro.
 export function observeSuperposedWalls(world, x, z, radius = PLAYER_RADIUS, timeSeconds = 0) {
-  if (!world.superposed?.size) return [];
   const system = wallQuantum(world);
+  const dt = system.time === null ? 0 : Math.min(MAX_EVOLVE_DT, Math.max(0, timeSeconds - system.time));
+  system.time = timeSeconds;
+  // A porta (2 qubits) também evolui enquanto ninguém a mede.
+  evolveDoor(world.door, dt);
+  if (!world.superposed?.size) return [];
   const touching = new Set();
   const half = world.cellSize / 2;
   const reach = radius + CONTACT_MARGIN;
@@ -131,8 +139,6 @@ export function observeSuperposedWalls(world, x, z, radius = PLAYER_RADIUS, time
   [...world.collapsed].forEach((key) => { if (!touching.has(key)) world.collapsed.delete(key); });
   [...world.measuredClosed].forEach((key) => { if (!touching.has(key)) world.measuredClosed.delete(key); });
 
-  const dt = system.time === null ? 0 : Math.min(MAX_EVOLVE_DT, Math.max(0, timeSeconds - system.time));
-  system.time = timeSeconds;
   evolveWalls(system, dt, touching);
 
   const measured = [];
@@ -146,6 +152,21 @@ export function observeSuperposedWalls(world, x, z, radius = PLAYER_RADIUS, time
     measured.push({ x: cx, z: cz, open: bit === 1, probability, partner: partnerOf(system, key) });
   });
   return measured;
+}
+
+// Porta em superposição: probabilidades iniciais (do hardware) viram amplitudes.
+export function setDoorSuperposition(world, probabilities) {
+  world.door = probabilities?.length ? createDoor(probabilities) : null;
+  return world.door;
+}
+
+export function doorPositionProbabilities(world) {
+  return doorProbabilities(world?.door);
+}
+
+// O QPS mede a porta: colapsa os 2 qubits e devolve o índice da posição.
+export function measureDoorPosition(world, random = Math.random) {
+  return measureDoor(world?.door, random);
 }
 
 export function isSuperposedCollapsed(world, x, z) {
@@ -344,6 +365,9 @@ if (typeof window !== 'undefined') {
     isCellSolid,
     superposedOpenProbability,
     observeSuperposedWalls,
+    setDoorSuperposition,
+    doorPositionProbabilities,
+    measureDoorPosition,
     isSuperposedCollapsed,
     resolveMove,
     findPhaseTarget,

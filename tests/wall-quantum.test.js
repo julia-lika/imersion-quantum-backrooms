@@ -80,3 +80,36 @@ test('o sistema de paredes: pares, evolução, Zeno e remoção', () => {
   assert.ok(!system.walls.has('c'));
   assert.equal(system.walls.get('d').partner, 'e');
 });
+
+test('porta: amplitudes iniciais do hardware, evolução no anel e medição', async () => {
+  const { createDoor, evolveDoor, doorProbabilities, measureDoor, doorDistributionFromCounts } = await import('../src/js/wall-quantum.js');
+  const probs = doorDistributionFromCounts({ '000000000000': 6, '000000000001': 2, '000000000011': 2 }, 4);
+  assert.deepEqual(probs, [0.6, 0.2, 0, 0.2]);
+  const door = createDoor(probs);
+  doorProbabilities(door).forEach((p, i) => assert.ok(close(p, probs[i]), 'medir no início dá a distribuição do hardware'));
+  evolveDoor(door, 2);
+  const after = doorProbabilities(door);
+  assert.ok(close(after.reduce((a, b) => a + b, 0), 1));
+  assert.ok(after.some((p, i) => Math.abs(p - probs[i]) > 0.01), 'o estado evolui');
+  const index = measureDoor(door, () => 0.5);
+  assert.ok(close(doorProbabilities(door)[index], 1), 'colapsou');
+  evolveDoor(door, 5);
+  assert.ok(close(doorProbabilities(door)[index], 1), 'medida não evolui mais');
+  assert.equal(measureDoor(door, () => 0.99), index);
+
+  const three = createDoor([0.5, 0.25, 0.25]);
+  evolveDoor(three, 3);
+  const p3 = doorProbabilities(three);
+  assert.equal(p3.length, 3);
+  assert.ok(close(p3.reduce((a, b) => a + b, 0), 1), 'com 3 posições a amplitude não vaza para a 4ª');
+});
+
+test('frequências de Born da porta batem com as do hardware', async () => {
+  const { createDoor, measureDoor } = await import('../src/js/wall-quantum.js');
+  const probs = [0.1, 0.4, 0.3, 0.2];
+  const hits = [0, 0, 0, 0];
+  let seed = 3;
+  const random = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  for (let i = 0; i < 4000; i += 1) hits[measureDoor(createDoor(probs), random)] += 1;
+  hits.forEach((h, i) => assert.ok(Math.abs(h / 4000 - probs[i]) < 0.03, `${i}: ${h / 4000}`));
+});
