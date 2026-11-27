@@ -32,6 +32,7 @@ Essa semana tem dois lados. Um é deixar o jogo com cara de Backrooms de verdade
 - [x] Mandar os jobs dos 5 andares para a IBM (ibm_fez, job `dc3e7hmq4uuc73a6pen0`, 25/11)
 - [x] Testes para o banco e para o mapeamento novo
 - [x] Paredes em superposição como qubits simulados (vetor de estado no navegador, pares emaranhados, medição ao encostar)
+- [x] Porta em superposição de verdade (2 qubits) e híbrido: amplitudes iniciais de porta e paredes vêm das medições do ibm_fez
 
 ## Pendências
 

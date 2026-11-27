@@ -63,13 +63,25 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
   ficam em tom neutro; em **ciano**, dá para atravessar com o Salto de Fase
   (X); em **lilás**, estão em superposição (Visor Zeta, Z). Objetos da sala
   aparecem em **azul** e a porta em **amarelo**.
-- **Porta (medição de verdade):** cada andar começa com a porta em
-  superposição entre até 4 posições possíveis, afastadas umas das outras
-  (`findDoorCandidates`). No mapa elas piscam em amarelo tracejado. Quando
-  qualquer uma entra no raio do QPS (2 células sem QPS), o estado é medido
-  (`measureFromBank`) e o bitstring medido escolhe onde a porta fica
-  (`pickDoorCandidate`). Ela pode aparecer bem ali ou em outro ponto do andar.
-  Depois de medida, não muda mais de lugar.
+- **Porta (superposição viva, híbrida com o hardware):** cada andar tem até 4
+  posições possíveis para a porta, afastadas umas das outras
+  (`findDoorCandidates`). A porta é um registrador de **2 qubits** no simulador
+  (`src/js/wall-quantum.js`): |00⟩, |01⟩, |10⟩ e |11⟩ são as 4 posições. As
+  amplitudes iniciais vêm do **hardware**: a chance de cada posição é a
+  frequência com que o `ibm_fez` produziu bitstrings que levam a ela (valor do
+  bitstring módulo o número de posições), e a amplitude é a raiz dessa chance.
+  Medir logo no início reproduz a distribuição do computador quântico real.
+  Depois, enquanto ninguém mede, o estado evolui devagar (passeio quântico num
+  anel: a amplitude escorre para as posições vizinhas). O mapa do QPS mostra a
+  chance de cada posição em %. Quando qualquer uma entra no raio do QPS, os 2
+  qubits são medidos pela regra de Born e a porta colapsa. Depois de medida,
+  não muda mais de lugar.
+- **Paredes híbridas:** a chance inicial de cada parede em superposição dar
+  passagem também vem do hardware: é a probabilidade, medida no `ibm_fez`, de o
+  qubit da região dela valer 1 (o ângulo RY é escolhido para sin²(θ/2) = P).
+- **Custo na IBM:** nenhum por partida. O jogo usa o banco já gravado (1 job
+  com os 5 andares, segundos de QPU). Para trocar as distribuições, rode de novo
+  o workflow "Medir no computador quântico (IBM)".
 
 ## Conceito por conceito
 
@@ -78,7 +90,7 @@ O labirinto evolui enquanto você joga, mas só onde ninguém está medindo.
 | Superposição | `RY(θ)` em cada qubit define a chance de dar 1 | Cada andar é um estado de 12 qubits até ser medido |
 | Emaranhamento | `CX(i, i+1)` em cadeia correlaciona vizinhos | Os bits medidos vêm correlacionados, não independentes |
 | Interferência e fase | Segunda camada de `RY` e anel de `CZ` | Alguns bitstrings (mapas) são bem mais prováveis |
-| Medição e colapso | Sorteio de 1 resultado entre os shots gravados (`measureFromBank`) | Cada andar nasce de uma medição; a porta fica entre várias posições até o QPS medir, e a medição sorteia uma |
+| Medição e colapso | Sorteio de 1 resultado entre os shots gravados (`measureFromBank`) para o andar; para a porta e as paredes, medição de verdade no simulador (regra de Born, com colapso do vetor de estado) | Cada andar nasce de uma medição; a porta fica em superposição (2 qubits) até o QPS medir |
 | Efeito Zeno | Medir sem parar impede a evolução do estado | O raio do QPS congela o labirinto; fora dele, setores sem medição por 18 s evoluem e são medidos de novo |
 | Entropia | Shannon dos `counts` (`shannonEntropy`), 0 a 12 bits | Andares gravados ficam entre ~7 e 8 bits |
 | Tunelamento | Metáfora | Salto de fase: atravessa até 2 células de parede comum (azul no mapa), 92% de sucesso, custa 25 de energia e 3 de sanidade; não passa por parede em superposição |
